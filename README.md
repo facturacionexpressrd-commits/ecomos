@@ -1,36 +1,60 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# EcomOS
 
-## Getting Started
+Multi-store e-commerce operations platform. This is Phase 0 (foundation:
+org/user/role/store model, invitation-based auth, capability RBAC) + Phase 1
+(Shopify core: OAuth connect, product/order/customer/inventory sync,
+idempotent webhooks, one dashboard). See [ARCHITECTURE.md](./ARCHITECTURE.md),
+[DATABASE.md](./DATABASE.md), and [INTEGRATIONS.md](./INTEGRATIONS.md) for the
+design — they're the source of truth for later phases too.
 
-First, run the development server:
+## Setup
+
+1. **Install deps**: `npm install`
+2. **Create a Supabase project** (free tier is fine): supabase.com → New
+   project. Copy into `.env` (see `.env.example`):
+   - `DATABASE_URL` — Settings → Database → Connection string (use the
+     pooled/transaction connection string)
+   - `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+     `SUPABASE_SERVICE_ROLE_KEY` — Settings → API
+3. **Generate a `TOKEN_ENCRYPTION_KEY`**: any long random string, e.g.
+   `openssl rand -hex 32`.
+4. **Run migrations**: `npm run db:migrate`
+5. **Sign up** at `/login` (after `npm run dev`) with the email that should
+   own the first organization.
+6. **Bootstrap the first org**:
+   `SEED_ORG_NAME="My Company" SEED_OWNER_EMAIL="you@example.com" npm run db:seed`
+7. **Shopify** (only needed to actually connect a store — see
+   [INTEGRATIONS.md](./INTEGRATIONS.md) for the full walkthrough): create a
+   Partner account + dev store + app, fill in `SHOPIFY_API_KEY`,
+   `SHOPIFY_API_SECRET`, `SHOPIFY_WEBHOOK_SECRET`, `SHOPIFY_APP_URL` in
+   `.env`.
+
+## Running
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm run dev      # Next.js app on :3000
+npm run worker   # background job worker (Shopify sync + webhook processing)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Both need to be running for a store connect to actually sync data — the app
+enqueues jobs, the worker processes them.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Testing
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm test         # RBAC + webhook idempotency unit tests — no live DB needed
+npm run build    # type-checks the whole app
+```
 
-## Learn More
+## Connecting a store
 
-To learn more about Next.js, take a look at the following resources:
+Once signed in and `.env` has real Shopify credentials:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+/api/shopify/install?shop=your-dev-store.myshopify.com
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This redirects through Shopify's OAuth consent screen and back to
+`/dashboard` once connected. The account that ran the install gets full
+("Owner") access to that store automatically; invite teammates via
+`POST /api/invitations` (see [ARCHITECTURE.md](./ARCHITECTURE.md#multi-tenancy--rbac)).

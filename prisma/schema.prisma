@@ -1,0 +1,259 @@
+// EcomOS — Phase 0 + Phase 1 schema. See DATABASE.md for rationale.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------- Phase 0: org, users, RBAC ----------
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+
+  users       User[]
+  roles       Role[]
+  stores      Store[]
+  invitations Invitation[]
+  auditLogs   AuditLog[]
+}
+
+// id matches the Supabase auth.users.id (uuid) — no separate password/identity here.
+model User {
+  id             String   @id
+  organizationId String
+  email          String   @unique
+  name           String?
+  createdAt      DateTime @default(now())
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  storeAccess  UserStoreAccess[]
+  auditLogs    AuditLog[]
+
+  @@index([organizationId])
+}
+
+// Capability-based role: a flat list of capability strings (e.g. "store:read",
+// "store:sync", "orders:read", "org:manage_users"). No fixed admin/editor/viewer
+// enum — new capabilities are additive, never require a schema migration.
+model Role {
+  id             String   @id @default(cuid())
+  organizationId String
+  name           String
+  capabilities   String[]
+  createdAt      DateTime @default(now())
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  access       UserStoreAccess[]
+  invitations  Invitation[]
+
+  @@unique([organizationId, name])
+}
+
+model Store {
+  id                   String    @id @default(cuid())
+  organizationId       String
+  name                 String
+  platform             Platform  @default(shopify)
+  shopDomain           String    @unique
+  accessTokenEncrypted String?
+  scope                String?
+  status               StoreStatus @default(pending)
+  connectedAt          DateTime?
+  createdAt            DateTime  @default(now())
+
+  organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  access       UserStoreAccess[]
+  invitations  Invitation[]
+  auditLogs    AuditLog[]
+
+  products         Product[]
+  productVariants  ProductVariant[]
+  orders           Order[]
+  customers        Customer[]
+  inventoryLevels  InventoryLevel[]
+  webhookEvents    WebhookEvent[]
+
+  @@index([organizationId])
+}
+
+enum Platform {
+  shopify
+}
+
+enum StoreStatus {
+  pending
+  connected
+  error
+}
+
+// The one join table capability checks read: which role a user holds for a store.
+model UserStoreAccess {
+  id      String @id @default(cuid())
+  userId  String
+  storeId String
+  roleId  String
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  role  Role  @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storeId])
+  @@index([storeId])
+}
+
+model Invitation {
+  id             String           @id @default(cuid())
+  organizationId String
+  email          String
+  roleId         String
+  storeId        String?
+  token          String           @unique
+  status         InvitationStatus @default(pending)
+  invitedBy      String
+  expiresAt      DateTime
+  createdAt      DateTime         @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  role         Role         @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  store        Store?       @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([organizationId])
+  @@index([email])
+}
+
+enum InvitationStatus {
+  pending
+  accepted
+  revoked
+  expired
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String
+  userId         String?
+  storeId        String?
+  action         String
+  metadata       Json?
+  createdAt      DateTime @default(now())
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  user         User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  store        Store?       @relation(fields: [storeId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, createdAt])
+}
+
+// ---------- Phase 1: Shopify sync ----------
+
+model Product {
+  id           String   @id @default(cuid())
+  storeId      String
+  shopifyGid   String
+  title        String
+  status       String?
+  raw          Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  store    Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  variants ProductVariant[]
+
+  @@unique([storeId, shopifyGid])
+}
+
+model ProductVariant {
+  id         String   @id @default(cuid())
+  storeId    String
+  productId  String
+  shopifyGid String
+  sku        String?
+  title      String?
+  price      Decimal? @db.Decimal(12, 2)
+  raw        Json
+  updatedAt  DateTime @updatedAt
+
+  store   Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  inventoryLevels InventoryLevel[]
+
+  @@unique([storeId, shopifyGid])
+  @@index([productId])
+}
+
+model Customer {
+  id         String   @id @default(cuid())
+  storeId    String
+  shopifyGid String
+  email      String?
+  name       String?
+  raw        Json
+  updatedAt  DateTime @updatedAt
+
+  store  Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  @@unique([storeId, shopifyGid])
+}
+
+model Order {
+  id            String   @id @default(cuid())
+  storeId       String
+  customerId    String?
+  shopifyGid    String
+  name          String
+  totalPrice    Decimal  @db.Decimal(12, 2)
+  currency      String
+  financialStatus String?
+  raw           Json
+  placedAt      DateTime
+  updatedAt     DateTime @updatedAt
+
+  store    Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+
+  @@unique([storeId, shopifyGid])
+  @@index([storeId, placedAt])
+}
+
+model InventoryLevel {
+  id         String   @id @default(cuid())
+  storeId    String
+  variantId  String
+  locationGid String
+  available  Int
+  updatedAt  DateTime @updatedAt
+
+  store   Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  variant ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@unique([variantId, locationGid])
+}
+
+// Idempotency ledger for Shopify webhooks — the unique constraint on
+// shopifyWebhookId is what makes double-delivery a no-op.
+model WebhookEvent {
+  id               String    @id @default(cuid())
+  storeId          String
+  shopifyWebhookId String    @unique
+  topic            String
+  receivedAt       DateTime  @default(now())
+  processedAt      DateTime?
+  status           WebhookStatus @default(received)
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, topic])
+}
+
+enum WebhookStatus {
+  received
+  processed
+  failed
+}
