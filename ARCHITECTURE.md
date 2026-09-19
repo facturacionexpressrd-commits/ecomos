@@ -142,10 +142,21 @@ Stubbed in schema but logic deferred:
 - **Break-even spend** = Contribution Profit / (1 - target ROAS factor)
 
 **UI:**
-- Campaign list with spend, revenue, ROAS, margin
-- Campaign detail page showing daily spend trends
-- Attribution dashboard (% of orders from Meta)
-- Profitability alert: campaigns with ROAS < 1.0
+- Campaign list (`/dashboard/meta/campaigns`) with spend, impressions, conversions, ROAS, profitability
+  - Summary cards: total campaigns, total spend, estimated revenue, avg contribution ROAS
+  - Sortable table: campaign name, status, spend, impressions, conversions, CPA, contrib ROAS, profitability
+  - Filterable by status (ACTIVE/PAUSED)
+- Campaign detail page (`/dashboard/campaigns/[id]`) showing:
+  - Key metrics: spend, revenue ROAS, contribution ROAS, CPA
+  - Efficiency benchmarks: break-even ROAS, max sustainable CPA
+  - 30-day spend trend table (daily spend, impressions, conversions)
+  - CPM, conversion rate, profit per $1 spent
+- Campaigns accessible from integrations dashboard when Meta connected
+
+**Revenue Attribution (MVP):**
+- Spend-proportion heuristic: campaign revenue = store revenue × (campaign spend / total spend)
+- Ready for upgrade to UTM tracking (utm_campaign → order source)
+- Note: Real attribution requires order-level tracking in Shopify
 
 **Out of Scope (Phase 2):**
 - Multi-account aggregation
