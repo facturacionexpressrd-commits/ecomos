@@ -31,6 +31,12 @@ jobs:
       - name: Generate Prisma client
         run: npx prisma generate
 
+      # Next writes route/layout globals (LayoutProps, PageProps) into
+      # .next/types, which is also gitignored. Without this the typecheck
+      # fails on types that exist locally only because a dev server built them.
+      - name: Generate Next route types
+        run: npx next typegen
+
       - name: Typecheck
         run: npm run typecheck
 
