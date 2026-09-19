@@ -84,6 +84,7 @@ model Store {
   metaAccounts       MetaAccount[]
   metaCampaigns      MetaCampaign[]
   metaSpendDaily     MetaSpendDaily[]
+  orderAttributions  OrderAttributionMeta[]
 
   @@index([organizationId])
 }
@@ -224,8 +225,9 @@ model Order {
   placedAt      DateTime
   updatedAt     DateTime @updatedAt
 
-  store    Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  customer Customer? @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  store              Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  customer           Customer?           @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  metaAttribution    OrderAttributionMeta? // 0..1 relation, populated by attribution job
 
   @@unique([storeId, shopifyGid])
   @@index([storeId, placedAt])
@@ -319,9 +321,8 @@ model MetaAccount {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  store         Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  campaigns     MetaCampaign[]
-  spendDaily    MetaSpendDaily[]
+  store     Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  campaigns MetaCampaign[]
 
   @@index([storeId])
 }
@@ -349,9 +350,10 @@ model MetaCampaign {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
-  store        Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  metaAccount  MetaAccount      @relation(fields: [metaAccountId], references: [id], onDelete: Cascade)
-  spendDaily   MetaSpendDaily[]
+  store         Store                @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  metaAccount   MetaAccount          @relation(fields: [metaAccountId], references: [id], onDelete: Cascade)
+  spendDaily    MetaSpendDaily[]
+  attributions  OrderAttributionMeta[]
 
   @@unique([storeId, metaCampaignId])
   @@index([storeId])
@@ -374,5 +376,24 @@ model MetaSpendDaily {
 
   @@unique([metaCampaignId, date])
   @@index([storeId, date])
+  @@index([metaCampaignId])
+}
+
+// Attribution of Shopify orders to Meta campaigns via utm_campaign tracking
+model OrderAttributionMeta {
+  id              String   @id @default(cuid())
+  storeId         String
+  orderId         String   @unique
+  metaCampaignId  String
+  utmCampaign     String   // extracted from order source (utm_campaign parameter)
+  confidence      Float    @default(1.0) // 1.0 = exact match, 0.5-0.9 = fuzzy match
+  method          String   @default("utm_exact") // utm_exact, utm_fuzzy, etc.
+  createdAt       DateTime @default(now())
+
+  store    Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  order    Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  campaign MetaCampaign @relation(fields: [metaCampaignId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
   @@index([metaCampaignId])
 }
