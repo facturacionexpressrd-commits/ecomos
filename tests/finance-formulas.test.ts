@@ -9,6 +9,10 @@ import {
   adPaybackPeriodDays,
   variantContribution,
   variantContributionMargin,
+  metaRevenueRoas,
+  metaContributionRoas,
+  metaCpa,
+  metaProfitabilityIndex,
 } from "../src/lib/finance/formulas";
 
 describe("Finance Formulas", () => {
@@ -286,6 +290,89 @@ describe("Finance Formulas", () => {
       // revenue = 50 * 10 = 500
       // margin = -100 / 500 * 100 = -20%
       expect(margin).toBe(-20);
+    });
+  });
+
+  // ===== META ADS FORMULAS =====
+
+  describe("Meta Ads Formulas", () => {
+    describe("metaRevenueRoas", () => {
+      it("calculates revenue per dollar spent", () => {
+        const roas = metaRevenueRoas(5000, 1000);
+        expect(roas).toBe(5); // $5 revenue per $1 spent
+      });
+
+      it("returns 0 if ad spend is 0", () => {
+        const roas = metaRevenueRoas(5000, 0);
+        expect(roas).toBe(0);
+      });
+
+      it("handles low ROAS", () => {
+        const roas = metaRevenueRoas(1200, 1000);
+        expect(roas).toBe(1.2); // Only $1.20 back per $1 spent
+      });
+    });
+
+    describe("metaContributionRoas", () => {
+      it("calculates true profitability ROAS", () => {
+        const roas = metaContributionRoas(1000, 500);
+        expect(roas).toBe(2); // $2 profit per $1 spent
+      });
+
+      it("returns 0 if ad spend is 0", () => {
+        const roas = metaContributionRoas(1000, 0);
+        expect(roas).toBe(0);
+      });
+
+      it("returns negative ROAS if unprofitable", () => {
+        const roas = metaContributionRoas(-500, 1000);
+        expect(roas).toBe(-0.5); // Losing money
+      });
+
+      it("identifies break-even (ROAS = 1)", () => {
+        const roas = metaContributionRoas(1000, 1000);
+        expect(roas).toBe(1); // Break-even
+      });
+    });
+
+    describe("metaCpa", () => {
+      it("calculates cost per action", () => {
+        const cpa = metaCpa(1000, 100);
+        expect(cpa).toBe(10); // $10 per order
+      });
+
+      it("returns 0 if no conversions", () => {
+        const cpa = metaCpa(1000, 0);
+        expect(cpa).toBe(0);
+      });
+
+      it("handles fractional conversions", () => {
+        const cpa = metaCpa(500, 50);
+        expect(cpa).toBe(10); // $10 per order
+      });
+    });
+
+    describe("metaProfitabilityIndex", () => {
+      it("shows profit per dollar spent", () => {
+        const pi = metaProfitabilityIndex(1500, 1000);
+        // ROAS = 1.5, PI = 0.5 (gain $0.50 per $1)
+        expect(pi).toBe(0.5);
+      });
+
+      it("returns 0 at break-even", () => {
+        const pi = metaProfitabilityIndex(1000, 1000);
+        expect(pi).toBe(0); // ROAS 1.0 = break-even
+      });
+
+      it("returns negative at loss", () => {
+        const pi = metaProfitabilityIndex(500, 1000);
+        expect(pi).toBe(-0.5); // Losing $0.50 per $1 spent
+      });
+
+      it("returns 0 if ad spend is 0", () => {
+        const pi = metaProfitabilityIndex(1000, 0);
+        expect(pi).toBe(0);
+      });
     });
   });
 });

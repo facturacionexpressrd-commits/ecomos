@@ -204,3 +204,66 @@ export function variantContributionMargin(
   const contrib = variantContribution(price, cost, quantity, paymentFeesPercentage);
   return (contrib / totalRevenue) * 100;
 }
+
+// ===== META ADS SPECIFIC ROAS =====
+
+/**
+ * Meta Revenue ROAS = Total Revenue from Attribution / Ad Spend
+ * Label: "Meta Revenue ROAS"
+ *
+ * Interpretation:
+ * - For every $1 spent on Meta ads, you get back $X in gross revenue.
+ * - ROAS = 1.5 means $1.50 revenue per $1 spent.
+ * - This does NOT account for costs (COGS, fees).
+ *
+ * Edge case: if ad spend is 0, ROAS is 0
+ */
+export function metaRevenueRoas(attributedRevenue: number, adSpend: number = 0): number {
+  if (adSpend === 0) return 0;
+  return attributedRevenue / adSpend;
+}
+
+/**
+ * Meta Contribution ROAS = Contribution Profit from Attribution / Ad Spend
+ * Label: "Meta Contribution ROAS"
+ *
+ * Interpretation:
+ * - For every $1 spent on Meta ads, you get back $X in contribution profit (after COGS & fees).
+ * - ROAS > 1.0 means profitable.
+ * - ROAS < 1.0 means losing money on this campaign.
+ *
+ * This is the TRUE profitability metric for Meta spend.
+ */
+export function metaContributionRoas(attributedProfit: number, adSpend: number = 0): number {
+  if (adSpend === 0) return 0;
+  return attributedProfit / adSpend;
+}
+
+/**
+ * Meta CPA (Cost Per Action) = Ad Spend / Conversions
+ * Label: "Meta CPA"
+ *
+ * Interpretation:
+ * - What you spent per conversion (order, signup, etc.)
+ * - Compare to "Max Sustainable CPA" to see if profitable
+ */
+export function metaCpa(adSpend: number, conversions: number): number {
+  if (conversions === 0) return 0;
+  return adSpend / conversions;
+}
+
+/**
+ * Meta Profitability Index = Contribution ROAS - 1.0
+ * Label: "Meta Profitability Index"
+ *
+ * Interpretation:
+ * - Positive: profitable (you gain this much per $1 spent)
+ * - 0: break-even
+ * - Negative: losing money
+ *
+ * Example: ROAS 1.5 → PI = 0.5 (gain $0.50 per $1 spent)
+ */
+export function metaProfitabilityIndex(attributedProfit: number, adSpend: number = 0): number {
+  if (adSpend === 0) return 0;
+  return metaContributionRoas(attributedProfit, adSpend) - 1.0;
+}

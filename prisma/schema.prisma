@@ -81,6 +81,10 @@ model Store {
   costAllocations    CostAllocation[]
   dailyFinancials    DailyFinancialMetric[]
 
+  metaAccounts       MetaAccount[]
+  metaCampaigns      MetaCampaign[]
+  metaSpendDaily     MetaSpendDaily[]
+
   @@index([organizationId])
 }
 
@@ -299,4 +303,76 @@ model DailyFinancialMetric {
 
   @@unique([storeId, date])
   @@index([storeId, date])
+}
+
+// ---------- Phase 2: Meta Ads Integration ----------
+
+model MetaAccount {
+  id                  String   @id @default(cuid())
+  storeId             String
+  metaBusinessId      String   @unique
+  metaAccountId       String   @unique
+  accessTokenEncrypted String  // encrypted OAuth token
+  scope               String   // granted permissions (ads_read, etc.)
+  status              MetaStatus @default(connected)
+  lastSyncedAt        DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  store         Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  campaigns     MetaCampaign[]
+  spendDaily    MetaSpendDaily[]
+
+  @@index([storeId])
+}
+
+enum MetaStatus {
+  connected
+  disconnected
+  expired
+  error
+}
+
+model MetaCampaign {
+  id            String   @id @default(cuid())
+  storeId       String
+  metaAccountId String
+  metaCampaignId String  // Meta's campaign ID
+  name          String
+  status        String   // ACTIVE, PAUSED, DELETED, etc.
+  objective     String   // LINK_CLICKS, CONVERSIONS, etc.
+  totalSpend    Decimal  @db.Decimal(12, 2) @default(0)
+  impressions   Int      @default(0)
+  clicks        Int      @default(0)
+  conversions   Int      @default(0)
+  syncedAt      DateTime?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  store        Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  metaAccount  MetaAccount      @relation(fields: [metaAccountId], references: [id], onDelete: Cascade)
+  spendDaily   MetaSpendDaily[]
+
+  @@unique([storeId, metaCampaignId])
+  @@index([storeId])
+  @@index([metaAccountId])
+}
+
+model MetaSpendDaily {
+  id              String   @id @default(cuid())
+  storeId         String
+  metaCampaignId  String
+  date            DateTime @db.Date
+  spend           Decimal  @db.Decimal(12, 2)
+  impressions     Int      @default(0)
+  clicks          Int      @default(0)
+  conversions     Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  store        Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  campaign     MetaCampaign @relation(fields: [metaCampaignId], references: [id], onDelete: Cascade)
+
+  @@unique([metaCampaignId, date])
+  @@index([storeId, date])
+  @@index([metaCampaignId])
 }

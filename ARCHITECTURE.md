@@ -113,6 +113,47 @@ Stubbed in schema but logic deferred:
 - Meta ads, suppliers, AI, creative studio, research, approval workflows
 - Finance logic beyond raw Shopify sync
 
+## Phase 2: Meta Ads Integration
+
+**Goal:** Connect Meta (Facebook/Instagram) ad accounts, track spend per campaign, calculate true ROAS (revenue vs. contribution profit).
+
+**Meta Entities:**
+- **MetaAccount** — Meta Business account connection (OAuth token)
+- **MetaCampaign** — Ad campaign metadata + spend totals
+- **MetaAdSet** — Ad set within campaign
+- **MetaSpendDaily** — Daily ad spend rollup by campaign
+- **OrderAttributionMetaad** — Link orders to Meta campaigns (heuristic: first-touch UTM param)
+
+**Meta OAuth Flow:**
+1. User clicks "Connect Meta Account"
+2. OAuth to Meta, request `ads_read` scope
+3. Store encrypted token in MetaAccount
+4. Fetch business account ID, campaigns list
+5. Start sync jobs
+
+**Sync Strategy:**
+- **Campaigns:** Every 4 hours (fetch latest spend, results)
+- **Daily Spend:** Every 24 hours (archive daily snapshots)
+- **Attribution:** Per-order analysis (extract utm_campaign from Shopify order source, match to Meta campaign)
+
+**ROAS Calculations:**
+- **Revenue ROAS** = Total Revenue / Total Ad Spend
+- **Contribution ROAS** = Total Contribution Profit / Total Ad Spend
+- **Break-even spend** = Contribution Profit / (1 - target ROAS factor)
+
+**UI:**
+- Campaign list with spend, revenue, ROAS, margin
+- Campaign detail page showing daily spend trends
+- Attribution dashboard (% of orders from Meta)
+- Profitability alert: campaigns with ROAS < 1.0
+
+**Out of Scope (Phase 2):**
+- Multi-account aggregation
+- Conversion tracking pixels
+- Dynamic ads
+- Audience insights
+- Google Ads (Phase 3)
+
 ## Deployment
 
 **Dev:** `npm run dev` + `npx prisma studio`
