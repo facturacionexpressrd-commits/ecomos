@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
   },
+  // Allow HMR through the Cloudflare tunnel for local dev
+  allowedDevOrigins: ["speaking-atlantic-blowing-techrepublic.trycloudflare.com"],
 };
 
 export default nextConfig;
