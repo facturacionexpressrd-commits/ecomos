@@ -1,70 +1,250 @@
-# EcomOS — Database
+# EcomOS Database Schema
 
-Prisma schema lives at `prisma/schema.prisma`. This file explains the *why*
-behind it; read the schema itself for exact fields/types.
+## Core Tables
 
-## Tenancy shape
-
-```
-Organization
- ├─ User (id = Supabase auth uid)
- ├─ Role (name + capabilities: string[])
- ├─ Store (one Shopify connection each)
- │   ├─ UserStoreAccess (User × Store × Role)
- │   ├─ Product ── ProductVariant ── InventoryLevel
- │   ├─ Customer ── Order
- │   └─ WebhookEvent
- ├─ Invitation (email + Role + optional Store scope)
- └─ AuditLog
+### Organization
+```sql
+CREATE TABLE organizations (
+  id BIGSERIAL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  slug VARCHAR(255) UNIQUE NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
 ```
 
-Everything scopes to `Organization`, either directly or by hanging off a
-`Store` that belongs to one. There is no cross-organization foreign key
-anywhere — a query that joins through `Store`/`User` can't accidentally leak
-another org's rows as long as it filters by `organizationId` (or by a
-`storeId` the caller is already authorized for) at the top.
+### User
+```sql
+CREATE TABLE users (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email VARCHAR(255) UNIQUE NOT NULL,
+  full_name VARCHAR(255),
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+```
 
-## RBAC model: capabilities, not role names
+### Role (enum-like)
+```
+Owner, Admin, Manager, Analyst, Member
+```
 
-`Role.capabilities` is a flat `String[]` such as
-`["store:read", "store:sync", "orders:read"]`. Reasons:
+### OrganizationMember
+```sql
+CREATE TABLE organization_members (
+  id BIGSERIAL PRIMARY KEY,
+  organization_id BIGINT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  role VARCHAR(50) NOT NULL, -- Owner, Admin, Manager, Analyst, Member
+  joined_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(organization_id, user_id)
+);
+```
 
-- Adding a new permission (e.g. `inventory:write`) is a data change (add the
-  string to a role), not a schema migration or an enum edit.
-- `UserStoreAccess` is what's actually checked at request time — it's the
-  join of "this user has this role on this store." A user can hold different
-  roles on different stores in the same org (e.g. read-only on Store A,
-  full sync rights on Store B).
-- The pure-function check (`hasCapability`, see `src/lib/auth/capabilities.ts`)
-  takes the caller's `UserStoreAccess[]` (already scoped to their org) and a
-  target `storeId` + capability string, and returns a boolean. No DB access
-  inside the check itself — makes it trivial to unit test allowed / denied /
-  "store belongs to someone else" cases.
+### Store (Shopify connection)
+```sql
+CREATE TABLE stores (
+  id BIGSERIAL PRIMARY KEY,
+  organization_id BIGINT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  name VARCHAR(255) NOT NULL,
+  shopify_domain VARCHAR(255) UNIQUE NOT NULL, -- mystore.myshopify.com
+  shopify_access_token VARCHAR(255) NOT NULL, -- encrypted
+  shopify_api_version VARCHAR(50) NOT NULL, -- 2024-01
+  webhook_secret VARCHAR(255),
+  last_synced_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+```
 
-## Shopify sync tables
+### UserStoreAccess
+```sql
+CREATE TABLE user_store_access (
+  id BIGSERIAL PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  store_id BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id, store_id)
+);
+```
 
-- Every synced row is unique on `(storeId, shopifyGid)` — Shopify's GraphQL
-  IDs (`gid://shopify/Product/123`) are the natural external key, so re-sync
-  is a plain upsert, not an insert-then-reconcile.
-- Each table keeps a `raw Json` snapshot of the full Shopify object alongside
-  a handful of typed columns (`title`, `price`, `totalPrice`, `available`,
-  etc.) — the typed columns are only what the Phase 1 dashboard needs to
-  query/aggregate directly; `raw` is the escape hatch for anything a later
-  phase needs without a migration.
-- `Order.totalPrice` / `ProductVariant.price` are `Decimal(12,2)` — money is
-  never a float.
+### Product (from Shopify)
+```sql
+CREATE TABLE products (
+  id BIGSERIAL PRIMARY KEY,
+  store_id BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  shopify_id VARCHAR(255) NOT NULL,
+  title VARCHAR(255) NOT NULL,
+  handle VARCHAR(255),
+  body_html TEXT,
+  vendor VARCHAR(255),
+  product_type VARCHAR(255),
+  status VARCHAR(50), -- active, draft, archived
+  published_at TIMESTAMP,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(store_id, shopify_id)
+);
+```
 
-## Webhook idempotency
+### Variant
+```sql
+CREATE TABLE variants (
+  id BIGSERIAL PRIMARY KEY,
+  product_id BIGINT NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  shopify_id VARCHAR(255) NOT NULL,
+  title VARCHAR(255),
+  sku VARCHAR(255),
+  position INT,
+  price DECIMAL(10, 2),
+  cost DECIMAL(10, 2), -- manual entry for Phase 1+
+  weight DECIMAL(10, 2),
+  weight_unit VARCHAR(10),
+  inventory_qty INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(product_id, shopify_id)
+);
+```
 
-`WebhookEvent.shopifyWebhookId` has a **unique constraint**. The webhook
-route always tries to insert a `WebhookEvent` row first; if that insert
-violates uniqueness (Prisma `P2002`), the handler treats it as "already seen"
-and returns 200 without re-enqueueing the `processWebhook` job. This is the
-actual mechanism — the schema, not just application logic, is what prevents
-double-processing, so it holds even under concurrent duplicate deliveries.
+### InventoryLevel
+```sql
+CREATE TABLE inventory_levels (
+  id BIGSERIAL PRIMARY KEY,
+  variant_id BIGINT NOT NULL REFERENCES variants(id) ON DELETE CASCADE,
+  location_id VARCHAR(255), -- Shopify location ID
+  available INT DEFAULT 0,
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+```
 
-## Migrations
+### Customer (from Shopify)
+```sql
+CREATE TABLE customers (
+  id BIGSERIAL PRIMARY KEY,
+  store_id BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  shopify_id VARCHAR(255) NOT NULL,
+  email VARCHAR(255),
+  first_name VARCHAR(255),
+  last_name VARCHAR(255),
+  phone VARCHAR(20),
+  total_spent DECIMAL(12, 2),
+  order_count INT DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(store_id, shopify_id)
+);
+```
 
-Standard Prisma flow: `npx prisma migrate dev --name <change>` locally,
-`npx prisma migrate deploy` in CI/production. No manual SQL outside Prisma
-migrations unless Prisma can't express it (none needed yet).
+### Order (from Shopify)
+```sql
+CREATE TABLE orders (
+  id BIGSERIAL PRIMARY KEY,
+  store_id BIGINT NOT NULL REFERENCES stores(id) ON DELETE CASCADE,
+  customer_id BIGINT REFERENCES customers(id) ON DELETE SET NULL,
+  shopify_id VARCHAR(255) NOT NULL,
+  order_number INT,
+  email VARCHAR(255),
+  currency VARCHAR(3),
+  total_price DECIMAL(12, 2),
+  subtotal_price DECIMAL(12, 2),
+  total_tax DECIMAL(12, 2),
+  total_shipping DECIMAL(12, 2),
+  financial_status VARCHAR(50), -- authorized, pending, paid, refunded, voided, partially_refunded
+  fulfillment_status VARCHAR(50), -- fulfilled, partial, unconfirmed, in_progress, on_hold, scheduled, cancelled
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(store_id, shopify_id)
+);
+```
+
+### OrderLineItem
+```sql
+CREATE TABLE order_line_items (
+  id BIGSERIAL PRIMARY KEY,
+  order_id BIGINT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  variant_id BIGINT REFERENCES variants(id) ON DELETE SET NULL,
+  quantity INT NOT NULL,
+  price DECIMAL(10, 2),
+  title VARCHAR(255)
+);
+```
+
+### AuditLog (immutable)
+```sql
+CREATE TABLE audit_logs (
+  id BIGSERIAL PRIMARY KEY,
+  organization_id BIGINT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  store_id BIGINT REFERENCES stores(id) ON DELETE SET NULL,
+  action VARCHAR(255) NOT NULL, -- store_connected, product_synced, order_synced, user_invited, etc.
+  resource_type VARCHAR(255), -- Store, Product, Order, User
+  resource_id VARCHAR(255),
+  metadata JSONB,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+CREATE INDEX idx_audit_logs_organization ON audit_logs(organization_id);
+CREATE INDEX idx_audit_logs_store ON audit_logs(store_id);
+```
+
+## Financial Tables (Phase 1.5+, stubbed)
+
+```sql
+CREATE TABLE financial_transactions (
+  id BIGSERIAL PRIMARY KEY,
+  store_id BIGINT NOT NULL REFERENCES stores(id),
+  order_id BIGINT REFERENCES orders(id),
+  type VARCHAR(50), -- sale, refund, fee, adjustment
+  amount DECIMAL(12, 2),
+  currency VARCHAR(3),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE cost_allocations (
+  id BIGSERIAL PRIMARY KEY,
+  variant_id BIGINT NOT NULL REFERENCES variants(id),
+  cost_type VARCHAR(50), -- cogs, packaging, shipping
+  amount DECIMAL(10, 2),
+  notes TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE daily_financial_metrics (
+  id BIGSERIAL PRIMARY KEY,
+  store_id BIGINT NOT NULL REFERENCES stores(id),
+  date DATE NOT NULL,
+  gross_revenue DECIMAL(12, 2),
+  refunds DECIMAL(12, 2),
+  cogs DECIMAL(12, 2),
+  fees DECIMAL(12, 2),
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(store_id, date)
+);
+```
+
+## Indexes for Performance
+
+```sql
+CREATE INDEX idx_products_store ON products(store_id);
+CREATE INDEX idx_variants_product ON variants(product_id);
+CREATE INDEX idx_orders_store ON orders(store_id);
+CREATE INDEX idx_orders_customer ON orders(customer_id);
+CREATE INDEX idx_orders_created ON orders(created_at DESC);
+CREATE INDEX idx_customers_store ON customers(store_id);
+CREATE INDEX idx_user_store_access_user ON user_store_access(user_id);
+CREATE INDEX idx_user_store_access_store ON user_store_access(store_id);
+CREATE INDEX idx_organization_members_user ON organization_members(user_id);
+CREATE INDEX idx_organization_members_org ON organization_members(organization_id);
+```
+
+## Row-Level Security (RLS) Rules
+
+**Principle:** Users can only see data for stores they have access to.
+
+```sql
+-- On products, variants, orders, customers, inventory_levels:
+-- Users see rows where store_id IN (user's accessible stores)
+```
+
+Implementation handled by application-level queries (Prisma filters) in Phase 0.
+RLS policies added in Phase 2 as secondary guard.

@@ -1,82 +1,200 @@
-# EcomOS — Integrations
+# EcomOS Integrations & APIs
 
-## Shopify (Phase 1 — implemented)
+## Shopify GraphQL Admin API
 
-**Auth**: standard OAuth 2.0 authorization code grant.
+**Base URL:** `https://{shop}.myshopify.com/admin/api/{version}/graphql.json`
 
-1. `GET /api/shopify/install?shop=<shop>.myshopify.com` — builds the Shopify
-   authorize URL with `client_id`, requested `scope`, `redirect_uri`, and a
-   signed `state` param (HMAC over a random nonce + org id, so the callback
-   can't be forged or replayed against the wrong org). Redirects the browser
-   to Shopify.
-2. `GET /api/shopify/callback?code=...&shop=...&state=...&hmac=...` —
-   verifies Shopify's `hmac` query param against the full query string,
-   verifies our own `state`, exchanges `code` for an access token
-   (`POST https://<shop>/admin/oauth/access_token`), encrypts the token, and
-   upserts the `Store` row (`status: connected`, `connectedAt: now()`).
-   Enqueues an initial `syncStore` job.
+**Authentication:**
+- Custom App access token in Authorization header
+- Token stored encrypted in `stores.shopify_access_token`
 
-**API used**: Shopify GraphQL Admin API (`/admin/api/<version>/graphql.json`),
-not REST — REST is legacy for new integrations. API version is pinned in
-`src/lib/shopify/client.ts` (`SHOPIFY_API_VERSION` constant) and bumped
-deliberately, not left on `unstable`/`latest`.
+**Required Scopes:**
+- `write_products`, `read_products`
+- `write_orders`, `read_orders`
+- `write_inventory`, `read_inventory`
+- `write_customers`, `read_customers`
+- `write_webhooks`, `read_webhooks`
 
-**Sync** (`src/lib/shopify/sync.ts`): paginated GraphQL queries
-(`products`, `orders`, `customers`) using cursor-based pagination
-(`first` / `after` / `pageInfo.hasNextPage`), plus a per-variant
-`inventoryLevels` query. Each page's results are upserted immediately
-(not buffered for the whole sync) so a crash mid-sync loses at most one
-page of progress, not the whole run.
+### Sync Operations
 
-**Webhooks** (`src/app/api/shopify/webhooks/[topic]/route.ts`):
-registered topics for this phase: `products/update`, `orders/create`,
-`orders/updated`, `customers/update`, `inventory_levels/update`.
-Every request:
-1. Read the raw body (required — HMAC is computed over raw bytes, not
-   parsed JSON).
-2. Verify `X-Shopify-Hmac-Sha256` using the app's webhook secret
-   (`SHOPIFY_WEBHOOK_SECRET`). Reject with 401 on mismatch.
-3. Insert a `WebhookEvent` keyed on `X-Shopify-Webhook-Id`. Unique
-   constraint violation → already processed → return 200, no-op.
-4. Enqueue `processWebhook` with the topic + store id + parsed payload.
-   Return 200 immediately — Shopify expects a fast response and retries
-   on timeout, which is exactly what the idempotency check protects
-   against.
+#### Products & Variants Sync
+```graphql
+query SyncProducts($first: Int, $after: String) {
+  products(first: $first, after: $after, sortKey: UPDATED_AT) {
+    edges {
+      node {
+        id
+        title
+        handle
+        bodyHtml
+        vendor
+        productType
+        status
+        publishedAt
+        variants(first: 250) {
+          edges {
+            node {
+              id
+              title
+              sku
+              price
+              weight
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
 
-**Required env vars** (see `.env.example`):
-`SHOPIFY_API_KEY`, `SHOPIFY_API_SECRET`, `SHOPIFY_WEBHOOK_SECRET`,
-`SHOPIFY_APP_URL` (base URL used to build `redirect_uri`),
-`SHOPIFY_SCOPES` (comma-separated, e.g.
-`read_products,read_orders,read_customers,read_inventory`).
+#### Orders Sync
+```graphql
+query SyncOrders($first: Int, $after: String) {
+  orders(first: $first, after: $after, sortKey: UPDATED_AT) {
+    edges {
+      node {
+        id
+        orderNumber
+        email
+        currencyCode
+        totalPriceSet { shopMoney { amount } }
+        subtotalPriceSet { shopMoney { amount } }
+        totalTaxSet { shopMoney { amount } }
+        totalShippingPriceSet { shopMoney { amount } }
+        financialStatus
+        fulfillmentStatus
+        customer { id email }
+        lineItems(first: 250) {
+          edges {
+            node {
+              id
+              quantity
+              originalUnitPriceSet { shopMoney { amount } }
+              variant { id sku }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+```
 
-**Setting up a real dev store to test against** (do this once, outside this
-session):
-1. Create a Shopify Partner account → create a development store.
-2. Create a custom app (or Partner app) with the scopes above, note the
-   API key/secret.
-3. Fill in `.env` with those values + a public/tunnel `SHOPIFY_APP_URL`
-   (Shopify requires HTTPS for OAuth redirect + webhooks — use `ngrok` or
-   similar for local dev).
-4. Visit `/api/shopify/install?shop=<your-dev-store>.myshopify.com` to
-   connect.
+#### Inventory Levels
+```graphql
+query InventoryLevels($first: Int, $after: String) {
+  inventoryLevels(first: $first, after: $after) {
+    edges {
+      node {
+        id
+        available
+        location { id }
+        item { variant { id } }
+      }
+    }
+  }
+}
+```
 
-## Supabase (Phase 0 — implemented)
+## Webhook Events
 
-Used for two things only: **Postgres** (via `DATABASE_URL`, consumed by
-Prisma) and **Auth** (via `@supabase/ssr`, consumed by `src/lib/supabase/*`).
-No other Supabase feature (Storage, Realtime, Edge Functions) is used in
-this phase.
+**Endpoint:** `POST /api/webhooks/shopify`
 
-**Required env vars**: `DATABASE_URL`, `NEXT_PUBLIC_SUPABASE_URL`,
-`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (server-only,
-used for admin actions like creating a user record on invite acceptance).
+**Signature Verification:**
+1. Extract `X-Shopify-Hmac-SHA256` header
+2. Compute HMAC-SHA256 of raw body with store webhook secret
+3. Base64-encode and compare to header value
 
-**Setup** (outside this session): create a free Supabase project, copy the
-project URL + anon key + service role key + the Postgres connection string
-into `.env`.
+### Subscribed Topics
 
-## Deferred (not built, per brief)
+| Topic | Action |
+|-------|--------|
+| `products/update` | Sync product/variants to DB |
+| `products/delete` | Mark product as deleted |
+| `orders/create` | Sync new order + customer |
+| `orders/updated` | Update order status + financials |
+| `inventory_levels/update` | Update stock in DB |
 
-Meta Ads, supplier APIs, AI providers: no client code, no env vars, no
-tables. When one of these is scoped for a later phase, it gets its own
-section here.
+**Example Webhook Payload:**
+```json
+{
+  "id": 12345,
+  "product_id": 67890,
+  "created_at": "2024-01-01T12:00:00Z",
+  "updated_at": "2024-01-02T12:00:00Z",
+  "title": "Blue Widget"
+}
+```
+
+## Supabase Auth Integration
+
+**Endpoints:**
+- Sign up: `https://{project}.supabase.co/auth/v1/signup`
+- Login: `https://{project}.supabase.co/auth/v1/token?grant_type=password`
+- Session verification: via JWT in httpOnly cookie
+
+**OAuth Providers:**
+- Google (optional, Phase 1+)
+
+**Session Management:**
+- JWT stored in httpOnly cookie (`session`)
+- Refresh token stored securely
+- Session validation on every API request
+
+## Background Job Scheduling
+
+**Service:** Supabase pg_cron (or Vercel Crons in production)
+
+**Scheduled Tasks:**
+
+| Job | Schedule | Action |
+|-----|----------|--------|
+| sync_products | 02:00 UTC daily | Full product sync from Shopify |
+| sync_orders | Every 4 hours | Fetch new/updated orders |
+| sync_inventory | Every 1 hour | Reconcile inventory levels |
+
+**Job Result Tracking:**
+- Success/failure logged to AuditLog
+- Retry logic: 3 attempts with exponential backoff
+- Alerts on repeated failures (stub for Phase 2)
+
+## API Response Format
+
+**Success:**
+```json
+{
+  "ok": true,
+  "data": { /* response */ }
+}
+```
+
+**Error:**
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "UNAUTHORIZED",
+    "message": "User does not have access to this store"
+  }
+}
+```
+
+## Rate Limits
+
+**Shopify GraphQL API:**
+- 2000 points per minute (burst: 100 points)
+- Mutation-heavy operations deplete faster
+- Backoff: wait until X-Shopify-Graphql-Resource-Consumed header reaches <1000
+
+**Application:**
+- 100 requests/minute per user per store (Phase 2+)
+- Webhook delivery: best-effort, retry up to 5 times over 48 hours
+
+## Data Encryption
+
+**Sensitive Fields:**
+- `stores.shopify_access_token` — encrypted with Supabase vault or application-level AES-256
+- `users.password` — handled by Supabase Auth (bcrypt)
+
+**Implementation:** Use Prisma middlewares or Supabase vault feature for token encryption.
