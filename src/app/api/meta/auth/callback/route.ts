@@ -94,6 +94,16 @@ export async function GET(req: NextRequest) {
 
     const business = businesses[0]; // Use first business for now (Phase 2)
 
+    // metaAccountId must hold an ad account, not the business — every
+    // Marketing API call for campaigns/insights is scoped to act_<id>.
+    // Multi-account selection is Phase 3; first account for now.
+    const adAccounts = await metaClient.getAdAccounts(business.id, accessToken);
+    if (adAccounts.length === 0) {
+      return redirectTo(req, `/dashboard?meta_auth_error=no_ad_accounts`);
+    }
+
+    const adAccount = adAccounts[0];
+
     // Encrypt token for storage
     const encryptionKey = process.env.TOKEN_ENCRYPTION_KEY;
     if (!encryptionKey) {
@@ -108,6 +118,7 @@ export async function GET(req: NextRequest) {
       where: { metaBusinessId: business.id },
       update: {
         storeId,
+        metaAccountId: adAccount.id,
         accessTokenEncrypted: encryptedToken,
         scope: "ads_read",
         status: "connected",
@@ -115,7 +126,7 @@ export async function GET(req: NextRequest) {
       create: {
         storeId,
         metaBusinessId: business.id,
-        metaAccountId: business.id, // Will be updated after user selects ad account
+        metaAccountId: adAccount.id,
         accessTokenEncrypted: encryptedToken,
         scope: "ads_read",
         status: "connected",
@@ -131,6 +142,7 @@ export async function GET(req: NextRequest) {
         action: "meta_account_connected",
         metadata: {
           metaBusinessId: business.id,
+          metaAdAccountId: adAccount.id,
           metaAccountId: metaAccount.id,
         },
       },

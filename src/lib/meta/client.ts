@@ -31,6 +31,21 @@ export interface MetaAdAccount {
   account_status: number;
 }
 
+export interface MetaCampaignSummary {
+  id: string;
+  name: string;
+  status: string;
+  objective: string;
+}
+
+/**
+ * Marketing API addresses ad accounts as `act_<id>`. The adaccounts edge
+ * already returns ids in that form, so only add the prefix when missing.
+ */
+export function withActPrefix(adAccountId: string): string {
+  return adAccountId.startsWith("act_") ? adAccountId : `act_${adAccountId}`;
+}
+
 export class MetaClient {
   private config: MetaOAuthConfig;
 
@@ -107,12 +122,13 @@ export class MetaClient {
     businessId: string,
     accessToken: string
   ): Promise<MetaAdAccount[]> {
+    const fields = "id,name,business_name,account_status";
     const response = await fetch(
-      `${META_GRAPH_API_BASE}/${businessId}/adaccounts?access_token=${accessToken}`
+      `${META_GRAPH_API_BASE}/${businessId}/adaccounts?fields=${fields}&access_token=${accessToken}`
     );
 
     if (!response.ok) {
-      throw new Error("Failed to fetch Meta ad accounts");
+      throw new Error(`Failed to fetch Meta ad accounts: ${await response.text()}`);
     }
 
     const data = (await response.json()) as { data: MetaAdAccount[] };
@@ -120,40 +136,25 @@ export class MetaClient {
   }
 
   /**
-   * Get campaigns for an ad account
+   * Get campaigns for an ad account.
+   *
+   * Returns metadata only. spend/impressions/actions are *insights* fields and
+   * are rejected on the /campaigns edge — read them from getCampaignInsights.
    */
   async getCampaigns(
     adAccountId: string,
     accessToken: string
-  ): Promise<Array<{
-    id: string;
-    name: string;
-    status: string;
-    objective: string;
-    spend: string;
-    impressions: string;
-    actions: Array<{ action_type: string; value: string }>;
-  }>> {
-    const fields = "id,name,status,objective,spend,impressions,actions";
+  ): Promise<MetaCampaignSummary[]> {
+    const fields = "id,name,status,objective";
     const response = await fetch(
-      `${META_GRAPH_API_BASE}/${adAccountId}/campaigns?fields=${fields}&access_token=${accessToken}`
+      `${META_GRAPH_API_BASE}/${withActPrefix(adAccountId)}/campaigns?fields=${fields}&access_token=${accessToken}`
     );
 
     if (!response.ok) {
-      throw new Error("Failed to fetch Meta campaigns");
+      throw new Error(`Failed to fetch Meta campaigns: ${await response.text()}`);
     }
 
-    const data = (await response.json()) as {
-      data: Array<{
-        id: string;
-        name: string;
-        status: string;
-        objective: string;
-        spend: string;
-        impressions: string;
-        actions: Array<{ action_type: string; value: string }>;
-      }>;
-    };
+    const data = (await response.json()) as { data: MetaCampaignSummary[] };
     return data.data;
   }
 

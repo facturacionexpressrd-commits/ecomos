@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { rollupDailyMetaSpend } from "@/lib/meta/rollup";
-import { AuditLog } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 
 /**
  * POST /api/meta/rollup
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
             organizationId: await getOrgForStore(store.id),
             storeId: store.id,
             action: "meta_spend_rollup_completed",
-            metadata: rollupResult,
+            metadata: rollupResult as unknown as Prisma.InputJsonObject,
           },
         });
       } catch (err) {

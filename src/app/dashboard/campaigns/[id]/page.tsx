@@ -36,7 +36,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
   }
 
   // Verify user has access to this store
-  const access = await prisma.storeAccess.findFirst({
+  const access = await prisma.userStoreAccess.findFirst({
     where: {
       userId: user.id,
       storeId: campaign.storeId,

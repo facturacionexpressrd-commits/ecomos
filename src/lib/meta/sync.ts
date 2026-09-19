@@ -16,6 +16,47 @@ export interface SyncResult {
   errors: string[];
 }
 
+const SPEND_WINDOW_DAYS = 30;
+
+export interface CampaignInsight {
+  date_start: string;
+  date_stop: string;
+  spend: string;
+  impressions: string;
+  actions: Array<{ action_type: string; value: string }>;
+}
+
+function num(value: string | undefined): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+/** One insights row → the numbers a MetaSpendDaily row stores. */
+export function perDay(insight: CampaignInsight) {
+  return {
+    date: new Date(insight.date_start),
+    spend: num(insight.spend),
+    impressions: Math.trunc(num(insight.impressions)),
+    conversions: Math.trunc(
+      num(insight.actions?.find((a) => a.action_type === "purchase")?.value)
+    ),
+  };
+}
+
+export function sumInsights(insights: CampaignInsight[]) {
+  return insights.reduce(
+    (acc, insight) => {
+      const day = perDay(insight);
+      return {
+        spend: acc.spend + day.spend,
+        impressions: acc.impressions + day.impressions,
+        conversions: acc.conversions + day.conversions,
+      };
+    },
+    { spend: 0, impressions: 0, conversions: 0 }
+  );
+}
+
 /**
  * Sync campaigns for a single Meta account
  */
@@ -59,121 +100,111 @@ export async function syncMetaAccount(metaAccountId: string): Promise<SyncResult
 
     console.log(`[Meta Sync] Found ${campaigns.length} campaigns for account ${metaAccountId}`);
 
+    // Insights window. totalSpend/impressions/conversions are the rolling sum
+    // over this window, not lifetime — the campaigns edge exposes no totals.
+    const today = new Date();
+    const thirtyDaysAgo = new Date(today.getTime() - SPEND_WINDOW_DAYS * 24 * 60 * 60 * 1000);
+    const dateStart = thirtyDaysAgo.toISOString().split("T")[0];
+    const dateStop = today.toISOString().split("T")[0];
+
     // Process each campaign
     for (const campaign of campaigns) {
       try {
-        // Parse spend and metrics
-        const spend = parseFloat(campaign.spend || "0");
-        const impressions = parseInt(campaign.impressions || "0");
-        const conversions = campaign.actions
-          ?.find((a) => a.action_type === "purchase")
-          ?.value || "0";
-
-        // Upsert campaign
-        const existing = await prisma.metaCampaign.findFirst({
-          where: {
-            storeId: metaAccount.storeId,
-            metaCampaignId: campaign.id,
-          },
-        });
-
-        if (existing) {
-          await prisma.metaCampaign.update({
-            where: { id: existing.id },
-            data: {
-              name: campaign.name,
-              status: campaign.status,
-              objective: campaign.objective,
-              totalSpend: spend,
-              impressions,
-              conversions: parseInt(conversions),
-              syncedAt: new Date(),
-            },
-          });
-          result.campaignsUpdated++;
-        } else {
-          await prisma.metaCampaign.create({
-            data: {
-              storeId: metaAccount.storeId,
-              metaAccountId: metaAccount.id,
-              metaCampaignId: campaign.id,
-              name: campaign.name,
-              status: campaign.status,
-              objective: campaign.objective,
-              totalSpend: spend,
-              impressions,
-              conversions: parseInt(conversions),
-              syncedAt: new Date(),
-            },
-          });
-          result.campaignsCreated++;
-        }
-
-        // Fetch and store daily insights (last 30 days)
-        const today = new Date();
-        const thirtyDaysAgo = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
-
-        const dateStart = thirtyDaysAgo.toISOString().split("T")[0];
-        const dateStop = today.toISOString().split("T")[0];
+        // Insights first — the campaign row's totals are derived from them.
+        let insights: CampaignInsight[] = [];
+        let insightsOk = true;
 
         try {
-          const insights = await metaClient.getCampaignInsights(
+          insights = await metaClient.getCampaignInsights(
             campaign.id,
             accessToken,
             dateStart,
             dateStop
           );
-
-          for (const insight of insights) {
-            const spendValue = parseFloat(insight.spend || "0");
-            const impressionsValue = parseInt(insight.impressions || "0");
-            const conversionsValue = insight.actions
-              ?.find((a) => a.action_type === "purchase")
-              ?.value || "0";
-
-            // Upsert daily spend
-            await prisma.metaSpendDaily.upsert({
-              where: {
-                metaCampaignId_date: {
-                  metaCampaignId: existing?.id || (await prisma.metaCampaign.findUniqueOrThrow({
-                    where: {
-                      storeId_metaCampaignId: {
-                        storeId: metaAccount.storeId,
-                        metaCampaignId: campaign.id,
-                      },
-                    },
-                  })).id,
-                  date: new Date(insight.date_start),
-                },
-              },
-              update: {
-                spend: spendValue,
-                impressions: impressionsValue,
-                conversions: parseInt(conversionsValue),
-              },
-              create: {
-                storeId: metaAccount.storeId,
-                metaCampaignId: existing?.id || (await prisma.metaCampaign.findUniqueOrThrow({
-                  where: {
-                    storeId_metaCampaignId: {
-                      storeId: metaAccount.storeId,
-                      metaCampaignId: campaign.id,
-                    },
-                  },
-                })).id,
-                date: new Date(insight.date_start),
-                spend: spendValue,
-                impressions: impressionsValue,
-                conversions: parseInt(conversionsValue),
-              },
-            });
-
-            result.spendDataPoints++;
-          }
         } catch (error) {
+          insightsOk = false;
           const msg = error instanceof Error ? error.message : String(error);
           result.errors.push(`Failed to fetch insights for campaign ${campaign.id}: ${msg}`);
           console.error(`[Meta Sync] Error fetching insights for ${campaign.id}:`, error);
+        }
+
+        const totals = sumInsights(insights);
+
+        const existing = await prisma.metaCampaign.findUnique({
+          where: {
+            storeId_metaCampaignId: {
+              storeId: metaAccount.storeId,
+              metaCampaignId: campaign.id,
+            },
+          },
+          select: { id: true },
+        });
+
+        const metadata = {
+          name: campaign.name,
+          status: campaign.status,
+          objective: campaign.objective,
+          syncedAt: new Date(),
+        };
+
+        // On an insights failure keep the previously stored totals rather than
+        // zeroing them — a transient API error shouldn't erase real spend.
+        const derivedTotals = insightsOk
+          ? {
+              totalSpend: totals.spend,
+              impressions: totals.impressions,
+              conversions: totals.conversions,
+            }
+          : {};
+
+        const stored = await prisma.metaCampaign.upsert({
+          where: {
+            storeId_metaCampaignId: {
+              storeId: metaAccount.storeId,
+              metaCampaignId: campaign.id,
+            },
+          },
+          update: { ...metadata, ...derivedTotals },
+          create: {
+            storeId: metaAccount.storeId,
+            metaAccountId: metaAccount.id,
+            metaCampaignId: campaign.id,
+            ...metadata,
+            ...derivedTotals,
+          },
+          select: { id: true },
+        });
+
+        if (existing) result.campaignsUpdated++;
+        else result.campaignsCreated++;
+
+        // Store the daily rows behind those totals
+        for (const insight of insights) {
+          const day = perDay(insight);
+
+          await prisma.metaSpendDaily.upsert({
+            where: {
+              metaCampaignId_date: {
+                metaCampaignId: stored.id,
+                date: day.date,
+              },
+            },
+            update: {
+              spend: day.spend,
+              impressions: day.impressions,
+              conversions: day.conversions,
+            },
+            create: {
+              storeId: metaAccount.storeId,
+              metaCampaignId: stored.id,
+              date: day.date,
+              spend: day.spend,
+              impressions: day.impressions,
+              conversions: day.conversions,
+            },
+          });
+
+          result.spendDataPoints++;
         }
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);

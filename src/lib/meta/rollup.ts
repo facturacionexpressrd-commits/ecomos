@@ -1,5 +1,4 @@
 import { prisma } from "@/lib/db";
-import { Decimal } from "@prisma/client/runtime/library";
 
 /**
  * Aggregate daily Meta ad spend into store-level financial metrics.
@@ -49,14 +48,16 @@ export async function rollupDailyMetaSpend(storeId: string): Promise<RollupResul
 }
 
 async function rollupDayForStore(storeId: string, date: Date): Promise<void> {
-  // Get total Meta spend for this date
+  // Get total Meta spend for this date.
+  // These three must stay in ONE _sum: a second _sum key silently replaces the
+  // first, which previously dropped `spend` and pinned every ROAS to 0.
   const spendAgg = await prisma.metaSpendDaily.aggregate({
     where: {
       storeId,
       date,
     },
-    _sum: { spend: true },
     _sum: {
+      spend: true,
       impressions: true,
       conversions: true,
     },
@@ -88,10 +89,10 @@ async function rollupDayForStore(storeId: string, date: Date): Promise<void> {
       data: {
         storeId,
         date,
-        grossRevenue: new Decimal(dayRevenue),
-        cogs: new Decimal(dayCogs),
-        fees: new Decimal(fees),
-        contributionProfit: new Decimal(contributionProfit),
+        grossRevenue: dayRevenue,
+        cogs: dayCogs,
+        fees,
+        contributionProfit,
       },
     });
   }

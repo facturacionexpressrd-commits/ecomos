@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import { attributeOrders } from "@/lib/meta/attribution";
 import { prisma } from "@/lib/db";
+import { Prisma } from "@prisma/client";
 
 /**
  * POST /api/campaigns/attribute
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
     }
 
     const grants = await loadStoreAccessGrants(user.id);
-    if (!hasCapability(grants, storeId, CAPABILITIES.storeWrite)) {
+    if (!hasCapability(grants, storeId, CAPABILITIES.storeSync)) {
       return NextResponse.json({ error: "No write access to this store" }, { status: 403 });
     }
 
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
         userId: user.id,
         storeId,
         action: "order_attribution_run",
-        metadata: result,
+        metadata: result as unknown as Prisma.InputJsonObject,
       },
     });
 

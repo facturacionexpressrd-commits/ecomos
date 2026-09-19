@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
-import { MetaClient, encryptToken, decryptToken } from "@/lib/meta/client";
+import { MetaClient, encryptToken, decryptToken, withActPrefix } from "@/lib/meta/client";
+import { sumInsights, perDay, type CampaignInsight } from "@/lib/meta/sync";
 import { syncMetaAccount } from "@/lib/meta/sync";
 import { attributeOrders } from "@/lib/meta/attribution";
 import { rollupDailyMetaSpend } from "@/lib/meta/rollup";
@@ -89,6 +90,76 @@ describe("Meta Ads Integration", () => {
 
       expect(mockTokenResponse.access_token).toBeDefined();
       expect(mockTokenResponse.token_type).toBe("bearer");
+    });
+  });
+
+  describe("Insight totals (campaign totals are derived from these)", () => {
+    const insight = (over: Partial<CampaignInsight> = {}): CampaignInsight => ({
+      date_start: "2026-09-19",
+      date_stop: "2026-09-19",
+      spend: "50.00",
+      impressions: "1500",
+      actions: [{ action_type: "purchase", value: "2" }],
+      ...over,
+    });
+
+    it("sums spend, impressions and purchases across days", () => {
+      const totals = sumInsights([
+        insight({ spend: "50.00", impressions: "1500" }),
+        insight({ spend: "45.75", impressions: "1200" }),
+      ]);
+
+      expect(totals.spend).toBeCloseTo(95.75, 2);
+      expect(totals.impressions).toBe(2700);
+      expect(totals.conversions).toBe(4);
+    });
+
+    it("counts only purchase actions, ignoring other action types", () => {
+      const totals = sumInsights([
+        insight({
+          actions: [
+            { action_type: "link_click", value: "40" },
+            { action_type: "purchase", value: "3" },
+            { action_type: "landing_page_view", value: "25" },
+          ],
+        }),
+      ]);
+
+      expect(totals.conversions).toBe(3);
+    });
+
+    it("treats missing or non-numeric fields as zero rather than NaN", () => {
+      const totals = sumInsights([
+        insight({ spend: undefined as never, impressions: "abc", actions: undefined as never }),
+      ]);
+
+      expect(totals.spend).toBe(0);
+      expect(totals.impressions).toBe(0);
+      expect(totals.conversions).toBe(0);
+      expect(Number.isNaN(totals.spend)).toBe(false);
+    });
+
+    it("returns zeroes for an empty window", () => {
+      expect(sumInsights([])).toEqual({ spend: 0, impressions: 0, conversions: 0 });
+    });
+
+    it("maps one insight row to a daily record", () => {
+      const day = perDay(insight({ spend: "12.34", impressions: "900" }));
+
+      expect(day.date).toEqual(new Date("2026-09-19"));
+      expect(day.spend).toBeCloseTo(12.34, 2);
+      expect(day.impressions).toBe(900);
+      expect(day.conversions).toBe(2);
+    });
+  });
+
+  describe("Ad account addressing", () => {
+    it("prefixes a bare ad account id with act_", () => {
+      expect(withActPrefix("123456789")).toBe("act_123456789");
+    });
+
+    it("leaves an already-prefixed id untouched", () => {
+      expect(withActPrefix("act_123456789")).toBe("act_123456789");
     });
   });
 

@@ -20,7 +20,7 @@ export default async function CampaignsPage() {
   }
 
   // Get user's active store (first store they have access to)
-  const userStores = await prisma.storeAccess.findMany({
+  const userStores = await prisma.userStoreAccess.findMany({
     where: { userId: user.id },
     include: { store: true },
     take: 1,
