@@ -13,30 +13,46 @@ import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/c
  *
  * Query params (from Meta):
  * - code: authorization code
- * - state: state token
+ * - state: CSRF token, must match the meta_auth_state cookie
  * - error: error code if denied
  */
+
+const AUTH_COOKIES = ["meta_auth_store_id", "meta_auth_state"];
+
+// NextResponse.redirect rejects relative URLs, so every redirect resolves
+// against the incoming request origin.
+function redirectTo(req: NextRequest, path: string): NextResponse {
+  const res = NextResponse.redirect(new URL(path, req.url));
+  for (const name of AUTH_COOKIES) res.cookies.delete(name);
+  return res;
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const code = searchParams.get("code");
+    const state = searchParams.get("state");
     const error = searchParams.get("error");
 
     // Handle user denial
     if (error) {
-      return NextResponse.redirect(
-        `/dashboard?meta_auth_error=${encodeURIComponent(error)}`
-      );
+      return redirectTo(req, `/dashboard?meta_auth_error=${encodeURIComponent(error)}`);
     }
 
     if (!code) {
-      return NextResponse.redirect(`/dashboard?meta_auth_error=missing_code`);
+      return redirectTo(req, `/dashboard?meta_auth_error=missing_code`);
+    }
+
+    // Verify CSRF state before anything else touches the code
+    const expectedState = req.cookies.get("meta_auth_state")?.value;
+    if (!expectedState || !state || state !== expectedState) {
+      return redirectTo(req, `/dashboard?meta_auth_error=state_mismatch`);
     }
 
     // Get storeId from cookie
     const storeId = req.cookies.get("meta_auth_store_id")?.value;
     if (!storeId) {
-      return NextResponse.redirect(`/dashboard?meta_auth_error=missing_store`);
+      return redirectTo(req, `/dashboard?meta_auth_error=missing_store`);
     }
 
     // Verify user auth
@@ -46,16 +62,19 @@ export async function GET(req: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.redirect(`/login?next=/dashboard`);
+      return redirectTo(req, `/login?next=/dashboard`);
     }
 
     // Verify store access
     const grants = await loadStoreAccessGrants(user.id);
     if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
-      return NextResponse.redirect(
-        `/dashboard?meta_auth_error=no_store_access`
-      );
+      return redirectTo(req, `/dashboard?meta_auth_error=no_store_access`);
     }
+
+    const store = await prisma.store.findUniqueOrThrow({
+      where: { id: storeId },
+      select: { organizationId: true },
+    });
 
     // Exchange code for token
     const metaClient = new MetaClient({
@@ -70,9 +89,7 @@ export async function GET(req: NextRequest) {
     // Fetch Meta business account info
     const businesses = await metaClient.getBusinessAccounts(accessToken);
     if (businesses.length === 0) {
-      return NextResponse.redirect(
-        `/dashboard?meta_auth_error=no_businesses`
-      );
+      return redirectTo(req, `/dashboard?meta_auth_error=no_businesses`);
     }
 
     const business = businesses[0]; // Use first business for now (Phase 2)
@@ -85,9 +102,17 @@ export async function GET(req: NextRequest) {
 
     const encryptedToken = encryptToken(accessToken, encryptionKey);
 
-    // Store in database
-    const metaAccount = await prisma.metaAccount.create({
-      data: {
+    // Reconnecting the same business must refresh the token, not collide on
+    // the metaBusinessId unique constraint.
+    const metaAccount = await prisma.metaAccount.upsert({
+      where: { metaBusinessId: business.id },
+      update: {
+        storeId,
+        accessTokenEncrypted: encryptedToken,
+        scope: "ads_read",
+        status: "connected",
+      },
+      create: {
         storeId,
         metaBusinessId: business.id,
         metaAccountId: business.id, // Will be updated after user selects ad account
@@ -100,7 +125,7 @@ export async function GET(req: NextRequest) {
     // Log to audit trail
     await prisma.auditLog.create({
       data: {
-        organizationId: user.id,
+        organizationId: store.organizationId,
         userId: user.id,
         storeId,
         action: "meta_account_connected",
@@ -112,13 +137,12 @@ export async function GET(req: NextRequest) {
     });
 
     // Redirect to success page
-    return NextResponse.redirect(
+    return redirectTo(
+      req,
       `/dashboard?meta_auth_success=true&meta_account_id=${metaAccount.id}`
     );
   } catch (error) {
     console.error("Error in Meta auth callback:", error);
-    return NextResponse.redirect(
-      `/dashboard?meta_auth_error=callback_failed`
-    );
+    return redirectTo(req, `/dashboard?meta_auth_error=callback_failed`);
   }
 }

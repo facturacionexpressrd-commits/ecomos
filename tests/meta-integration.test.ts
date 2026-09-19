@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
-import { MetaClient } from "@/lib/meta/client";
+import { MetaClient, encryptToken, decryptToken } from "@/lib/meta/client";
 import { syncMetaAccount } from "@/lib/meta/sync";
 import { attributeOrders } from "@/lib/meta/attribution";
 import { rollupDailyMetaSpend } from "@/lib/meta/rollup";
@@ -23,15 +23,36 @@ describe("Meta Ads Integration", () => {
   const mockAccessToken = "test-access-token-encrypted";
 
   describe("OAuth Token Handling", () => {
-    it("should encrypt and decrypt access tokens", () => {
-      // Test token encryption/decryption roundtrip
-      const token = "EAAbvBfL3J60BAX7x7Zy3w8P9Uj8n";
-      const encryptionKey = "c09b929bc34d2898f22e0cfe553c0247bb3e024904800027955f80668773ccf7";
+    const encryptionKey =
+      "c09b929bc34d2898f22e0cfe553c0247bb3e024904800027955f80668773ccf7";
 
-      // Note: Actual crypto operations tested via lib/meta/client.ts
-      // This tests the pattern
-      expect(token.length).toBeGreaterThan(20); // Meta tokens are typically 28-32 chars
-      expect(encryptionKey).toHaveLength(64);
+    it("should encrypt and decrypt access tokens", () => {
+      const token = "EAAbvBfL3J60BAX7x7Zy3w8P9Uj8n";
+      const encrypted = encryptToken(token, encryptionKey);
+
+      expect(encrypted).not.toContain(token); // never stored in plaintext
+      expect(encrypted.split(":")).toHaveLength(3); // iv:authTag:ciphertext
+      expect(decryptToken(encrypted, encryptionKey)).toBe(token);
+    });
+
+    it("should produce a different ciphertext each time (random IV)", () => {
+      const token = "EAAbvBfL3J60BAX7x7Zy3w8P9Uj8n";
+
+      const a = encryptToken(token, encryptionKey);
+      const b = encryptToken(token, encryptionKey);
+
+      expect(a).not.toBe(b);
+      expect(decryptToken(a, encryptionKey)).toBe(decryptToken(b, encryptionKey));
+    });
+
+    it("should reject a tampered ciphertext (GCM auth tag)", () => {
+      const encrypted = encryptToken("EAAbvBfL3J60BAX7x7Zy3w8P9Uj8n", encryptionKey);
+      const [iv, authTag, ciphertext] = encrypted.split(":");
+
+      // Flip the last hex digit of the ciphertext
+      const flipped = ciphertext.slice(0, -1) + (ciphertext.slice(-1) === "0" ? "1" : "0");
+
+      expect(() => decryptToken(`${iv}:${authTag}:${flipped}`, encryptionKey)).toThrow();
     });
 
     it("should generate valid OAuth authorization URL", () => {
@@ -41,11 +62,22 @@ describe("Meta Ads Integration", () => {
         redirectUri: mockRedirectUri,
       });
 
-      const authUrl = client.getAuthorizationUrl();
+      const state = MetaClient.generateState();
+      const authUrl = client.getAuthorizationUrl(state);
       expect(authUrl).toContain("facebook.com/v");
       expect(authUrl).toContain("client_id=");
       expect(authUrl).toContain("scope=");
       expect(authUrl).toContain("ads_read");
+      // state must survive into the URL so the callback can verify it
+      expect(authUrl).toContain(`state=${state}`);
+    });
+
+    it("should generate a unique state per authorization attempt", () => {
+      const a = MetaClient.generateState();
+      const b = MetaClient.generateState();
+
+      expect(a).toHaveLength(32); // 16 random bytes, hex encoded
+      expect(a).not.toBe(b);
     });
 
     it("should handle OAuth token exchange (mocked)", async () => {

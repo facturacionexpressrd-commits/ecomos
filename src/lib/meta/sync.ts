@@ -218,10 +218,15 @@ export async function syncAllMetaAccounts(): Promise<void> {
       const result = await syncMetaAccount(account.id);
       storesWithSync.add(account.storeId);
 
+      const store = await prisma.store.findUniqueOrThrow({
+        where: { id: account.storeId },
+        select: { organizationId: true },
+      });
+
       // Log to audit trail
       await prisma.auditLog.create({
         data: {
-          organizationId: account.storeId, // Store as org for now (Phase 2)
+          organizationId: store.organizationId,
           storeId: account.storeId,
           action: "meta_sync_completed",
           metadata: {

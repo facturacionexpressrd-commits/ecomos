@@ -6,7 +6,7 @@ import crypto from "crypto";
  */
 
 const META_API_VERSION = "v18.0";
-const META_GRAPH_API_BASE = `https://graph.instagram.com/${META_API_VERSION}`;
+const META_GRAPH_API_BASE = `https://graph.facebook.com/${META_API_VERSION}`;
 
 export interface MetaOAuthConfig {
   appId: string;
@@ -41,17 +41,24 @@ export class MetaClient {
   /**
    * Get OAuth authorization URL
    * User will be redirected to Meta to grant permissions
+   *
+   * `state` must be persisted by the caller (cookie) and compared against the
+   * value Meta echoes back to the callback — otherwise the flow is CSRF-open.
    */
-  getAuthorizationUrl(): string {
+  getAuthorizationUrl(state: string): string {
     const params = new URLSearchParams({
       client_id: this.config.appId,
       redirect_uri: this.config.redirectUri,
       scope: "ads_read", // Read campaigns, spend, results
       response_type: "code",
-      state: this.generateState(),
+      state,
     });
 
     return `https://www.facebook.com/${META_API_VERSION}/dialog/oauth?${params.toString()}`;
+  }
+
+  static generateState(): string {
+    return crypto.randomBytes(16).toString("hex");
   }
 
   /**
@@ -65,7 +72,7 @@ export class MetaClient {
       code,
     });
 
-    const response = await fetch(`https://graph.instagram.com/${META_API_VERSION}/oauth/access_token`, {
+    const response = await fetch(`${META_GRAPH_API_BASE}/oauth/access_token`, {
       method: "POST",
       body: params,
     });
@@ -193,9 +200,6 @@ export class MetaClient {
     return data.data;
   }
 
-  private generateState(): string {
-    return crypto.randomBytes(16).toString("hex");
-  }
 }
 
 /**

@@ -43,15 +43,21 @@ export async function GET(req: NextRequest) {
       redirectUri: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/meta/auth/callback`,
     });
 
-    const authUrl = metaClient.getAuthorizationUrl();
+    const state = MetaClient.generateState();
+    const authUrl = metaClient.getAuthorizationUrl(state);
 
-    // Store storeId in session cookie for callback to retrieve
+    // Store storeId + state in session cookies for the callback to retrieve.
+    // The state cookie is what makes the callback's CSRF check possible.
     const response = NextResponse.redirect(authUrl);
-    response.cookies.set("meta_auth_store_id", storeId, {
+    const cookieOpts = {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
+      sameSite: "lax" as const,
+      path: "/",
       maxAge: 600, // 10 minutes
-    });
+    };
+    response.cookies.set("meta_auth_store_id", storeId, cookieOpts);
+    response.cookies.set("meta_auth_state", state, cookieOpts);
 
     return response;
   } catch (error) {
