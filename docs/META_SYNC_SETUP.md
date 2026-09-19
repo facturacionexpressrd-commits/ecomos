@@ -21,40 +21,104 @@ META_APP_ID="your-app-id"
 META_APP_SECRET="your-app-secret"
 ```
 
-### 2. Create pg_cron Job in Supabase
+### 2. Prerequisites (all four, or the jobs just fail on a schedule)
 
-In Supabase Dashboard → SQL Editor, run:
+pg_cron runs **inside Supabase**, not on your machine. Before scheduling anything:
+
+1. **Migrations applied.** The sync queries `MetaAccount` / `MetaCampaign` /
+   `MetaSpendDaily`. If those tables aren't in the target database, every run errors.
+   Check with `\dt` or the dashboard before scheduling.
+2. **A publicly reachable URL.** `localhost` and ephemeral tunnels are not targets
+   Supabase can call. Deploy first, then use that origin.
+3. **A real `META_SYNC_API_KEY`** on the deployed app — not the `.env` placeholder.
+4. **Real `META_APP_ID` / `META_APP_SECRET`**, and at least one connected
+   `MetaAccount` row. With zero connected accounts the job succeeds doing nothing.
+
+### 3. Enable extensions
+
+Use `pg_net` (async, Supabase's supported path), not `http`. The `http` extension's
+`http_post` takes `(uri, content, content_type)` and has **no** header argument, so
+bearer auth is impossible with it in a one-liner.
 
 ```sql
--- Create extension if not exists
 CREATE EXTENSION IF NOT EXISTS pg_cron;
+CREATE EXTENSION IF NOT EXISTS pg_net;
+```
 
--- Schedule Meta sync every 4 hours
+### 4. Store the key in Vault, not in the job body
+
+`cron.job.command` is readable by anyone with database access. Keep the bearer token
+out of it:
+
+```sql
+SELECT vault.create_secret('<your-real-sync-key>', 'meta_sync_api_key');
+```
+
+### 5. Schedule the jobs
+
+```sql
+-- Campaign sync, every 4 hours
 SELECT cron.schedule(
   'meta-campaign-sync-4h',
-  '0 */4 * * *', -- Every 4 hours (00:00, 04:00, 08:00, 12:00, 16:00, 20:00 UTC)
+  '0 */4 * * *',
   $$
-  SELECT http_post(
-    'https://your-domain.com/api/meta/sync',
-    '{}',
-    'application/json',
-    jsonb_build_object('Authorization', 'Bearer YOUR_META_SYNC_API_KEY')
-  ) as request_id;
+  SELECT net.http_post(
+    url     := 'https://YOUR-DEPLOYED-DOMAIN/api/meta/sync',
+    headers := jsonb_build_object(
+                 'Content-Type',  'application/json',
+                 'Authorization', 'Bearer ' || (
+                   SELECT decrypted_secret FROM vault.decrypted_secrets
+                   WHERE name = 'meta_sync_api_key'
+                 )
+               ),
+    body    := '{}'::jsonb
+  );
   $$
 );
 
--- View scheduled jobs
-SELECT * FROM cron.job;
-
--- Unschedule if needed
-SELECT cron.unschedule('meta-campaign-sync-4h');
+-- Spend rollup, daily at 02:00 UTC — after the last sync of the day
+SELECT cron.schedule(
+  'meta-spend-rollup-daily',
+  '0 2 * * *',
+  $$
+  SELECT net.http_post(
+    url     := 'https://YOUR-DEPLOYED-DOMAIN/api/meta/rollup',
+    headers := jsonb_build_object(
+                 'Content-Type',  'application/json',
+                 'Authorization', 'Bearer ' || (
+                   SELECT decrypted_secret FROM vault.decrypted_secrets
+                   WHERE name = 'meta_sync_api_key'
+                 )
+               ),
+    body    := '{}'::jsonb
+  );
+  $$
+);
 ```
 
-### 3. Enable http Extension
+Note: `syncAllMetaAccounts()` already runs the rollup inline after each sync, so the
+daily job is a backstop that repairs days a sync failed partway. Skip it if you'd
+rather have one moving part.
+
+### 6. Verify
 
 ```sql
-CREATE EXTENSION IF NOT EXISTS http;
+SELECT jobid, jobname, schedule, active FROM cron.job;
+
+-- Run outcomes (pg_cron only records that the statement ran)
+SELECT jobid, status, return_message, start_time
+FROM cron.job_run_details ORDER BY start_time DESC LIMIT 10;
+
+-- The actual HTTP result lands here
+SELECT id, status_code, content, created
+FROM net._http_response ORDER BY created DESC LIMIT 10;
 ```
+
+`cron.job_run_details` showing `succeeded` only means the SQL ran — a 401 or 500 from
+the endpoint still shows as success there. Check `net._http_response` for the real
+status.
+
+To remove: `SELECT cron.unschedule('meta-campaign-sync-4h');`
 
 ## Manual Sync (for testing)
 
@@ -111,7 +175,7 @@ LIMIT 10;
 ## Troubleshooting
 
 ### Sync not running
-- Check that http extension is enabled: `SELECT * FROM pg_extension WHERE extname = 'http';`
+- Check the extensions are enabled: `SELECT extname FROM pg_extension WHERE extname IN ('pg_cron','pg_net');`
 - Verify cron job exists: `SELECT * FROM cron.job;`
 - Check Supabase function logs
 
