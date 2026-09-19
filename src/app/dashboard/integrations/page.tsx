@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
@@ -81,6 +82,12 @@ export default async function IntegrationsPage({
             </div>
 
             <div className="space-y-2">
+              <Link
+                href="/dashboard/meta/campaigns"
+                className="block w-full rounded bg-blue-600 px-4 py-2 text-center font-medium text-white hover:bg-blue-700"
+              >
+                View Campaigns
+              </Link>
               <button
                 disabled
                 className="w-full rounded bg-gray-300 px-4 py-2 font-medium text-gray-600"
