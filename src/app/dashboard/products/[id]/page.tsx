@@ -9,7 +9,6 @@ import {
   variantContributionMargin,
 } from "@/lib/finance/formulas";
 import CostEntryForm from "@/components/products/CostEntryForm";
-import VariantEconomicsCard from "@/components/products/VariantEconomicsCard";
 
 export default async function ProductDetailPage({
   params,
@@ -49,19 +48,6 @@ export default async function ProductDetailPage({
   });
 
   if (!product) return <div className="p-4 text-red-600">Product not found</div>;
-
-  // Get variant sales (sum orders containing this variant)
-  const variantSales = await prisma.order.findMany({
-    where: { storeId },
-    include: {
-      customer: { select: { id: true } },
-    },
-    select: {
-      id: true,
-      totalPrice: true,
-      customer: { select: { id: true } },
-    },
-  });
 
   // For demo, compute basic economics per variant
   // Real implementation would join order_line_items to get variant-specific sales

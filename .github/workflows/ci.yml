@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+
+    env:
+      # prisma.config.ts resolves DATABASE_URL eagerly, so `generate` fails
+      # without it. Nothing here connects — generate only reads the schema —
+      # so a placeholder is enough and no real credentials belong in CI.
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      # The generated client lives in gitignored node_modules. Without this
+      # step every prisma.* access is untyped and the typecheck below passes
+      # vacuously — which is how a stale client hid real bugs for two phases.
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
