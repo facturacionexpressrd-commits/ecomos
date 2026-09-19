@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { MetaClient, decryptToken } from "./client";
+import { rollupDailyMetaSpend } from "./rollup";
 
 /**
  * Meta campaign sync service
@@ -211,8 +212,11 @@ export async function syncAllMetaAccounts(): Promise<void> {
 
     console.log(`[Meta Sync] Found ${accounts.length} connected accounts`);
 
+    const storesWithSync = new Set<string>();
+
     for (const account of accounts) {
       const result = await syncMetaAccount(account.id);
+      storesWithSync.add(account.storeId);
 
       // Log to audit trail
       await prisma.auditLog.create({
@@ -239,7 +243,18 @@ export async function syncAllMetaAccounts(): Promise<void> {
       }
     }
 
-    console.log("[Meta Sync] All accounts synced");
+    // Rollup daily spend for all stores that synced
+    console.log("[Meta Sync] Running spend rollup...");
+    for (const storeId of storesWithSync) {
+      try {
+        const rollupResult = await rollupDailyMetaSpend(storeId);
+        console.log(`[Meta Sync] Rollup complete for store: ${rollupResult.datesProcessed} dates`);
+      } catch (error) {
+        console.error(`[Meta Sync] Rollup failed for store ${storeId}:`, error);
+      }
+    }
+
+    console.log("[Meta Sync] All accounts synced and rolled up");
   } catch (error) {
     console.error("[Meta Sync] Fatal error syncing all accounts:", error);
     throw error;
