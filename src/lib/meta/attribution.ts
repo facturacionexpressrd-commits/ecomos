@@ -7,6 +7,14 @@ import { prisma } from "@/lib/db";
  * and creates OrderAttributionMeta records.
  */
 
+/** The subset of a Shopify order's raw payload attribution reads. */
+interface ShopifyOrderRaw {
+  attributions?: Array<{ title?: string; source?: { name?: string } }>;
+  referring_site?: string;
+  source_name?: string;
+  landing_site?: string;
+}
+
 interface AttributionResult {
   totalOrders: number;
   attributed: number;
@@ -53,7 +61,7 @@ export async function attributeOrders(storeId: string): Promise<AttributionResul
     // Process each order
     for (const order of orders) {
       try {
-        const utmCampaign = extractUtmCampaign(order.raw as Record<string, any>);
+        const utmCampaign = extractUtmCampaign(order.raw as ShopifyOrderRaw);
         if (!utmCampaign) {
           result.errors.push({
             orderId: order.id,
@@ -129,7 +137,7 @@ export async function attributeOrders(storeId: string): Promise<AttributionResul
  * 2. order.raw.attributions[].title
  * 3. URL in order.raw.referring_site
  */
-function extractUtmCampaign(orderRaw: Record<string, any>): string | null {
+function extractUtmCampaign(orderRaw: ShopifyOrderRaw): string | null {
   // Try 1: Check attribution object (Shopify post-purchase API)
   if (Array.isArray(orderRaw.attributions)) {
     for (const attr of orderRaw.attributions) {

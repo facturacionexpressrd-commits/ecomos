@@ -7,38 +7,40 @@ interface ConnectMetaButtonProps {
   storeId: string;
 }
 
+const CALLBACK_ERRORS: Record<string, string> = {
+  missing_code: "Authorization code missing",
+  missing_store: "Store ID missing",
+  state_mismatch: "Authorization could not be verified. Please try again.",
+  no_store_access: "No access to this store",
+  no_businesses: "No Meta business accounts found",
+  no_ad_accounts: "That Meta business has no ad accounts",
+  callback_failed: "OAuth callback failed",
+};
+
 export default function ConnectMetaButton({ storeId }: ConnectMetaButtonProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
+  const [fetchError, setFetchError] = useState("");
 
-  // Handle OAuth callback results
+  // Both derive from the URL, so they're computed during render rather than
+  // mirrored into state by an effect.
+  const success = searchParams.get("meta_auth_success") === "true";
+  const callbackError = searchParams.get("meta_auth_error");
+  const error =
+    fetchError || (callbackError ? CALLBACK_ERRORS[callbackError] ?? callbackError : "");
+
+  // The refresh is a real side effect and stays in an effect — cleared on
+  // unmount so a navigation mid-countdown can't refresh a gone component.
   useEffect(() => {
-    const successParam = searchParams.get("meta_auth_success");
-    const errorParam = searchParams.get("meta_auth_error");
-
-    if (successParam === "true") {
-      setSuccess(true);
-      setTimeout(() => router.refresh(), 2000);
-    }
-
-    if (errorParam) {
-      const errorMap: Record<string, string> = {
-        missing_code: "Authorization code missing",
-        missing_store: "Store ID missing",
-        no_store_access: "No access to this store",
-        no_businesses: "No Meta business accounts found",
-        callback_failed: "OAuth callback failed",
-      };
-      setError(errorMap[errorParam] || errorParam);
-    }
-  }, [searchParams, router]);
+    if (!success) return;
+    const timer = setTimeout(() => router.refresh(), 2000);
+    return () => clearTimeout(timer);
+  }, [success, router]);
 
   const handleConnect = async () => {
     setLoading(true);
-    setError("");
+    setFetchError("");
 
     try {
       // Start OAuth flow
@@ -49,7 +51,7 @@ export default function ConnectMetaButton({ storeId }: ConnectMetaButtonProps) {
       }
       // Redirect is handled by fetch (will redirect to Meta)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
+      setFetchError(err instanceof Error ? err.message : "Unknown error");
       setLoading(false);
     }
   };
@@ -70,8 +72,8 @@ export default function ConnectMetaButton({ storeId }: ConnectMetaButtonProps) {
       )}
 
       <p className="text-xs text-gray-500">
-        This will open Meta's authorization page. You'll need to log in with your Meta Business account
-        and grant permission to access your ad campaigns.
+        This will open Meta&apos;s authorization page. You&apos;ll need to log in with your Meta
+        Business account and grant permission to access your ad campaigns.
       </p>
     </div>
   );

@@ -64,7 +64,6 @@ async function rollupDayForStore(storeId: string, date: Date): Promise<void> {
   });
 
   const totalSpend = spendAgg._sum.spend?.toNumber() ?? 0;
-  const totalImpressions = spendAgg._sum.impressions ?? 0;
   const totalConversions = spendAgg._sum.conversions ?? 0;
 
   // Get or create daily financial metric
@@ -97,24 +96,15 @@ async function rollupDayForStore(storeId: string, date: Date): Promise<void> {
     });
   }
 
-  // Update with Meta spend metadata (store as JSON in metadata field)
-  const roas = dailyMetric.grossRevenue.toNumber() > 0
-    ? dailyMetric.grossRevenue.toNumber() / totalSpend
-    : 0;
-
   const contributionRoas =
     dailyMetric.contributionProfit.toNumber() > 0
       ? dailyMetric.contributionProfit.toNumber() / totalSpend
       : 0;
 
-  await prisma.dailyFinancialMetric.update({
-    where: { id: dailyMetric.id },
-    data: {
-      // ponytail: metadata field would hold meta spend, but schema doesn't have it yet
-      // Add metaSpendTotal and metaROAS as direct fields in Phase 2.1 schema migration
-    },
-  });
-
+  // DailyFinancialMetric has nowhere to store ad spend yet, so the rollup
+  // currently only ensures the row exists and reports. Persisting
+  // metaSpendTotal/metaRoas needs a schema migration (Phase 2.1) — until then
+  // an update here would write an empty object and cost a round trip.
   console.log(
     `[Rollup] ${date.toISOString().split("T")[0]}: spend=$${totalSpend.toFixed(2)}, ` +
     `conversions=${totalConversions}, contrib_roas=${contributionRoas.toFixed(2)}x`

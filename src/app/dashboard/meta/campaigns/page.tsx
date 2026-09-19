@@ -32,7 +32,7 @@ export default async function CampaignsPage() {
         <h1 className="text-2xl font-bold">Campaigns</h1>
         <div className="rounded-lg border border-gray-200 bg-gray-50 p-6 text-center">
           <p className="text-gray-600">
-            You don't have access to any stores yet. Contact your admin to grant access.
+            You don&apos;t have access to any stores yet. Contact your admin to grant access.
           </p>
         </div>
       </div>

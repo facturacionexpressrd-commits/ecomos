@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       select: { id: true, name: true },
     });
 
-    const results: Record<string, any> = {};
+    const results: Record<string, unknown> = {};
     let totalSuccess = 0;
     let totalErrors = 0;
 

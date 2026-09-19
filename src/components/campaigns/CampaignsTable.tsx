@@ -40,24 +40,36 @@ export default function CampaignsTable({ storeId }: CampaignsTableProps) {
   });
 
   useEffect(() => {
-    fetchCampaigns();
+    // Guarded so a quick re-sort can't let an earlier, slower response
+    // overwrite the newer one.
+    let cancelled = false;
+
+    const load = async () => {
+      try {
+        setLoading(true);
+        const res = await fetch(
+          `/api/campaigns/list?storeId=${encodeURIComponent(storeId)}&sortBy=${encodeURIComponent(sortBy)}`
+        );
+        if (!res.ok) throw new Error("Failed to fetch campaigns");
+
+        const data = await res.json();
+        if (cancelled) return;
+
+        setCampaigns(data.campaigns);
+        setMeta(data.meta);
+        setError("");
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Unknown error");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    load();
+    return () => {
+      cancelled = true;
+    };
   }, [storeId, sortBy]);
-
-  const fetchCampaigns = async () => {
-    try {
-      setLoading(true);
-      const res = await fetch(`/api/campaigns/list?storeId=${storeId}&sortBy=${sortBy}`);
-      if (!res.ok) throw new Error("Failed to fetch campaigns");
-
-      const data = await res.json();
-      setCampaigns(data.campaigns);
-      setMeta(data.meta);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Unknown error");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) return <div className="p-4 text-gray-600">Loading campaigns...</div>;
   if (error) return <div className="p-4 text-red-600">Error: {error}</div>;

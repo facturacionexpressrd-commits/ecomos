@@ -1,9 +1,6 @@
-import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
+import { describe, it, expect } from "vitest";
 import { MetaClient, encryptToken, decryptToken, withActPrefix } from "@/lib/meta/client";
 import { sumInsights, perDay, type CampaignInsight } from "@/lib/meta/sync";
-import { syncMetaAccount } from "@/lib/meta/sync";
-import { attributeOrders } from "@/lib/meta/attribution";
-import { rollupDailyMetaSpend } from "@/lib/meta/rollup";
 
 /**
  * End-to-end test suite for Meta ads integration
@@ -21,7 +18,6 @@ describe("Meta Ads Integration", () => {
   const mockMetaAppId = "test-app-id";
   const mockMetaAppSecret = "test-app-secret";
   const mockRedirectUri = "http://localhost:3000/api/meta/auth/callback";
-  const mockAccessToken = "test-access-token-encrypted";
 
   describe("OAuth Token Handling", () => {
     const encryptionKey =

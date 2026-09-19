@@ -2,12 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
-import {
-  contributionProfit,
-  contributionMargin,
-  variantContribution,
-  variantContributionMargin,
-} from "@/lib/finance/formulas";
+import { contributionProfit, contributionMargin } from "@/lib/finance/formulas";
 import CostEntryForm from "@/components/products/CostEntryForm";
 
 export default async function ProductDetailPage({

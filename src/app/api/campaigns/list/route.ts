@@ -54,7 +54,6 @@ export async function GET(req: NextRequest) {
 
     // Fetch order revenue by campaign (heuristic: UTM source)
     // For MVP, estimate revenue by dividing store revenue evenly
-    const totalOrders = await prisma.order.count({ where: { storeId } });
     const storeRevenue = await prisma.order.aggregate({
       where: { storeId },
       _sum: { totalPrice: true },
@@ -66,7 +65,6 @@ export async function GET(req: NextRequest) {
         : 0;
 
     // Get financial data
-    const store = await prisma.store.findUniqueOrThrow({ where: { id: storeId } });
     const latestDaily = await prisma.dailyFinancialMetric.findFirst({
       where: { storeId },
       orderBy: { date: "desc" },

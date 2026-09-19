@@ -54,7 +54,6 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
   });
 
   // Estimate metrics
-  const totalOrders = await prisma.order.count({ where: { storeId: campaign.storeId } });
   const storeRevenue = await prisma.order.aggregate({
     where: { storeId: campaign.storeId },
     _sum: { totalPrice: true },
