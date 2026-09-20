@@ -37,10 +37,20 @@ export async function POST(req: NextRequest) {
       data: { cost: cost ? parseFloat(cost) : null },
     });
 
+    // Look up user's organization (via store access)
+    const access = await prisma.userStoreAccess.findFirst({
+      where: { userId: user.id, storeId },
+      select: { store: { select: { organizationId: true } } },
+    });
+
+    if (!access) {
+      return NextResponse.json({ error: "Store not found" }, { status: 404 });
+    }
+
     // Log to audit trail
     await prisma.auditLog.create({
       data: {
-        organizationId: user.id, // TODO: get org from user context
+        organizationId: access.store.organizationId,
         userId: user.id,
         storeId,
         action: "variant_cost_updated",

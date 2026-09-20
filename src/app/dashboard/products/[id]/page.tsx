@@ -44,12 +44,21 @@ export default async function ProductDetailPage({
 
   if (!product) return <div className="p-4 text-red-600">Product not found</div>;
 
-  // For demo, compute basic economics per variant
-  // Real implementation would join order_line_items to get variant-specific sales
-  const store = await prisma.store.findUniqueOrThrow({ where: { id: storeId } });
-  const PAYMENT_FEES_PCT = 2.9; // Stripe default
+  // Fetch refunds per variant upfront (needed for economics calculation)
+  const variantRefunds: Record<string, number> = {};
+  for (const variant of product.variants) {
+    const result = await prisma.refundLine.aggregate({
+      where: { lineItem: { variantId: variant.id } },
+      _sum: { subtotal: true },
+    });
+    variantRefunds[variant.id] = Number(result._sum.subtotal ?? 0);
+  }
 
-  // Get total revenue for the store (crude, but works for MVP)
+  const store = await prisma.store.findUniqueOrThrow({ where: { id: storeId } });
+  const PAYMENT_FEES_PCT = Number(store.paymentFeePercent);
+  const PAYMENT_FEES_FIXED = Number(store.paymentFeeFixed);
+
+  // Get total revenue for the store
   const totalRevenue = await prisma.order.aggregate({
     where: { storeId },
     _sum: { totalPrice: true },
@@ -75,11 +84,11 @@ export default async function ProductDetailPage({
 
             // For MVP: assume this variant is 1/n of store revenue
             const variantShare = product.variants.length > 0 ? storeRevenue / product.variants.length : 0;
-            const variantRefunds = 0; // TODO: track refunds per variant
+            const refunded = variantRefunds[variant.id] ?? 0;
 
             // Calculate economics
-            const profit = contributionProfit(variantShare, variantRefunds, PAYMENT_FEES_PCT, totalCogs);
-            const margin = contributionMargin(variantShare, variantRefunds, PAYMENT_FEES_PCT, totalCogs);
+            const profit = contributionProfit(variantShare, refunded, PAYMENT_FEES_PCT, totalCogs);
+            const margin = contributionMargin(variantShare, refunded, PAYMENT_FEES_PCT, totalCogs);
 
             return (
               <div key={variant.id} className="rounded-lg border border-gray-200 p-6">
@@ -140,9 +149,9 @@ export default async function ProductDetailPage({
             <p className="mt-1 text-xs text-gray-500">From Shopify data</p>
           </div>
           <div>
-            <p className="text-sm text-gray-600">Payment Fee Rate</p>
-            <p className="text-2xl font-bold">{PAYMENT_FEES_PCT}%</p>
-            <p className="mt-1 text-xs text-gray-500">Stripe default (hardcoded for MVP)</p>
+            <p className="text-sm text-gray-600">Payment Fee</p>
+            <p className="text-2xl font-bold">{PAYMENT_FEES_PCT}% + ${PAYMENT_FEES_FIXED}</p>
+            <p className="mt-1 text-xs text-gray-500">Per-transaction estimate (update in Store settings)</p>
           </div>
           <div>
             <p className="text-sm text-gray-600">Avg Revenue/Customer</p>
@@ -169,7 +178,8 @@ export default async function ProductDetailPage({
             <strong>Payment Fees:</strong> Fixed at 2.9% (Stripe standard). Update this if using a different processor.
           </li>
           <li>
-            <strong>Refunds:</strong> Not yet tracked per variant. Revenue shown is gross (before refunds).
+            <strong>Refunds:</strong> Tracked per variant from RefundLineItems. Revenue shown is still gross, but
+            contribution profit deducts actual refunds.
           </li>
           <li>
             <strong>Attribution:</strong> For MVP, revenue is split equally across variants. Real impl. uses order_line_items.

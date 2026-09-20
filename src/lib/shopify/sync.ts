@@ -53,6 +53,37 @@ const ORDERS_QUERY = /* GraphQL */ `
         displayFinancialStatus
         currentTotalPriceSet { shopMoney { amount currencyCode } }
         customer { id }
+        lineItems(first: 100) {
+          nodes {
+            id
+            quantity
+            variant { id }
+            originalTotalSet { shopMoney { amount } }
+            discountedTotalSet { shopMoney { amount } }
+          }
+        }
+        refunds {
+          id
+          createdAt
+          totalRefundedSet { shopMoney { amount currencyCode } }
+          refundLineItems(first: 100) {
+            nodes {
+              quantity
+              subtotalSet { shopMoney { amount } }
+              lineItem { id }
+            }
+          }
+        }
+        transactions(first: 20) {
+          nodes {
+            id
+            kind
+            status
+            gateway
+            processedAt
+            amountSet { shopMoney { amount currencyCode } }
+          }
+        }
       }
     }
   }
@@ -102,6 +133,37 @@ type OrdersResponse = {
       displayFinancialStatus: string | null;
       currentTotalPriceSet: { shopMoney: { amount: string; currencyCode: string } };
       customer: { id: string } | null;
+      lineItems: {
+        nodes: Array<{
+          id: string;
+          quantity: number;
+          variant: { id: string } | null;
+          originalTotalSet: { shopMoney: { amount: string } };
+          discountedTotalSet: { shopMoney: { amount: string } };
+        }>;
+      };
+      refunds: Array<{
+        id: string;
+        createdAt: string;
+        totalRefundedSet: { shopMoney: { amount: string; currencyCode: string } };
+        refundLineItems: {
+          nodes: Array<{
+            quantity: number;
+            subtotalSet: { shopMoney: { amount: string } };
+            lineItem: { id: string } | null;
+          }>;
+        };
+      }>;
+      transactions: {
+        nodes: Array<{
+          id: string;
+          kind: string;
+          status: string;
+          gateway: string | null;
+          processedAt: string | null;
+          amountSet: { shopMoney: { amount: string; currencyCode: string } };
+        }>;
+      };
     }>;
   };
 };
@@ -186,7 +248,7 @@ async function syncOrders(storeId: string, shop: string, accessToken: string) {
           })
         : null;
 
-      await prisma.order.upsert({
+      const order = await prisma.order.upsert({
         where: { storeId_shopifyGid: { storeId, shopifyGid: o.id } },
         create: {
           storeId,
@@ -206,6 +268,95 @@ async function syncOrders(storeId: string, shop: string, accessToken: string) {
           raw: o as object,
         },
       });
+
+      // Sync line items (revenue facts)
+      for (const line of o.lineItems.nodes) {
+        await prisma.orderLineItem.upsert({
+          where: { orderId_shopifyGid: { orderId: order.id, shopifyGid: line.id } },
+          create: {
+            storeId,
+            orderId: order.id,
+            variantId: line.variant?.id ?? null,
+            shopifyGid: line.id,
+            quantity: line.quantity,
+            grossAmount: line.originalTotalSet.shopMoney.amount,
+            netAmount: line.discountedTotalSet.shopMoney.amount,
+          },
+          update: {
+            quantity: line.quantity,
+            grossAmount: line.originalTotalSet.shopMoney.amount,
+            netAmount: line.discountedTotalSet.shopMoney.amount,
+          },
+        });
+      }
+
+      // Sync refunds
+      for (const ref of o.refunds) {
+        const refund = await prisma.refund.upsert({
+          where: { storeId_shopifyGid: { storeId, shopifyGid: ref.id } },
+          create: {
+            storeId,
+            orderId: order.id,
+            shopifyGid: ref.id,
+            amount: ref.totalRefundedSet.shopMoney.amount,
+            refundedAt: new Date(ref.createdAt),
+          },
+          update: {
+            amount: ref.totalRefundedSet.shopMoney.amount,
+            refundedAt: new Date(ref.createdAt),
+          },
+        });
+
+        // Sync refund line items (which order line was refunded)
+        for (const rline of ref.refundLineItems.nodes) {
+          const lineItem = rline.lineItem
+            ? await prisma.orderLineItem.findUnique({
+                where: { orderId_shopifyGid: { orderId: order.id, shopifyGid: rline.lineItem.id } },
+              })
+            : null;
+
+          // Only upsert if there's a matching line item; Shopify allows refunds on deleted lines too.
+          if (lineItem) {
+            await prisma.refundLine.upsert({
+              where: {
+                refundId_lineItemId: { refundId: refund.id, lineItemId: lineItem.id },
+              },
+              create: {
+                refundId: refund.id,
+                lineItemId: lineItem.id,
+                quantity: rline.quantity,
+                subtotal: rline.subtotalSet.shopMoney.amount,
+              },
+              update: {
+                quantity: rline.quantity,
+                subtotal: rline.subtotalSet.shopMoney.amount,
+              },
+            });
+          }
+        }
+      }
+
+      // Sync payment transactions
+      for (const tx of o.transactions.nodes) {
+        await prisma.financialTransaction.upsert({
+          where: { storeId_shopifyGid: { storeId, shopifyGid: tx.id } },
+          create: {
+            storeId,
+            orderId: order.id,
+            shopifyGid: tx.id,
+            kind: tx.kind,
+            status: tx.status,
+            gateway: tx.gateway,
+            amount: tx.amountSet.shopMoney.amount,
+            currency: tx.amountSet.shopMoney.currencyCode,
+            processedAt: tx.processedAt ? new Date(tx.processedAt) : null,
+          },
+          update: {
+            status: tx.status,
+            processedAt: tx.processedAt ? new Date(tx.processedAt) : null,
+          },
+        });
+      }
     }
     cursor = data.orders.pageInfo.hasNextPage ? data.orders.pageInfo.endCursor : null;
   } while (cursor);
