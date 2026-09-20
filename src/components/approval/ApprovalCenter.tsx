@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 interface ApprovalActionItem {
   id: string;
@@ -27,30 +27,30 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
   const [deciding, setDeciding] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
 
-  const loadApprovals = useCallback(async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(
-        `/api/approvals/list?storeId=${encodeURIComponent(storeId)}&status=pending`
-      );
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to load approvals");
-      }
-
-      const data = await response.json();
-      setApprovals(data.approvals || []);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Error loading approvals");
-    } finally {
-      setLoading(false);
-    }
-  }, [storeId]);
-
   useEffect(() => {
+    const loadApprovals = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch(
+          `/api/approvals/list?storeId=${encodeURIComponent(storeId)}&status=pending`
+        );
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || "Failed to load approvals");
+        }
+
+        const data = await response.json();
+        setApprovals(data.approvals || []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Error loading approvals");
+      } finally {
+        setLoading(false);
+      }
+    };
+
     loadApprovals();
-  }, [loadApprovals]);
+  }, [storeId]);
 
   const handleDecision = async (decision: "approved" | "rejected") => {
     if (!selectedApproval) return;
