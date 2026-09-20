@@ -46,8 +46,7 @@ export async function requireStoreAccess(
  */
 export async function hasCapability(
   userId: string,
-  storeId: string,
-  requiredCapability: string
+  storeId: string
 ): Promise<boolean> {
   const access = await prisma.userStoreAccess.findFirst({
     where: {

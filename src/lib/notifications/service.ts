@@ -51,8 +51,7 @@ export class NotificationService {
   }
 
   static async markAsRead(
-    notificationId: string,
-    userId: string
+    notificationId: string
   ): Promise<Notification | null> {
     try {
       return (await prisma.notification.update({
@@ -104,8 +103,7 @@ export class NotificationService {
     userId: string,
     storeId: string,
     type: NotificationType,
-    title: string,
-    message: string
+    title: string
   ): Promise<void> {
     // Get user email
     const user = await prisma.user.findUnique({
