@@ -224,7 +224,7 @@ export default function CampaignWizard({ storeId }: CampaignWizardProps) {
           <div className="space-y-4">
             <h2 className="text-xl font-bold">Campaign Objective</h2>
             <div>
-              <label className="block text-sm font-medium">What's your goal?</label>
+              <label className="block text-sm font-medium">What&apos;s your goal?</label>
               <div className="mt-3 space-y-2">
                 {objectives.map((obj) => (
                   <label key={obj.value} className="flex cursor-pointer items-center">
@@ -322,7 +322,7 @@ export default function CampaignWizard({ storeId }: CampaignWizardProps) {
             </div>
             <div className="rounded bg-blue-50 p-3 text-sm text-blue-800">
               <p>
-                <strong>Campaign will start PAUSED.</strong> After review, you'll set up ad sets,
+                <strong>Campaign will start PAUSED.</strong> After review, you&apos;ll set up ad sets,
                 upload creatives, and then activate.
               </p>
             </div>

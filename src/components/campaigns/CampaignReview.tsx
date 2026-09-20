@@ -104,7 +104,7 @@ export default function CampaignReview({
             </div>
             <div className="rounded bg-yellow-50 p-3 text-xs text-yellow-800 mt-3">
               <p>
-                <strong>Important:</strong> The campaign will be created in PAUSED status. You'll need to:
+                <strong>Important:</strong> The campaign will be created in PAUSED status. You&apos;ll need to:
               </p>
               <ul className="mt-2 space-y-1 ml-4 list-disc">
                 <li>Set up ad sets (audience targeting, placements)</li>
@@ -119,7 +119,7 @@ export default function CampaignReview({
         <div className="rounded-lg border-l-4 border-orange-500 bg-orange-50 p-4">
           <p className="text-sm font-semibold text-orange-900">⚠ Before You Publish</p>
           <ul className="mt-2 space-y-1 text-sm text-orange-800 ml-4 list-disc">
-            <li>You'll manage creatives and ad sets directly in Meta Ads Manager (read-only in EcomOS for now)</li>
+            <li>You&apos;ll manage creatives and ad sets directly in Meta Ads Manager (read-only in EcomOS for now)</li>
             <li>Campaign status can be edited in EcomOS (pause, activate, duplicate)</li>
             <li>Budget changes must be made in Meta Ads Manager</li>
             <li>This campaign cannot be edited or deleted via EcomOS once created</li>
@@ -136,12 +136,12 @@ export default function CampaignReview({
               className="mt-1 rounded border-gray-300"
             />
             <span className="ml-3 text-sm">
-              I confirm that I've reviewed the campaign details and understand that:
+              I confirm that I&apos;ve reviewed the campaign details and understand that:
               <ul className="mt-2 space-y-1 ml-4 list-disc text-xs text-gray-700">
                 <li>The campaign will be created in a PAUSED state</li>
                 <li>I must activate it in EcomOS or Meta Ads Manager to start spending</li>
                 <li>Meta will begin charging according to the daily budget once activated</li>
-                <li>I'm responsible for accurate campaign setup and compliance</li>
+                <li>I&apos;m responsible for accurate campaign setup and compliance</li>
               </ul>
             </span>
           </label>

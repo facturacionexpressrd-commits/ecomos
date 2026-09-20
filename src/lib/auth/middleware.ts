@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/db";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
+import { createHmac } from "crypto";
 
 /**
  * Middleware to enforce store access authorization on API endpoints
@@ -89,9 +90,7 @@ export function verifyWebhookSignature(
   signature: string,
   secret: string
 ): boolean {
-  const crypto = require("crypto");
-  const expectedSignature = crypto
-    .createHmac("sha256", secret)
+  const expectedSignature = createHmac("sha256", secret)
     .update(payload)
     .digest("hex");
 

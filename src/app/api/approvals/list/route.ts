@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     const approvals = await prisma.approvalAction.findMany({
       where: {
         storeId,
-        status: status as any,
+        status: status as "pending" | "approved" | "rejected",
       },
       orderBy: [
         { priority: "desc" }, // critical first
