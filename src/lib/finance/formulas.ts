@@ -203,12 +203,14 @@ export function variantContributionMargin(
   return (contrib / totalRevenue) * 100;
 }
 
+import type { PrismaClient } from "@prisma/client";
+
 /**
  * Real variant refunds: sum of RefundLine.subtotal for this variant.
  * Called from the product detail page once, then passed to formulas.
  * The query is here (not in the page) so the formula logic stays pure.
  */
-export async function getVariantRefunds(prisma: any, variantId: string): Promise<number> {
+export async function getVariantRefunds(prisma: PrismaClient, variantId: string): Promise<number> {
   const result = await prisma.refundLine.aggregate({
     where: { lineItem: { variantId } },
     _sum: { subtotal: true },
@@ -220,7 +222,7 @@ export async function getVariantRefunds(prisma: any, variantId: string): Promise
  * Real store refunds: sum of Refund.amount for all orders in the store.
  * (Not per-variant, but the full refund value including tax & shipping.)
  */
-export async function getStoreRefunds(prisma: any, storeId: string): Promise<number> {
+export async function getStoreRefunds(prisma: PrismaClient, storeId: string): Promise<number> {
   const result = await prisma.refund.aggregate({
     where: { storeId },
     _sum: { amount: true },
