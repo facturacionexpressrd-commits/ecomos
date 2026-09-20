@@ -103,8 +103,7 @@ export function verifyWebhookSignature(
  */
 export async function checkIdempotencyKey(
   storeId: string,
-  idempotencyKey: string,
-  expiryMinutes: number = 24 * 60
+  idempotencyKey: string
 ): Promise<boolean> {
   // In production, use Redis for this with TTL
   // For now, use a simple in-memory map (not production-safe)

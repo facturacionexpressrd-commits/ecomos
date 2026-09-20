@@ -7,8 +7,7 @@ export class NotificationService {
     userId: string,
     type: NotificationType,
     title: string,
-    message: string,
-    link?: string
+    message: string
   ): Promise<Notification | null> {
     try {
       // Check user preferences
@@ -30,14 +29,13 @@ export class NotificationService {
             type: type as string,
             title,
             message,
-            link,
             read: false,
           },
         });
 
         // Send email if enabled
         if (!prefs || prefs.emailNotifications) {
-          this.sendEmail(userId, storeId, type, title, message, link).catch(
+          this.sendEmail(userId, storeId, type, title, message).catch(
             (err) => console.error("Email send failed:", err)
           );
         }
@@ -107,8 +105,7 @@ export class NotificationService {
     storeId: string,
     type: NotificationType,
     title: string,
-    message: string,
-    link?: string
+    message: string
   ): Promise<void> {
     // Get user email
     const user = await prisma.user.findUnique({
