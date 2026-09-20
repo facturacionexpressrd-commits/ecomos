@@ -35,7 +35,7 @@ export class NotificationService {
 
         // Send email if enabled
         if (!prefs || prefs.emailNotifications) {
-          this.sendEmail(userId, storeId, type, title, message).catch(
+          this.sendEmail(userId, storeId, type, title).catch(
             (err) => console.error("Email send failed:", err)
           );
         }
