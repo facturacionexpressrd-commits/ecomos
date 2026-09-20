@@ -27,7 +27,7 @@ export class NotificationService {
           data: {
             storeId,
             userId,
-            type,
+            type: type as string,
             title,
             message,
             link,
@@ -42,7 +42,7 @@ export class NotificationService {
           );
         }
 
-        return notification;
+        return notification as any;
       }
 
       return null;
@@ -57,10 +57,10 @@ export class NotificationService {
     userId: string
   ): Promise<Notification | null> {
     try {
-      return await prisma.notification.update({
+      return (await prisma.notification.update({
         where: { id: notificationId },
         data: { read: true },
-      });
+      })) as any;
     } catch (error) {
       console.error("Mark as read failed:", error);
       return null;
@@ -73,11 +73,11 @@ export class NotificationService {
     limit: number = 20
   ): Promise<Notification[]> {
     try {
-      return await prisma.notification.findMany({
+      return (await prisma.notification.findMany({
         where: { userId, storeId },
         orderBy: { createdAt: "desc" },
         take: limit,
-      });
+      })) as any;
     } catch (error) {
       console.error("Get notifications failed:", error);
       return [];

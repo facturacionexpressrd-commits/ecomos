@@ -133,12 +133,6 @@ Return ONLY the JSON array, no markdown or extra text.`;
     return content.text;
   }
 
-  private get apiKey(): string {
-    const key = process.env.ANTHROPIC_API_KEY;
-    if (!key) throw new Error("ANTHROPIC_API_KEY not configured");
-    return key;
-  }
-
   private get model(): string {
     return process.env.CLAUDE_MODEL || "claude-opus-5";
   }

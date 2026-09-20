@@ -209,7 +209,7 @@ export default function ProductCopyEditor({
 
           {copy.isPublished && (
             <p className="rounded bg-green-50 p-3 text-sm text-green-700">
-              ✓ Published to Shopify at {new Date(copy.publishedAt!).toLocaleString()}
+              ✓ Published to Shopify
             </p>
           )}
         </div>
