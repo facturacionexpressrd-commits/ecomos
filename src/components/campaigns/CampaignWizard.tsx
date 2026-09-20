@@ -3,6 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import CampaignReview from "./CampaignReview";
+import ProductSelector from "./ProductSelector";
+import OfferSelector from "./OfferSelector";
+import CreativeSelector from "./CreativeSelector";
 
 interface CampaignWizardProps {
   storeId: string;
@@ -17,6 +20,9 @@ export default function CampaignWizard({ storeId }: CampaignWizardProps) {
 
   const [campaignData, setCampaignData] = useState({
     name: "",
+    productId: "",
+    offerId: "",
+    creativeIds: [] as string[],
     objective: "LINK_CLICKS",
     budget: 100, // daily budget in dollars
     market: "us",
@@ -38,7 +44,19 @@ export default function CampaignWizard({ storeId }: CampaignWizardProps) {
       setError("Campaign name is required");
       return;
     }
-    if (step === 4) {
+    if (step === 1 && !campaignData.productId) {
+      setError("Product selection is required");
+      return;
+    }
+    if (step === 2 && !campaignData.offerId) {
+      setError("Offer selection is required");
+      return;
+    }
+    if (step === 2 && campaignData.creativeIds.length === 0) {
+      setError("At least one creative is required");
+      return;
+    }
+    if (step === 5) {
       // Before review, validate budget
       if (campaignData.budget < 1) {
         setError("Daily budget must be at least $1");
@@ -108,7 +126,7 @@ export default function CampaignWizard({ storeId }: CampaignWizardProps) {
       {/* Progress Indicator */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
-          {[1, 2, 3, 4].map((s) => (
+          {[1, 2, 3, 4, 5].map((s) => (
             <div key={s} className="flex items-center">
               <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full font-bold ${
@@ -117,16 +135,17 @@ export default function CampaignWizard({ storeId }: CampaignWizardProps) {
               >
                 {s}
               </div>
-              {s < 4 && (
+              {s < 5 && (
                 <div className={`h-1 w-12 ${s < step ? "bg-blue-600" : "bg-gray-200"}`} />
               )}
             </div>
           ))}
         </div>
-        <div className="mt-2 flex justify-between text-sm text-gray-600">
-          <span>Campaign Details</span>
+        <div className="mt-2 flex justify-between text-xs text-gray-600">
+          <span>Details</span>
+          <span>Product</span>
+          <span>Creative</span>
           <span>Objective</span>
-          <span>Targeting</span>
           <span>Budget</span>
         </div>
       </div>
@@ -134,9 +153,9 @@ export default function CampaignWizard({ storeId }: CampaignWizardProps) {
       {/* Step Content */}
       <div className="rounded-lg border border-gray-200 bg-white p-6">
         {step === 1 && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-bold">Campaign Details</h2>
+          <div className="space-y-6">
             <div>
+              <h2 className="text-xl font-bold mb-4">Campaign Details & Product</h2>
               <label className="block text-sm font-medium">Campaign Name</label>
               <input
                 type="text"
@@ -148,10 +167,60 @@ export default function CampaignWizard({ storeId }: CampaignWizardProps) {
               />
               <p className="mt-1 text-xs text-gray-500">{campaignData.name.length}/100</p>
             </div>
+            <div>
+              <label className="block text-sm font-medium mb-3">Select Product to Promote</label>
+              <ProductSelector
+                storeId={storeId}
+                selectedProductId={campaignData.productId}
+                onSelect={(productId) =>
+                  setCampaignData({ ...campaignData, productId })
+                }
+              />
+            </div>
           </div>
         )}
 
         {step === 2 && (
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-xl font-bold mb-4">Offer & Creatives</h2>
+              <label className="block text-sm font-medium mb-3">Select Offer</label>
+              {campaignData.productId ? (
+                <OfferSelector
+                  storeId={storeId}
+                  productId={campaignData.productId}
+                  selectedOfferId={campaignData.offerId}
+                  onSelect={(offerId) =>
+                    setCampaignData({ ...campaignData, offerId })
+                  }
+                />
+              ) : (
+                <p className="text-sm text-yellow-600">Select a product first</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-3">Select Creatives</label>
+              <CreativeSelector
+                selectedCreativeIds={campaignData.creativeIds}
+                onSelectCreative={(id, checked) => {
+                  if (checked) {
+                    setCampaignData({
+                      ...campaignData,
+                      creativeIds: [...campaignData.creativeIds, id],
+                    });
+                  } else {
+                    setCampaignData({
+                      ...campaignData,
+                      creativeIds: campaignData.creativeIds.filter((cid) => cid !== id),
+                    });
+                  }
+                }}
+              />
+            </div>
+          </div>
+        )}
+
+        {step === 3 && (
           <div className="space-y-4">
             <h2 className="text-xl font-bold">Campaign Objective</h2>
             <div>
@@ -177,7 +246,7 @@ export default function CampaignWizard({ storeId }: CampaignWizardProps) {
           </div>
         )}
 
-        {step === 3 && (
+        {step === 4 && (
           <div className="space-y-4">
             <h2 className="text-xl font-bold">Targeting & Audience</h2>
             <div>
@@ -229,7 +298,7 @@ export default function CampaignWizard({ storeId }: CampaignWizardProps) {
           </div>
         )}
 
-        {step === 4 && (
+        {step === 5 && (
           <div className="space-y-4">
             <h2 className="text-xl font-bold">Budget & Schedule</h2>
             <div>
@@ -253,7 +322,7 @@ export default function CampaignWizard({ storeId }: CampaignWizardProps) {
             </div>
             <div className="rounded bg-blue-50 p-3 text-sm text-blue-800">
               <p>
-                <strong>Campaign will start PAUSED.</strong> After review, you'll be able to edit ad sets,
+                <strong>Campaign will start PAUSED.</strong> After review, you'll set up ad sets,
                 upload creatives, and then activate.
               </p>
             </div>
@@ -277,7 +346,7 @@ export default function CampaignWizard({ storeId }: CampaignWizardProps) {
           disabled={loading}
           className="rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
         >
-          {step === 4 ? "Review & Publish →" : "Next →"}
+          {step === 5 ? "Review & Publish →" : "Next →"}
         </button>
       </div>
     </div>

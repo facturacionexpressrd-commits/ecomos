@@ -8,6 +8,9 @@ import {
   breakEvenRoas,
   maxSustainableCpa,
 } from "@/lib/finance/formulas";
+import BudgetEditor from "@/components/campaigns/BudgetEditor";
+import AdSetManager from "@/components/campaigns/AdSetManager";
+import CampaignActionMenu from "@/components/campaigns/CampaignActionMenu";
 
 export const metadata = {
   title: "Campaign Details | EcomOS",
@@ -28,6 +31,11 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
     include: {
       spendDaily: true,
       store: true,
+      adSets: {
+        include: {
+          creatives: true,
+        },
+      },
     },
   });
 
@@ -300,6 +308,49 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
           <p className="text-gray-500">No spend data yet. Campaign synced: {campaign.syncedAt?.toLocaleString()}</p>
         )}
       </div>
+
+      {/* Budget Management */}
+      <div className="rounded-lg border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Budget Management</h3>
+          <BudgetEditor
+            storeId={campaign.storeId}
+            campaignId={campaign.id}
+            metaCampaignId={campaign.metaCampaignId}
+            currentBudget={campaign.dailyBudget?.toNumber() ?? 0}
+            onSave={() => {
+              // Refresh page data
+              window.location.reload();
+            }}
+          />
+        </div>
+        {campaign.dailyBudget && (
+          <p className="text-sm text-gray-600">
+            Current daily budget: <span className="font-medium">${campaign.dailyBudget.toFixed(2)}</span>
+          </p>
+        )}
+      </div>
+
+      {/* Ad Set Management */}
+      <AdSetManager
+        storeId={campaign.storeId}
+        metaCampaignId={campaign.metaCampaignId}
+        adSets={
+          campaign.adSets?.map((adSet) => ({
+            id: adSet.id,
+            name: adSet.name,
+            status: adSet.status,
+            billingEvent: adSet.billingEvent,
+            optimizationGoal: adSet.optimizationGoal,
+            dailyBudget: adSet.dailyBudget?.toString(),
+            creatives: adSet.creatives ?? [],
+          })) ?? []
+        }
+        onAdSetCreated={() => {
+          // Refresh page data
+          window.location.reload();
+        }}
+      />
 
       {/* Attribution Note */}
       <div className="rounded-lg bg-gray-50 p-4 border border-gray-200">
