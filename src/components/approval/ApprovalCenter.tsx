@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface ApprovalActionItem {
   id: string;
@@ -27,7 +27,7 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
   const [deciding, setDeciding] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
 
-  const loadApprovals = async () => {
+  const loadApprovals = useCallback(async () => {
     try {
       setLoading(true);
       const response = await fetch(
@@ -46,11 +46,11 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [storeId]);
 
   useEffect(() => {
     loadApprovals();
-  }, [storeId, loadApprovals]);
+  }, [loadApprovals]);
 
   const handleDecision = async (decision: "approved" | "rejected") => {
     if (!selectedApproval) return;
