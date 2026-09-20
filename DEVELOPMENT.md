@@ -134,6 +134,128 @@ Product detail page (`/dashboard/products/[id]`):
 
 Cost entry form: manual COGS per variant, POSTed to `/api/variants/cost`
 
+## Order Routing & Fulfillment (Session 12)
+
+### Schema
+
+**OrderRoute:** Assigns each line item to a supplier offer. One route per line
+item, built when an order is routed. Stores the decision reason and who made it.
+
+**SupplierOrder:** Groups line items by supplier. One record per order+supplier
+pair. Aggregates cost, shipping, and estimated margin from routed line items.
+
+**Fulfillment:** Tracks fulfillment status of a SupplierOrder (pending, processing,
+shipped, delivered, failed). Links to Shipment once shipped.
+
+**Shipment:** Tracking info (carrier, tracking number, estimated/actual delivery).
+Created when a SupplierOrder ships. Links to TrackingEvents.
+
+**TrackingEvent:** Status updates (in_transit, out_for_delivery, delivered, etc.)
+from the supplier's tracking API. Timestamp per event.
+
+**FulfillmentException:** Issues during fulfillment (out_of_stock, payment_failed,
+customs_delay, etc.). Severity (low/medium/high/critical). Recommended action is
+plain text field for now.
+
+### Routing Algorithm
+
+`src/lib/orders/routing.ts`:
+
+**routeOrderLineItems(orderId):**
+1. Fetch order with line items → products → canonical product → supplier offers
+2. For each line item, pick the cheapest available supplier (cost + shipping)
+3. Store route decision in OrderRoute table
+4. Return list of routing decisions
+
+**createSupplierOrdersFromRoutes(orderId):**
+1. Group routes by supplier
+2. For each supplier, aggregate costs and shipping
+3. Estimate margin: Revenue - (SupplierCost + Shipping + PaymentFees)
+4. Create SupplierOrder with aggregated totals
+
+### API Endpoints
+
+**POST `/api/orders/route`** — Route a single order
+- Request: `{ orderId, storeId }`
+- Response: list of SupplierOrders created, with costs and margins
+
+**POST `/api/orders/sync-tracking`** — Poll suppliers for tracking updates
+- Requires `x-cron-secret` header (if CRON_SECRET env var is set)
+- Syncs all open shipments, creates TrackingEvents, updates Fulfillment status
+- Called by background job (configure in Vercel, AWS Lambda, etc.)
+
+**PATCH `/api/exceptions/[id]`** — Update exception status
+- Request: `{ storeId, isResolved, recommendedAction }`
+- Response: updated exception record
+
+### Order Hub Screen
+
+`src/app/dashboard/orders/page.tsx`:
+- Displays all store orders, newest first (paginated)
+- For each order: total price, estimated margin, fulfillment status
+- Shows all supplier orders for that order with:
+  - Supplier name + status badge
+  - Cost, shipping, margin breakdown
+  - Latest tracking event (status + timestamp)
+  - Open exceptions count + summary
+
+### Fulfillment Exception Center
+
+`src/app/dashboard/exceptions/page.tsx`:
+- Lists all unresolved exceptions across store
+- Stats: total issues, critical count, high count, unresolved count
+- Filter by resolved/unresolved, by severity
+- Click to edit: add recommended action + mark resolved
+- Tracks who resolved and when
+
+### Usage
+
+**When an order arrives from Shopify:**
+1. Sync updates Order + OrderLineItem via `syncOrders()`
+2. Call `POST /api/orders/route` to assign each line to a supplier
+3. SupplierOrder and Fulfillment records created automatically
+4. Order Hub displays progress
+
+**When a supplier ships:**
+1. External system (supplier API) creates tracking record
+2. Cron job calls `POST /api/orders/sync-tracking` periodically
+3. Tracking events populated, Fulfillment status updated
+4. Order Hub shows tracking link + ETA
+
+**When an issue occurs:**
+1. External system or manual entry creates FulfillmentException
+2. Exception Center highlights it by severity
+3. User adds recommended action and marks resolved
+4. Exception removed from "unresolved" count
+
+### Tracking Sync Job Setup
+
+For production, configure one of:
+
+**Vercel Crons** (if deployed on Vercel):
+```ts
+// vercel.json
+"crons": [{ "path": "/api/orders/sync-tracking", "schedule": "0 */6 * * *" }]
+```
+
+**AWS Lambda / EventBridge:**
+```bash
+# Schedule: every 6 hours
+# Call: POST https://your-domain.com/api/orders/sync-tracking
+# Header: x-cron-secret: ${CRON_SECRET}
+```
+
+**Self-hosted (e.g., node-cron package):**
+```ts
+import cron from 'node-cron';
+cron.schedule('0 */6 * * *', () => {
+  fetch('http://localhost:3000/api/orders/sync-tracking', {
+    method: 'POST',
+    headers: { 'x-cron-secret': process.env.CRON_SECRET }
+  });
+});
+```
+
 ## Product Economics Flow
 
 1. **Product Detail Page:** `src/app/dashboard/products/[id]/page.tsx`

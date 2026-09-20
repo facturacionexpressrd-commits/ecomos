@@ -59,7 +59,7 @@ export default async function ProductDetailPage({
         title: product.title,
         sku: product.raw.sku ? String(product.raw.sku) : undefined,
         externalId: product.shopifyGid,
-        description: (product.raw as any).bodyHtml ?? undefined,
+        description: typeof product.raw === "object" && product.raw !== null && "bodyHtml" in product.raw ? String(product.raw.bodyHtml) : undefined,
       },
     });
     canonicalProductId = canonical.id;
