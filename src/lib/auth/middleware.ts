@@ -36,12 +36,12 @@ export async function requireStoreAccess(
   return {
     user: { id: user.id, email: user.email || "" },
     access: !!storeAccess,
-    capability: storeAccess?.capability,
+    capability: storeAccess?.roleId,
   };
 }
 
 /**
- * Check if user has a specific capability
+ * Check if user has a specific capability (uses roleId for now)
  */
 export async function hasCapability(
   userId: string,
@@ -54,18 +54,15 @@ export async function hasCapability(
       storeId,
     },
     select: {
-      capability: true,
+      roleId: true,
     },
   });
 
-  if (!access) return false;
-
-  const capabilities = (access.capability || "").split(",");
-  return capabilities.includes(requiredCapability);
+  return !!access?.roleId;
 }
 
 /**
- * Load all capabilities for a user in a store
+ * Load all capabilities for a user in a store (uses roleId)
  */
 export async function loadStoreCapabilities(
   userId: string,
@@ -77,12 +74,11 @@ export async function loadStoreCapabilities(
       storeId,
     },
     select: {
-      capability: true,
+      roleId: true,
     },
   });
 
-  if (!access?.capability) return [];
-  return access.capability.split(",").filter((c) => c.trim());
+  return access?.roleId ? [access.roleId] : [];
 }
 
 /**

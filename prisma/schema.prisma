@@ -152,7 +152,6 @@ model CanonicalProduct {
 
   offers        SupplierOffer[]
   productMappings ProductMapping[]
-  approvalActions ApprovalAction[]
 
   @@index([externalId])
   @@index([sku])
@@ -210,32 +209,6 @@ enum ApprovalActionType {
   supplier_switch
   inventory_adjustment
   pricing_override
-}
-
-model ApprovalAction {
-  id                String   @id @default(cuid())
-  storeId           String
-  canonicalProductId String
-  actionType        ApprovalActionType
-  // Supplier switching context
-  fromSupplier      SupplierName?
-  toSupplier        SupplierName?
-  // Who requested this
-  requestedBy       String // user ID
-  requestedAt       DateTime @default(now())
-  // Approval state
-  status            String   @default("pending") // pending, approved, rejected, implemented
-  approvedBy        String?  // user ID
-  approvedAt        DateTime?
-  // Why
-  reason            String?  @db.Text
-  metadata          Json?
-
-  store               Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  canonicalProduct    CanonicalProduct @relation(fields: [canonicalProductId], references: [id], onDelete: Cascade)
-
-  @@index([storeId, status])
-  @@index([canonicalProductId])
 }
 
 // ---------- Phase 0: org, users, RBAC ----------
@@ -319,8 +292,6 @@ model Store {
 
   watchlist        ResearchWatchlist[]
   competitors      CompetitorProduct[]
-
-  approvals        ApprovalAction[]
 
   notifications    Notification[]
   notificationPreferences NotificationPreferences[]

@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     const product = copy.product;
     const store = await prisma.store.findUnique({
       where: { id: storeId },
-      include: { metaAccount: true },
+      include: { metaAccounts: true },
     });
 
     if (!store) {
@@ -51,12 +51,12 @@ export async function POST(req: NextRequest) {
 
     // Call Shopify to update product
     const shopifyResponse = await fetch(
-      `https://${store.shopifyDomain}/admin/api/2024-01/graphql.json`,
+      `https://${store.shopDomain}/admin/api/2024-01/graphql.json`,
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Shopify-Access-Token": store.shopifyAccessToken!,
+          "X-Shopify-Access-Token": store.accessTokenEncrypted!,
         },
         body: JSON.stringify({
           query: `
