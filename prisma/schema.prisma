@@ -673,6 +673,7 @@ model MetaCampaign {
   impressions   Int      @default(0)
   clicks        Int      @default(0)
   conversions   Int      @default(0)
+  dailyBudget   Decimal? @db.Decimal(12, 2) // campaign-level budget intent
   syncedAt      DateTime?
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
@@ -681,6 +682,7 @@ model MetaCampaign {
   metaAccount   MetaAccount          @relation(fields: [metaAccountId], references: [id], onDelete: Cascade)
   spendDaily    MetaSpendDaily[]
   attributions  OrderAttributionMeta[]
+  adSets        MetaAdSet[]
 
   @@unique([storeId, metaCampaignId])
   @@index([storeId])
