@@ -8,6 +8,107 @@ datasource db {
   provider = "postgresql"
 }
 
+// ---------- Phase 3: Canonical Products & Supplier Offers ----------
+
+model CanonicalProduct {
+  id        String   @id @default(cuid())
+  // External identifiers for matching across suppliers
+  // (barcode, SKU, internal ID — user provides one or more)
+  externalId String?
+  sku        String?
+  barcode    String?
+  title      String   @db.VarChar(255)
+  description String?  @db.Text
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  offers        SupplierOffer[]
+  productMappings ProductMapping[]
+  approvalActions ApprovalAction[]
+
+  @@index([externalId])
+  @@index([sku])
+  @@index([barcode])
+}
+
+enum SupplierName {
+  autods
+  spocket
+  printful
+  zendrop
+}
+
+model SupplierOffer {
+  id              String   @id @default(cuid())
+  canonicalProductId String
+  supplier        SupplierName
+  // Data pulled from supplier API
+  supplierProductId String?  // supplier's own ID (for linking back to their API)
+  cost            Decimal  @db.Decimal(12, 2)
+  shippingCost    Decimal  @db.Decimal(12, 2)
+  shippingDays    Int      // estimated delivery days
+  availableQty    Int      @default(0)
+  lastSyncedAt    DateTime?
+  syncStatus      String?  // "success", "error", error message
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  canonicalProduct CanonicalProduct @relation(fields: [canonicalProductId], references: [id], onDelete: Cascade)
+
+  @@unique([canonicalProductId, supplier])
+  @@index([supplier])
+}
+
+// Maps a Shopify Product to a CanonicalProduct (one-to-one per store)
+model ProductMapping {
+  id                String @id @default(cuid())
+  storeId           String
+  shopifyProductId  String // links to Product.id
+  canonicalProductId String
+  // When the user maps the product, who did it and why
+  mappedBy          String? // user ID
+  mappedAt          DateTime @default(now())
+  notes             String?
+
+  store               Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  canonicalProduct    CanonicalProduct @relation(fields: [canonicalProductId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, shopifyProductId])
+  @@index([canonicalProductId])
+}
+
+enum ApprovalActionType {
+  supplier_switch
+  inventory_adjustment
+  pricing_override
+}
+
+model ApprovalAction {
+  id                String   @id @default(cuid())
+  storeId           String
+  canonicalProductId String
+  actionType        ApprovalActionType
+  // Supplier switching context
+  fromSupplier      SupplierName?
+  toSupplier        SupplierName?
+  // Who requested this
+  requestedBy       String // user ID
+  requestedAt       DateTime @default(now())
+  // Approval state
+  status            String   @default("pending") // pending, approved, rejected, implemented
+  approvedBy        String?  // user ID
+  approvedAt        DateTime?
+  // Why
+  reason            String?  @db.Text
+  metadata          Json?
+
+  store               Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  canonicalProduct    CanonicalProduct @relation(fields: [canonicalProductId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, status])
+  @@index([canonicalProductId])
+}
+
 // ---------- Phase 0: org, users, RBAC ----------
 
 model Organization {
@@ -87,6 +188,9 @@ model Store {
   orderLineItems     OrderLineItem[]
   refunds            Refund[]
   financialTransactions FinancialTransaction[]
+
+  productMappings    ProductMapping[]
+  approvalActions    ApprovalAction[]
 
   metaAccounts       MetaAccount[]
   metaCampaigns      MetaCampaign[]
