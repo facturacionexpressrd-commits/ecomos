@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     const aiProvider = new ClaudeAIProvider(apiKey);
     const generated = await aiProvider.generateProductCopy({
       productTitle: product.title,
-      productDescription: (product.raw as Record<string, unknown>)?.description as string | undefined,
+      productDescription: (product.raw as { description?: string })?.description,
       targetAudience,
       toneOfVoice,
     });
