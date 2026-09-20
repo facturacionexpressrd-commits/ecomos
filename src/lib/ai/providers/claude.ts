@@ -132,7 +132,7 @@ Return ONLY valid JSON, no markdown formatting.`;
     }
   }
 
-  private async callClaude(prompt: string): Promise<string> {
+  protected async callClaude(prompt: string): Promise<string> {
     const response = await fetch(`${this.baseUrl}/messages`, {
       method: "POST",
       headers: {
