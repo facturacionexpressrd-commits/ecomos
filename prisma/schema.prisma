@@ -330,6 +330,8 @@ model Store {
   metaAdSets         MetaAdSet[]
   metaCreatives      MetaCreative[]
 
+  productAICopy      ProductAICopy[]
+
   @@index([organizationId])
 }
 
@@ -413,10 +415,36 @@ model Product {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  store    Store            @relation(fields: [storeId], references: [id], onDelete: Cascade)
-  variants ProductVariant[]
+  store              Store                @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  variants           ProductVariant[]
+  aiGeneratedContent ProductAICopy[]
 
   @@unique([storeId, shopifyGid])
+}
+
+// AI-generated product copy suggestions
+model ProductAICopy {
+  id                String   @id @default(cuid())
+  storeId           String
+  productId         String
+  headline          String
+  description       String   @db.Text
+  bulletPoints      String[] // JSON array stored as text
+  seoKeywords       String[]
+  aiProvider        String   // "claude", etc.
+  confidence        Float    @default(0.8)
+  isPublished       Boolean  @default(false)
+  publishedAt       DateTime?
+  publishedHeadline String?  // what was actually published
+  publishedDescription String? @db.Text
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  store   Store   @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, productId])
+  @@index([isPublished])
 }
 
 model ProductVariant {
