@@ -263,6 +263,8 @@ model User {
   organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   storeAccess  UserStoreAccess[]
   auditLogs    AuditLog[]
+  notifications Notification[]
+  notificationPreferences NotificationPreferences?
 
   @@index([organizationId])
 }
@@ -319,6 +321,9 @@ model Store {
   competitors      CompetitorProduct[]
 
   approvals        ApprovalAction[]
+
+  notifications    Notification[]
+  notificationPreferences NotificationPreferences[]
 
   costAllocations    CostAllocation[]
   dailyFinancials    DailyFinancialMetric[]
@@ -454,6 +459,52 @@ model ProductAICopy {
 
   @@index([storeId, productId])
   @@index([isPublished])
+}
+
+// User notifications
+model Notification {
+  id        String   @id @default(cuid())
+  storeId   String
+  userId    String
+  type      String   // "approval_pending", "campaign_launched", etc.
+  title     String
+  message   String   @db.Text
+  link      String?  // deep link to relevant page
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, storeId, read])
+  @@index([createdAt])
+}
+
+// User notification preferences
+model NotificationPreferences {
+  id                   String  @id @default(cuid())
+  userId               String  @unique
+  storeId              String
+  approval_pending     Boolean @default(true)
+  approval_approved    Boolean @default(true)
+  approval_rejected    Boolean @default(true)
+  campaign_launched    Boolean @default(true)
+  campaign_paused      Boolean @default(true)
+  opportunity_found    Boolean @default(true)
+  creative_generated   Boolean @default(true)
+  product_published    Boolean @default(true)
+  order_routed         Boolean @default(true)
+  sync_completed       Boolean @default(true)
+  error_alert          Boolean @default(true)
+  emailNotifications   Boolean @default(true)
+  inAppNotifications   Boolean @default(true)
+  digestFrequency      String  @default("immediate") // "immediate", "daily", "weekly"
+  updatedAt            DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 // Approval actions: AI recommendations awaiting human approval
