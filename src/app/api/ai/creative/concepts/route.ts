@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     const provider = new ClaudeCreativeProvider(apiKey);
     const concepts = await provider.generateConcepts({
       productTitle: product.title,
-      productDescription: product.raw?.description,
+      productDescription: (product.raw as any)?.description as string | undefined,
       targetAudience,
     });
 

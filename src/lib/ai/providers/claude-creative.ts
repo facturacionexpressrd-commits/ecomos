@@ -98,42 +98,4 @@ Return ONLY the JSON array, no markdown or extra text.`;
     }
   }
 
-  protected async callClaude(prompt: string): Promise<string> {
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": this.apiKey,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: this.model,
-        max_tokens: 2048,
-        messages: [
-          {
-            role: "user",
-            content: prompt,
-          },
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(`Claude API error: ${error.error?.message || "Unknown error"}`);
-    }
-
-    const data = await response.json();
-    const content = data.content?.[0];
-
-    if (!content || content.type !== "text") {
-      throw new Error("Invalid response from Claude API");
-    }
-
-    return content.text;
-  }
-
-  private get model(): string {
-    return process.env.CLAUDE_MODEL || "claude-opus-5";
-  }
 }

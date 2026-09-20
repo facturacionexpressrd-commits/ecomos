@@ -32,18 +32,10 @@ export default async function ExceptionsPage({
     },
   };
 
-  if (status !== undefined) {
-    where.isResolved = status === "resolved";
-  }
-
-  if (severity) {
-    where.severity = severity;
-  }
-
   // Fetch exceptions with supplier order details
   const exceptions = await prisma.fulfillmentException.findMany({
     where,
-    orderBy: [{ isResolved: "asc" }, { severity: "desc" }, { createdAt: "desc" }],
+    orderBy: [{ createdAt: "desc" }],
     include: {
       supplierOrder: {
         include: {

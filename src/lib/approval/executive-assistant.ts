@@ -34,8 +34,7 @@ export class ExecutiveAssistant {
 Recommendation: ${input.title}
 Action Type: ${input.actionType}
 Confidence: ${(input.confidenceScore * 100).toFixed(0)}%
-Priority: ${input.priority}
-Risk Level: ${input.estimatedImpact.riskLevel}
+Impact: ${input.estimatedImpact}
 
 ${financialImpact}
 ${timelineImpact}
