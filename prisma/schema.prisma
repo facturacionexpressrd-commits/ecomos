@@ -318,6 +318,8 @@ model Store {
   watchlist        ResearchWatchlist[]
   competitors      CompetitorProduct[]
 
+  approvals        ApprovalAction[]
+
   costAllocations    CostAllocation[]
   dailyFinancials    DailyFinancialMetric[]
   orderLineItems     OrderLineItem[]
@@ -452,6 +454,33 @@ model ProductAICopy {
 
   @@index([storeId, productId])
   @@index([isPublished])
+}
+
+// Approval actions: AI recommendations awaiting human approval
+model ApprovalAction {
+  id                String   @id @default(cuid())
+  storeId           String
+  actionType        String   // "supplier_add", "budget_update", "creative_approval", etc.
+  title             String
+  description       String   @db.Text
+  data              Json     // action-specific data (varies by type)
+  priority          String   // "low", "medium", "high", "critical"
+  confidenceScore   Decimal  @db.Decimal(3, 2) // 0-1
+  reasoning         String   @db.Text
+  executiveExplanation String @db.Text
+  status            String   @default("pending") // "pending", "approved", "rejected", "completed"
+  approvedBy        String?
+  approvedAt        DateTime?
+  rejectionReason   String?
+  createdBy         String
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId, status])
+  @@index([priority])
+  @@index([createdAt])
 }
 
 // Watchlist for research + opportunity tracking
