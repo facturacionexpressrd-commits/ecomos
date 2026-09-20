@@ -9,7 +9,7 @@ export default async function ExceptionsPage({
 }: {
   searchParams: Promise<{ store?: string; status?: string; severity?: string }>;
 }) {
-  const { store: requestedStoreId, status, severity } = await searchParams;
+  const { store: requestedStoreId } = await searchParams;
 
   const supabase = await createClient();
   const {

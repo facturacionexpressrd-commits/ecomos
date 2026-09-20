@@ -1,10 +1,5 @@
 import { AIProvider, AIGeneratedContent } from "../types";
 
-interface ClaudeMessage {
-  role: "user" | "assistant";
-  content: string;
-}
-
 export class ClaudeAIProvider implements AIProvider {
   name = "claude";
   private apiKey: string;

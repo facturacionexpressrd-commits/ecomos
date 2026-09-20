@@ -20,7 +20,6 @@ interface CampaignReviewProps {
 }
 
 export default function CampaignReview({
-  storeId,
   campaignData,
   onBack,
   onPublish,

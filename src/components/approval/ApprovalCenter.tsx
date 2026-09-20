@@ -27,10 +27,6 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
   const [deciding, setDeciding] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
 
-  useEffect(() => {
-    loadApprovals();
-  }, [storeId]);
-
   const loadApprovals = async () => {
     try {
       setLoading(true);
@@ -51,6 +47,10 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadApprovals();
+  }, [storeId, loadApprovals]);
 
   const handleDecision = async (decision: "approved" | "rejected") => {
     if (!selectedApproval) return;

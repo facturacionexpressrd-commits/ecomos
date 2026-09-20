@@ -1,5 +1,5 @@
 import { ClaudeAIProvider } from "./claude";
-import { CreativeConceptProvider, CreativeIdea, HeadlineIdea } from "./types";
+import { CreativeConceptProvider, CreativeIdea } from "./types";
 
 export class ClaudeCreativeProvider
   extends ClaudeAIProvider

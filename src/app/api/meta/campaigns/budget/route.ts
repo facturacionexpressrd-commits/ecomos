@@ -67,21 +67,9 @@ export async function PATCH(req: NextRequest) {
     }
 
     // Decrypt token
-    const encryptionKey = process.env.TOKEN_ENCRYPTION_KEY;
-    if (!encryptionKey) {
-      throw new Error("TOKEN_ENCRYPTION_KEY not set");
-    }
-
-    const accessToken = decryptToken(metaAccount.accessTokenEncrypted, encryptionKey);
-
     // Update in Meta (note: campaigns don't have budgets directly, ad sets do)
     // For now, we'll just update the campaign in our DB as a marker
     // Real budget management happens at the ad set level in Meta
-    const metaClient = new MetaClient({
-      appId: process.env.META_APP_ID || "",
-      appSecret: process.env.META_APP_SECRET || "",
-      redirectUri: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/meta/auth/callback`,
-    });
 
     // Note: Campaigns in Meta don't have budgets; budgets are set at the ad set level.
     // This endpoint is a placeholder for storing budget intent at the campaign level.
