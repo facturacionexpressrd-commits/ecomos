@@ -120,7 +120,7 @@ export async function GET(req: NextRequest) {
         storeId,
         metaAccountId: adAccount.id,
         accessTokenEncrypted: encryptedToken,
-        scope: "ads_read",
+        scope: "ads_read,ads_manage",
         status: "connected",
       },
       create: {
@@ -128,7 +128,7 @@ export async function GET(req: NextRequest) {
         metaBusinessId: business.id,
         metaAccountId: adAccount.id,
         accessTokenEncrypted: encryptedToken,
-        scope: "ads_read",
+        scope: "ads_read,ads_manage",
         status: "connected",
       },
     });

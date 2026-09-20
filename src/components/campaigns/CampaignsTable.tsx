@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import CampaignActionMenu from "./CampaignActionMenu";
 
 interface Campaign {
   id: string;
+  metaCampaignId: string;
   name: string;
   status: string;
   objective: string;
@@ -74,8 +76,36 @@ export default function CampaignsTable({ storeId }: CampaignsTableProps) {
   if (loading) return <div className="p-4 text-gray-600">Loading campaigns...</div>;
   if (error) return <div className="p-4 text-red-600">Error: {error}</div>;
 
+  const handleCampaignActionCompleted = () => {
+    // Reload campaigns after an action
+    const load = async () => {
+      try {
+        const res = await fetch(
+          `/api/campaigns/list?storeId=${encodeURIComponent(storeId)}&sortBy=${encodeURIComponent(sortBy)}`
+        );
+        if (!res.ok) throw new Error("Failed to fetch campaigns");
+        const data = await res.json();
+        setCampaigns(data.campaigns);
+        setMeta(data.meta);
+      } catch (err) {
+        console.error("Failed to reload campaigns:", err);
+      }
+    };
+    load();
+  };
+
   return (
     <div className="space-y-6">
+      {/* Create Campaign Button */}
+      <div className="flex justify-end">
+        <Link
+          href={`/dashboard/meta/campaigns/new?storeId=${encodeURIComponent(storeId)}`}
+          className="inline-flex items-center rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
+        >
+          + Create Campaign
+        </Link>
+      </div>
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
         <div className="rounded-lg border border-gray-200 p-4">
@@ -105,6 +135,7 @@ export default function CampaignsTable({ storeId }: CampaignsTableProps) {
             <tr>
               <th className="px-4 py-3 text-left text-sm font-semibold">Campaign</th>
               <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
+              <th className="px-4 py-3 text-left text-sm font-semibold">Actions</th>
               <th
                 className="cursor-pointer px-4 py-3 text-left text-sm font-semibold hover:bg-gray-100"
                 onClick={() => setSortBy("spend")}
@@ -155,6 +186,15 @@ export default function CampaignsTable({ storeId }: CampaignsTableProps) {
                   >
                     {campaign.status}
                   </span>
+                </td>
+                <td className="px-4 py-3">
+                  <CampaignActionMenu
+                    storeId={storeId}
+                    campaignId={campaign.id}
+                    metaCampaignId={campaign.metaCampaignId}
+                    status={campaign.status}
+                    onActionCompleted={handleCampaignActionCompleted}
+                  />
                 </td>
                 <td className="px-4 py-3 font-mono text-sm">
                   ${campaign.spend.toFixed(2)}

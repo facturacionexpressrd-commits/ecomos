@@ -64,7 +64,7 @@ export class MetaClient {
     const params = new URLSearchParams({
       client_id: this.config.appId,
       redirect_uri: this.config.redirectUri,
-      scope: "ads_read", // Read campaigns, spend, results
+      scope: "ads_read,ads_manage", // Read + manage campaigns, spend, results, create/edit campaigns
       response_type: "code",
       state,
     });
@@ -199,6 +199,180 @@ export class MetaClient {
       }>;
     };
     return data.data;
+  }
+
+  /**
+   * Create a new campaign in Meta Ads Manager
+   * Requires ads_manage scope
+   */
+  async createCampaign(
+    adAccountId: string,
+    accessToken: string,
+    campaignData: {
+      name: string;
+      objective: string;
+      status?: string;
+      special_ad_categories?: string[];
+    }
+  ): Promise<{ campaign_id: string }> {
+    const formData = new URLSearchParams({
+      name: campaignData.name,
+      objective: campaignData.objective,
+      status: campaignData.status || "PAUSED", // Start paused, user must activate
+      access_token: accessToken,
+    });
+
+    if (campaignData.special_ad_categories?.length) {
+      formData.append("special_ad_categories", JSON.stringify(campaignData.special_ad_categories));
+    }
+
+    const response = await fetch(
+      `${META_GRAPH_API_BASE}/${withActPrefix(adAccountId)}/campaigns`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to create Meta campaign: ${await response.text()}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Create an ad set within a campaign
+   * Requires ads_manage scope
+   */
+  async createAdSet(
+    adAccountId: string,
+    accessToken: string,
+    adSetData: {
+      name: string;
+      campaign_id: string;
+      daily_budget?: number; // in cents
+      lifetime_budget?: number; // in cents
+      billing_event: string;
+      optimization_goal: string;
+      targeting: Record<string, unknown>;
+      start_time?: number;
+      end_time?: number;
+      status?: string;
+    }
+  ): Promise<{ adset_id: string }> {
+    const formData = new URLSearchParams({
+      name: adSetData.name,
+      campaign_id: adSetData.campaign_id,
+      billing_event: adSetData.billing_event,
+      optimization_goal: adSetData.optimization_goal,
+      targeting: JSON.stringify(adSetData.targeting),
+      status: adSetData.status || "PAUSED",
+      access_token: accessToken,
+    });
+
+    if (adSetData.daily_budget) {
+      formData.append("daily_budget", adSetData.daily_budget.toString());
+    }
+    if (adSetData.lifetime_budget) {
+      formData.append("lifetime_budget", adSetData.lifetime_budget.toString());
+    }
+    if (adSetData.start_time) {
+      formData.append("start_time", adSetData.start_time.toString());
+    }
+    if (adSetData.end_time) {
+      formData.append("end_time", adSetData.end_time.toString());
+    }
+
+    const response = await fetch(
+      `${META_GRAPH_API_BASE}/${withActPrefix(adAccountId)}/adsets`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to create Meta ad set: ${await response.text()}`);
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Update a campaign (status, name, budget)
+   * Requires ads_manage scope
+   */
+  async updateCampaign(
+    campaignId: string,
+    accessToken: string,
+    updates: {
+      name?: string;
+      status?: string;
+    }
+  ): Promise<{ success: boolean }> {
+    const formData = new URLSearchParams({
+      access_token: accessToken,
+    });
+
+    if (updates.name) formData.append("name", updates.name);
+    if (updates.status) formData.append("status", updates.status);
+
+    const response = await fetch(
+      `${META_GRAPH_API_BASE}/${campaignId}`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to update Meta campaign: ${await response.text()}`);
+    }
+
+    return { success: true };
+  }
+
+  /**
+   * Update an ad set (budget, status, timing)
+   * Requires ads_manage scope
+   */
+  async updateAdSet(
+    adSetId: string,
+    accessToken: string,
+    updates: {
+      name?: string;
+      daily_budget?: number; // in cents
+      lifetime_budget?: number; // in cents
+      status?: string;
+      start_time?: number;
+      end_time?: number;
+    }
+  ): Promise<{ success: boolean }> {
+    const formData = new URLSearchParams({
+      access_token: accessToken,
+    });
+
+    if (updates.name) formData.append("name", updates.name);
+    if (updates.daily_budget) formData.append("daily_budget", updates.daily_budget.toString());
+    if (updates.lifetime_budget) formData.append("lifetime_budget", updates.lifetime_budget.toString());
+    if (updates.status) formData.append("status", updates.status);
+    if (updates.start_time) formData.append("start_time", updates.start_time.toString());
+    if (updates.end_time) formData.append("end_time", updates.end_time.toString());
+
+    const response = await fetch(
+      `${META_GRAPH_API_BASE}/${adSetId}`,
+      {
+        method: "POST",
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to update Meta ad set: ${await response.text()}`);
+    }
+
+    return { success: true };
   }
 
 }

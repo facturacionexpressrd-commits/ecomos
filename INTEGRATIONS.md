@@ -191,10 +191,89 @@ query InventoryLevels($first: Int, $after: String) {
 - 100 requests/minute per user per store (Phase 2+)
 - Webhook delivery: best-effort, retry up to 5 times over 48 hours
 
+## Meta Marketing API (Ads Manage)
+
+**Base URL:** `https://graph.facebook.com/{version}/`
+
+**Authentication:**
+- OAuth access token in request params or Authorization header
+- Token stored encrypted in `metaAccounts.accessTokenEncrypted`
+- Requires scope: `ads_read,ads_manage` (write actions require `ads_manage`)
+
+**Campaign Creation:**
+```
+POST /{ad_account_id}/campaigns
+- name: string
+- objective: string (LINK_CLICKS, CONVERSIONS, etc.)
+- status: string (ACTIVE, PAUSED)
+- special_ad_categories: array (if applicable)
+Returns: { campaign_id }
+```
+
+**Ad Set Creation:**
+```
+POST /{ad_account_id}/adsets
+- name: string
+- campaign_id: string
+- daily_budget or lifetime_budget: number (in cents)
+- billing_event: string
+- optimization_goal: string
+- targeting: object
+- start_time: timestamp (optional)
+- end_time: timestamp (optional)
+Returns: { adset_id }
+```
+
+**Ad Creation:**
+```
+POST /{ad_account_id}/ads
+- name: string
+- adset_id: string
+- creative: object { asset_id or ... }
+- status: string
+Returns: { ad_id }
+```
+
+**Campaign Update (budget, status, name):**
+```
+POST /{campaign_id}
+- name: string (optional)
+- status: string (ACTIVE, PAUSED, DELETED)
+Returns: { success }
+```
+
+**Ad Set Budget Update:**
+```
+POST /{adset_id}
+- daily_budget: number (optional, in cents)
+- lifetime_budget: number (optional, in cents)
+- start_time: timestamp (optional)
+- end_time: timestamp (optional)
+Returns: { success }
+```
+
+### Campaign Wizard Endpoints (EcomOS)
+
+**POST /api/meta/campaigns/draft** — Save wizard state
+- storeId, campaignName, objective, budget, targeting, creativeAssets
+- Returns: draftId
+
+**POST /api/meta/campaigns/create** — Create and publish campaign
+- storeId, draftId or full campaign object
+- Review screen presented before this is called
+- Returns: { campaignId, syncedAt }
+
+**POST /api/meta/campaigns/{id}/pause**
+**POST /api/meta/campaigns/{id}/activate**
+**POST /api/meta/campaigns/{id}/duplicate**
+**PATCH /api/meta/campaigns/{id}/budget**
+- All require user authorization + audit logging
+
 ## Data Encryption
 
 **Sensitive Fields:**
 - `stores.shopify_access_token` — encrypted with Supabase vault or application-level AES-256
+- `metaAccounts.accessTokenEncrypted` — AES-256-GCM with IV + auth tag
 - `users.password` — handled by Supabase Auth (bcrypt)
 
 **Implementation:** Use Prisma middlewares or Supabase vault feature for token encryption.
