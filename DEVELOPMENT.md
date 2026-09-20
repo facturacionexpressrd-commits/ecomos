@@ -75,18 +75,64 @@ npm test -- --watch
 
 ## Finance Layer
 
-Finance formulas are pure functions in `src/lib/finance/formulas.ts`:
+### Schema
+
+**OrderLineItem:** revenue fact per line. Shopify reports gross (before discount)
+and net (after discount) separately.
+
+**Refund:** refund header (when, how much, Shopify's ID). **RefundLine:** which
+line items were refunded. Amounts are product only (Refund.amount includes tax +
+shipping; RefundLine.subtotal is just the line's share).
+
+**FinancialTransaction:** payment ledger (sale, refund, void, etc.) as reported
+by Shopify. Gateway (Stripe, etc.), status (success, pending), kind. Amount can
+be negative.
+
+**Store.paymentFeePercent/Fixed:** per-store estimate of card processing fees
+(e.g., 2.9% + $0.30). This is an estimate; Shopify's actual per-transaction fees
+are not synced. Update in `prisma studio` or via an admin form.
+
+### Formulas
+
+Pure functions in `src/lib/finance/formulas.ts`. All 42 tests pass.
+
+**Store-level:**
 - `contributionProfit(grossRevenue, refunds, paymentFeesPercentage, totalCogs)`
 - `contributionMargin(grossRevenue, refunds, paymentFeesPercentage, totalCogs)`
 - `breakEvenCpa(contributionProfit, uniqueCustomers, adSpend)`
 - `maxSustainableCpa(contributionProfit, uniqueCustomers)`
-- `breakEvenRoas(grossRevenue, adSpend)`
-- `contributionRoas(contributionProfit, adSpend)`
+- `breakEvenRoas(grossRevenue, adSpend)` — revenue ROAS, not profit
+- `contributionRoas(contributionProfit, adSpend)` — true profitability
 - `adPaybackPeriodDays(contributionProfit, adSpend, periodDays)`
+
+**Variant-level:**
 - `variantContribution(price, cost, quantity, paymentFeesPercentage)`
 - `variantContributionMargin(price, cost, quantity, paymentFeesPercentage)`
 
-All 42 unit tests pass: `npm test -- finance-formulas.test.ts`
+**Meta ads (Phase 2):**
+- `metaRevenueRoas(attributedRevenue, adSpend)`
+- `metaContributionRoas(attributedProfit, adSpend)`
+- `metaCpa(adSpend, conversions)`
+- `metaProfitabilityIndex(attributedProfit, adSpend)`
+
+### Sync
+
+`src/lib/shopify/sync.ts` fetches Shopify GraphQL and populates all tables
+idempotently (by `storeId_shopifyGid` unique constraint).
+
+- **LineItems:** per order, at upsert time
+- **Refunds + RefundLines:** per order, matches lines by shopifyGid
+- **Transactions:** per order, separate kind/status/gateway for each
+
+### Usage
+
+Product detail page (`/dashboard/products/[id]`):
+- Fetches variant refunds per variant (RefundLine aggregation)
+- Reads Store.paymentFeePercent and Fixed
+- Computes contribution profit and margin via formulas
+- Shows per-variant economics with methodology labels
+
+Cost entry form: manual COGS per variant, POSTed to `/api/variants/cost`
 
 ## Product Economics Flow
 

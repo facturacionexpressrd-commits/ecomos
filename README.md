@@ -1,11 +1,14 @@
 # EcomOS
 
-Multi-store e-commerce operations platform. This is Phase 0 (foundation:
-org/user/role/store model, invitation-based auth, capability RBAC) + Phase 1
-(Shopify core: OAuth connect, product/order/customer/inventory sync,
-idempotent webhooks, one dashboard). See [ARCHITECTURE.md](./ARCHITECTURE.md),
-[DATABASE.md](./DATABASE.md), and [INTEGRATIONS.md](./INTEGRATIONS.md) for the
-design — they're the source of truth for later phases too.
+Multi-store e-commerce operations platform. Phases complete:
+
+- **Phase 0:** org/user/role/store model, invitation-based auth, capability RBAC
+- **Phase 1:** Shopify core — OAuth connect, product/order/customer/inventory sync, webhooks
+- **Phase 1.5:** Finance layer — order line items (revenue facts), refunds, payment ledger, per-store fee config
+- **Phase 2:** Meta Ads — campaign sync, daily spend rollup, order attribution, ROAS calculation
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md), [DATABASE.md](./DATABASE.md), and
+[INTEGRATIONS.md](./INTEGRATIONS.md) for the design.
 
 ## Setup
 
@@ -42,19 +45,29 @@ enqueues jobs, the worker processes them.
 ## Testing
 
 ```bash
-npm test         # RBAC + webhook idempotency unit tests — no live DB needed
-npm run build    # type-checks the whole app
+npm test         # 98 tests: RBAC, webhook idempotency, 42 finance formulas — no live DB needed
+npm run build    # type-checks + builds for production
+npm run lint     # strict ESLint (0 warnings, 0 errors)
 ```
 
-## Connecting a store
+## Connecting a store & syncing data
 
 Once signed in and `.env` has real Shopify credentials:
 
-```
+```bash
+# Install Shopify app
 /api/shopify/install?shop=your-dev-store.myshopify.com
+
+# Start worker (required for background sync jobs)
+npm run worker
 ```
 
-This redirects through Shopify's OAuth consent screen and back to
-`/dashboard` once connected. The account that ran the install gets full
-("Owner") access to that store automatically; invite teammates via
-`POST /api/invitations` (see [ARCHITECTURE.md](./ARCHITECTURE.md#multi-tenancy--rbac)).
+The OAuth flow redirects to `/dashboard` once connected. The installing account
+gets full ("Owner") access automatically; invite teammates via `POST /api/invitations`.
+
+**What gets synced:** products, variants, inventory, customers, orders, refunds,
+payment transactions. Sync runs on install, then every 4 hours (orders), hourly
+(inventory), and daily (products) via pg_cron jobs.
+
+**Contribution profit:** automatically calculated per variant from Shopify revenue,
+actual refunds, payment fees, and manual COGS entry. Open any product to see economics.
