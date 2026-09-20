@@ -327,6 +327,8 @@ model Store {
   metaCampaigns      MetaCampaign[]
   metaSpendDaily     MetaSpendDaily[]
   orderAttributions  OrderAttributionMeta[]
+  metaAdSets         MetaAdSet[]
+  metaCreatives      MetaCreative[]
 
   @@index([organizationId])
 }
@@ -721,4 +723,56 @@ model OrderAttributionMeta {
 
   @@index([storeId])
   @@index([metaCampaignId])
+}
+
+// Ad sets within a campaign (targeting, budget, schedule)
+model MetaAdSet {
+  id              String   @id @default(cuid())
+  storeId         String
+  metaCampaignId  String
+  metaAdSetId     String   @unique // Meta's ad set ID
+  name            String
+  status          String   @default("PAUSED") // ACTIVE, PAUSED, DELETED, etc.
+  dailyBudget     Decimal? @db.Decimal(12, 2) // in cents
+  lifetimeBudget  Decimal? @db.Decimal(12, 2) // in cents
+  billingEvent    String   // IMPRESSIONS, CLICKS, CONVERSIONS, etc.
+  optimizationGoal String // REACH, IMPRESSIONS, LINK_CLICKS, CONVERSIONS, etc.
+  targeting       Json? // Meta targeting object (interests, demographics, etc.)
+  startTime       DateTime?
+  endTime         DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  store    Store        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  campaign MetaCampaign @relation(fields: [metaCampaignId], references: [id], onDelete: Cascade)
+  creatives MetaCreative[]
+
+  @@unique([storeId, metaAdSetId])
+  @@index([metaCampaignId])
+  @@index([status])
+}
+
+// Creatives (ads) within an ad set
+model MetaCreative {
+  id            String   @id @default(cuid())
+  storeId       String
+  metaAdSetId   String
+  metaCreativeId String  @unique // Meta's creative ID
+  name          String
+  status        String   @default("PAUSED")
+  // Asset references (images, videos, copy)
+  assetIds      String[] // Comma-separated asset IDs
+  headline      String?
+  bodyText      String?
+  ctaText       String?
+  imageUrl      String?
+  videoUrl      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  store   Store      @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  adSet   MetaAdSet  @relation(fields: [metaAdSetId], references: [id], onDelete: Cascade)
+
+  @@index([metaAdSetId])
+  @@index([status])
 }
