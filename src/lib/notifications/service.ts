@@ -42,7 +42,7 @@ export class NotificationService {
           );
         }
 
-        return notification as any;
+        return notification as Notification;
       }
 
       return null;
@@ -60,7 +60,7 @@ export class NotificationService {
       return (await prisma.notification.update({
         where: { id: notificationId },
         data: { read: true },
-      })) as any;
+      })) as Notification;
     } catch (error) {
       console.error("Mark as read failed:", error);
       return null;
@@ -77,7 +77,7 @@ export class NotificationService {
         where: { userId, storeId },
         orderBy: { createdAt: "desc" },
         take: limit,
-      })) as any;
+      })) as Notification[];
     } catch (error) {
       console.error("Get notifications failed:", error);
       return [];
