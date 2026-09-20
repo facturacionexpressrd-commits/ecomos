@@ -101,10 +101,7 @@ export function verifyWebhookSignature(
  * Webhook idempotency key tracking
  * Returns true if this is the first time we've seen this key
  */
-export async function checkIdempotencyKey(
-  storeId: string,
-  idempotencyKey: string
-): Promise<boolean> {
+export async function checkIdempotencyKey(): Promise<boolean> {
   // In production, use Redis for this with TTL
   // For now, use a simple in-memory map (not production-safe)
   // TODO: integrate with Redis
