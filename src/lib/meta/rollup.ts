@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { buildDailyMetric } from "@/lib/finance/daily";
 
 /**
  * Aggregate daily Meta ad spend into store-level financial metrics.
@@ -66,40 +67,16 @@ async function rollupDayForStore(storeId: string, date: Date): Promise<void> {
   const totalSpend = spendAgg._sum.spend?.toNumber() ?? 0;
   const totalConversions = spendAgg._sum.conversions ?? 0;
 
-  // Get or create daily financial metric
-  let dailyMetric = await prisma.dailyFinancialMetric.findUnique({
-    where: {
-      storeId_date: {
-        storeId,
-        date,
-      },
-    },
+  // Recompute from real orders every run so late orders and refunds correct the row.
+  const metric = await computeDailyMetric(storeId, date);
+  const saved = await prisma.dailyFinancialMetric.upsert({
+    where: { storeId_date: { storeId, date } },
+    create: { storeId, date, ...metric },
+    update: metric,
   });
 
-  if (!dailyMetric) {
-    // Create new metric with revenue/COGS from orders that day
-    const dayRevenue = await getRevenuForDate(storeId, date);
-    const dayCogs = await getCOGSForDate(storeId, date);
-    const fees = calculateFees(dayRevenue);
-
-    const contributionProfit = dayRevenue - dayCogs - fees;
-
-    dailyMetric = await prisma.dailyFinancialMetric.create({
-      data: {
-        storeId,
-        date,
-        grossRevenue: dayRevenue,
-        cogs: dayCogs,
-        fees,
-        contributionProfit,
-      },
-    });
-  }
-
   const contributionRoas =
-    dailyMetric.contributionProfit.toNumber() > 0
-      ? dailyMetric.contributionProfit.toNumber() / totalSpend
-      : 0;
+    totalSpend > 0 ? saved.contributionProfit.toNumber() / totalSpend : 0;
 
   // DailyFinancialMetric has nowhere to store ad spend yet, so the rollup
   // currently only ensures the row exists and reports. Persisting
@@ -111,56 +88,38 @@ async function rollupDayForStore(storeId: string, date: Date): Promise<void> {
   );
 }
 
-async function getRevenuForDate(storeId: string, date: Date): Promise<number> {
+async function computeDailyMetric(storeId: string, date: Date) {
   const startOfDay = new Date(date);
   startOfDay.setUTCHours(0, 0, 0, 0);
+  const endOfDay = new Date(startOfDay);
+  endOfDay.setUTCDate(endOfDay.getUTCDate() + 1);
 
-  const endOfDay = new Date(date);
-  endOfDay.setUTCHours(23, 59, 59, 999);
-
-  const orders = await prisma.order.aggregate({
-    where: {
-      storeId,
-      placedAt: {
-        gte: startOfDay,
-        lt: endOfDay,
+  const [store, orders] = await Promise.all([
+    prisma.store.findUniqueOrThrow({
+      where: { id: storeId },
+      select: { paymentFeePercent: true, paymentFeeFixed: true },
+    }),
+    prisma.order.findMany({
+      where: { storeId, placedAt: { gte: startOfDay, lt: endOfDay } },
+      select: {
+        totalPrice: true,
+        refunds: { select: { amount: true } },
+        lineItems: { select: { quantity: true, variant: { select: { cost: true } } } },
       },
-    },
-    _sum: { totalPrice: true },
+    }),
+  ]);
+
+  return buildDailyMetric({
+    feePercent: store.paymentFeePercent.toNumber(),
+    feeFixed: store.paymentFeeFixed.toNumber(),
+    orders: orders.map((o) => ({
+      totalPrice: o.totalPrice.toNumber(),
+      refunded: o.refunds.reduce((sum, r) => sum + r.amount.toNumber(), 0),
+    })),
+    lines: orders.flatMap((o) =>
+      o.lineItems.map((l) => ({ quantity: l.quantity, unitCost: l.variant?.cost?.toNumber() ?? 0 }))
+    ),
   });
-
-  return orders._sum.totalPrice?.toNumber() ?? 0;
-}
-
-async function getCOGSForDate(storeId: string, date: Date): Promise<number> {
-  // ponytail: COGS calculation is simplified here
-  // Real implementation would sum actual costs from order line items + variants
-  // For now, assume average COGS per store from DailyFinancialMetric
-
-  const latestDaily = await prisma.dailyFinancialMetric.findFirst({
-    where: { storeId },
-    orderBy: { date: "desc" },
-  });
-
-  if (!latestDaily || latestDaily.grossRevenue.toNumber() === 0) {
-    return 0;
-  }
-
-  // Estimate COGS ratio from recent data
-  const cogsRatio = latestDaily.cogs.toNumber() / latestDaily.grossRevenue.toNumber();
-  const dayRevenue = await getRevenuForDate(storeId, date);
-
-  return dayRevenue * cogsRatio;
-}
-
-function calculateFees(revenue: number): number {
-  // Shopify payment processing: 2.9% + $0.30 per transaction
-  // Estimate: 30 orders per $1000 revenue (rough avg)
-  const estimatedOrders = (revenue / 1000) * 30;
-  const percentageFees = revenue * 0.029;
-  const fixedFees = estimatedOrders * 0.3;
-
-  return percentageFees + fixedFees;
 }
 
 interface RollupResult {
