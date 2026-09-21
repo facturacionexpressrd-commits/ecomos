@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
+import { CAPABILITIES, hasCapability, loadStoreAccessGrants } from "@/lib/auth/capabilities";
+import { decideApproval } from "@/lib/approval/decide";
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -15,59 +17,32 @@ export async function POST(req: NextRequest) {
   const { storeId, approvalId, decision, rejectionReason } = await req.json();
 
   if (!storeId || !approvalId || !["approved", "rejected"].includes(decision)) {
-    return NextResponse.json(
-      { error: "Invalid parameters" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Invalid parameters" }, { status: 400 });
   }
 
-  // Verify user has access
-  const access = await prisma.userStoreAccess.findFirst({
-    where: { userId: user.id, storeId },
-  });
-
-  if (!access) {
+  // Approving can spend money or change prices, so it needs its own capability, not just store access.
+  const grants = await loadStoreAccessGrants(user.id);
+  if (!hasCapability(grants, storeId, CAPABILITIES.approvalsDecide)) {
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
   }
 
   try {
-    const approval = await prisma.approvalAction.findFirst({
-      where: { id: approvalId, storeId },
-    });
+    const result = await decideApproval({ storeId, approvalId, userId: user.id, decision, rejectionReason });
 
-    if (!approval) {
-      return NextResponse.json(
-        { error: "Approval not found" },
-        { status: 404 }
-      );
+    switch (result.outcome) {
+      case "not_found":
+        return NextResponse.json({ error: "Approval not found" }, { status: 404 });
+      case "already_processed":
+        return NextResponse.json({ error: "Approval already processed" }, { status: 409 });
+      case "failed":
+        return NextResponse.json({ error: `Action failed: ${result.error}` }, { status: 502 });
+      default: {
+        const approval = await prisma.approvalAction.findUniqueOrThrow({ where: { id: approvalId } });
+        return NextResponse.json({ approval, executed: result.outcome === "completed" }, { status: 200 });
+      }
     }
-
-    if (approval.status !== "pending") {
-      return NextResponse.json(
-        { error: "Approval already processed" },
-        { status: 400 }
-      );
-    }
-
-    const updated = await prisma.approvalAction.update({
-      where: { id: approvalId },
-      data: {
-        status: decision,
-        approvedBy: user.id,
-        approvedAt: new Date(),
-        rejectionReason: decision === "rejected" ? rejectionReason : null,
-      },
-    });
-
-    // TODO: Execute the action if approved (e.g., create campaign, update budget)
-    // For now, just update the status
-
-    return NextResponse.json({ approval: updated }, { status: 200 });
   } catch (error) {
     console.error("Approval decision error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Decision failed" },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Decision failed" }, { status: 500 });
   }
 }

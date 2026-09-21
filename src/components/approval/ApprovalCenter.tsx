@@ -23,6 +23,7 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
   const [approvals, setApprovals] = useState<ApprovalActionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
   const [selectedApproval, setSelectedApproval] = useState<ApprovalActionItem | null>(null);
   const [deciding, setDeciding] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
@@ -78,6 +79,13 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
         const data = await response.json();
         throw new Error(data.error || "Decision failed");
       }
+
+      const result = await response.json();
+      setNotice(
+        decision === "approved" && !result.executed
+          ? "Approved and recorded. This action type has no automatic step yet, so nothing was executed."
+          : ""
+      );
 
       // Remove from list and deselect
       setApprovals(approvals.filter((a) => a.id !== selectedApproval.id));
@@ -142,6 +150,9 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
 
       {error && (
         <div className="rounded-lg bg-red-50 p-4 text-sm text-red-700">{error}</div>
+      )}
+      {notice && (
+        <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-800">{notice}</div>
       )}
 
       {approvals.length === 0 ? (

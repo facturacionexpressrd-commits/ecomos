@@ -7,6 +7,7 @@ export const CAPABILITIES = {
   storeConnect: "store:connect",
   ordersRead: "orders:read",
   orgManageUsers: "org:manage_users",
+  approvalsDecide: "approvals:decide",
 } as const;
 
 export const OWNER_CAPABILITIES: string[] = Object.values(CAPABILITIES);
