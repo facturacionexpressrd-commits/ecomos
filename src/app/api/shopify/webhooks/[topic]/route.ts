@@ -3,10 +3,10 @@ import { drainQueues } from "@/lib/jobs/drain";
 import { prisma } from "@/lib/db";
 import { verifyWebhookHmac } from "@/lib/shopify/hmac";
 import { isDuplicateWebhookError } from "@/lib/shopify/webhook-idempotency";
-import { enqueueProcessWebhook } from "@/lib/jobs/boss";
+import { enqueueSyncStore } from "@/lib/jobs/boss";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ topic: string }> }) {
-  const { topic } = await params;
+  const { topic: pathTopic } = await params;
   const rawBody = await request.text();
 
   const hmacHeader = request.headers.get("x-shopify-hmac-sha256");
@@ -19,6 +19,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!shopDomain || !webhookId) {
     return new Response("Missing Shopify headers", { status: 400 });
   }
+  const topic = request.headers.get("x-shopify-topic") ?? pathTopic;
 
   const store = await prisma.store.findUnique({ where: { shopDomain } });
   if (!store) {
@@ -38,12 +39,19 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     throw err;
   }
 
-  await enqueueProcessWebhook({
-    storeId: store.id,
-    topic,
-    webhookEventId: webhookEvent.id,
-    payload: JSON.parse(rawBody),
-  });
+  // The token is revoked at this point, so a sync could only fail; drop it and flag the store.
+  if (topic === "app/uninstalled") {
+    await prisma.store.update({ where: { id: store.id }, data: { accessTokenEncrypted: null, status: "error" } });
+    await prisma.webhookEvent.update({
+      where: { id: webhookEvent.id },
+      data: { status: "processed", processedAt: new Date() },
+    });
+    return new Response("OK", { status: 200 });
+  }
+
+  // Every other topic means "something changed": request a sync of the store. Bursts collapse into
+  // one trailing sync, and the sync marks this event processed once it has run.
+  await enqueueSyncStore({ storeId: store.id });
   after(() => drainQueues().catch((err) => console.error("[drain]", err)));
 
   return new Response("OK", { status: 200 });

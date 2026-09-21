@@ -237,8 +237,10 @@ export async function syncAllMetaAccounts(): Promise<void> {
   try {
     console.log("[Meta Sync] Starting sync of all accounts");
 
+    // "error" is retried every run: a transient failure must not silence an account for good.
+    // disconnected/expired need the user to reconnect, so those are left alone.
     const accounts = await prisma.metaAccount.findMany({
-      where: { status: "connected" },
+      where: { status: { in: ["connected", "error"] } },
     });
 
     console.log(`[Meta Sync] Found ${accounts.length} connected accounts`);
@@ -246,7 +248,14 @@ export async function syncAllMetaAccounts(): Promise<void> {
     const storesWithSync = new Set<string>();
 
     for (const account of accounts) {
-      const result = await syncMetaAccount(account.id);
+      let result: SyncResult;
+      try {
+        result = await syncMetaAccount(account.id);
+      } catch (err) {
+        console.error(`[Meta Sync] Account ${account.id} failed:`, err);
+        await prisma.metaAccount.update({ where: { id: account.id }, data: { status: "error" } });
+        continue;
+      }
       storesWithSync.add(account.storeId);
 
       const store = await prisma.store.findUniqueOrThrow({
@@ -270,13 +279,10 @@ export async function syncAllMetaAccounts(): Promise<void> {
         },
       });
 
-      // If there were errors, update status
-      if (result.errors.length > 0) {
-        await prisma.metaAccount.update({
-          where: { id: account.id },
-          data: { status: "error" },
-        });
-      }
+      await prisma.metaAccount.update({
+        where: { id: account.id },
+        data: { status: result.errors.length > 0 ? "error" : "connected" },
+      });
     }
 
     // Rollup daily spend for all stores that synced

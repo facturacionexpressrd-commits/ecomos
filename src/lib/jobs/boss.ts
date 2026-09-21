@@ -2,7 +2,6 @@ import { PgBoss } from "pg-boss";
 
 export const QUEUES = {
   syncStore: "sync-store",
-  processWebhook: "process-webhook",
 } as const;
 
 let bossPromise: Promise<PgBoss> | null = null;
@@ -14,9 +13,10 @@ export async function getBoss(): Promise<PgBoss> {
       const boss = new PgBoss(process.env.DATABASE_URL!);
       boss.on("error", (err) => console.error("[pg-boss]", err));
       await boss.start();
-      for (const queue of Object.values(QUEUES)) {
-        await boss.createQueue(queue);
-      }
+      // "stately" + a per-store singletonKey: at most one queued and one running sync per store,
+      // so a burst of webhooks collapses into a single trailing sync. A queue's policy can't be
+      // changed after creation, so an environment with an older queue must delete and recreate it.
+      await boss.createQueue(QUEUES.syncStore, { policy: "stately" });
       return boss;
     })();
   }
@@ -24,19 +24,9 @@ export async function getBoss(): Promise<PgBoss> {
 }
 
 export type SyncStoreJobData = { storeId: string };
-export type ProcessWebhookJobData = {
-  storeId: string;
-  topic: string;
-  webhookEventId: string;
-  payload: unknown;
-};
 
+/** Returns null when a sync for this store is already waiting, which will cover this request too. */
 export async function enqueueSyncStore(data: SyncStoreJobData) {
   const boss = await getBoss();
-  return boss.send(QUEUES.syncStore, data);
-}
-
-export async function enqueueProcessWebhook(data: ProcessWebhookJobData) {
-  const boss = await getBoss();
-  return boss.send(QUEUES.processWebhook, data);
+  return boss.send(QUEUES.syncStore, data, { singletonKey: data.storeId });
 }

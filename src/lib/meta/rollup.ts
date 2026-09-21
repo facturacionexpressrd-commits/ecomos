@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { buildDailyMetric } from "@/lib/finance/daily";
+import type { Prisma } from "@prisma/client";
 
 /**
  * Aggregate daily Meta ad spend into store-level financial metrics.
@@ -120,6 +121,41 @@ async function computeDailyMetric(storeId: string, date: Date) {
       o.lineItems.map((l) => ({ quantity: l.quantity, unitCost: l.variant?.cost?.toNumber() ?? 0 }))
     ),
   });
+}
+
+/** Rolls up every store with a connected Meta account; one store failing never stops the rest. */
+export async function rollupAllMetaStores() {
+  const stores = await prisma.store.findMany({
+    where: { metaAccounts: { some: { status: "connected" } } },
+    select: { id: true, name: true, organizationId: true },
+  });
+
+  const results: Record<string, unknown> = {};
+  let datesProcessed = 0;
+  let errors = 0;
+
+  for (const store of stores) {
+    try {
+      const rollup = await rollupDailyMetaSpend(store.id);
+      results[store.name] = rollup;
+      datesProcessed += rollup.datesProcessed;
+      errors += rollup.errors.length;
+      await prisma.auditLog.create({
+        data: {
+          organizationId: store.organizationId,
+          storeId: store.id,
+          action: "meta_spend_rollup_completed",
+          metadata: rollup as unknown as Prisma.InputJsonObject,
+        },
+      });
+    } catch (err) {
+      console.error(`[Rollup] Error for store ${store.name}:`, err);
+      results[store.name] = { error: err instanceof Error ? err.message : "Unknown error" };
+      errors++;
+    }
+  }
+
+  return { stores: stores.length, datesProcessed, errors, results };
 }
 
 interface RollupResult {
