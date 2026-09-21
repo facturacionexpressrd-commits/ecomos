@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
-import { MetaClient, encryptToken } from "@/lib/meta/client";
+import { MetaClient } from "@/lib/meta/client";
+import { connectAdAccount, listAdAccountChoices, sealPending } from "@/lib/meta/connect";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 
 /**
@@ -71,11 +71,6 @@ export async function GET(req: NextRequest) {
       return redirectTo(req, `/dashboard?meta_auth_error=no_store_access`);
     }
 
-    const store = await prisma.store.findUniqueOrThrow({
-      where: { id: storeId },
-      select: { organizationId: true },
-    });
-
     // Exchange code for token
     const metaClient = new MetaClient({
       appId: process.env.META_APP_ID || "",
@@ -86,66 +81,32 @@ export async function GET(req: NextRequest) {
     const tokenResponse = await metaClient.getAccessToken(code);
     const accessToken = tokenResponse.access_token;
 
-    // Fetch Meta business account info
-    const businesses = await metaClient.getBusinessAccounts(accessToken);
-    if (businesses.length === 0) {
-      return redirectTo(req, `/dashboard?meta_auth_error=no_businesses`);
-    }
-
-    const business = businesses[0]; // Use first business for now (Phase 2)
-
-    // metaAccountId must hold an ad account, not the business — every
-    // Marketing API call for campaigns/insights is scoped to act_<id>.
-    // Multi-account selection is Phase 3; first account for now.
-    const adAccounts = await metaClient.getAdAccounts(business.id, accessToken);
-    if (adAccounts.length === 0) {
+    const choices = await listAdAccountChoices(metaClient, accessToken);
+    if (choices.length === 0) {
       return redirectTo(req, `/dashboard?meta_auth_error=no_ad_accounts`);
     }
 
-    const adAccount = adAccounts[0];
-
-    // Encrypt token for storage
-    const encryptionKey = process.env.TOKEN_ENCRYPTION_KEY;
-    if (!encryptionKey) {
-      throw new Error("TOKEN_ENCRYPTION_KEY not set");
+    // Never guess which of several accounts should be able to spend: hand the choice to the user.
+    if (choices.length > 1) {
+      const key = process.env.TOKEN_ENCRYPTION_KEY;
+      if (!key) throw new Error("TOKEN_ENCRYPTION_KEY not set");
+      const res = redirectTo(req, `/dashboard/integrations/meta-account`);
+      res.cookies.set("meta_pick", sealPending({ token: accessToken, storeId }, key), {
+        httpOnly: true,
+        secure: true,
+        sameSite: "lax",
+        maxAge: 600,
+        path: "/",
+      });
+      return res;
     }
 
-    const encryptedToken = encryptToken(accessToken, encryptionKey);
-
-    // Reconnecting the same business must refresh the token, not collide on
-    // the metaBusinessId unique constraint.
-    const metaAccount = await prisma.metaAccount.upsert({
-      where: { metaBusinessId: business.id },
-      update: {
-        storeId,
-        metaAccountId: adAccount.id,
-        accessTokenEncrypted: encryptedToken,
-        scope: "ads_read,ads_manage",
-        status: "connected",
-      },
-      create: {
-        storeId,
-        metaBusinessId: business.id,
-        metaAccountId: adAccount.id,
-        accessTokenEncrypted: encryptedToken,
-        scope: "ads_read,ads_manage",
-        status: "connected",
-      },
-    });
-
-    // Log to audit trail
-    await prisma.auditLog.create({
-      data: {
-        organizationId: store.organizationId,
-        userId: user.id,
-        storeId,
-        action: "meta_account_connected",
-        metadata: {
-          metaBusinessId: business.id,
-          metaAdAccountId: adAccount.id,
-          metaAccountId: metaAccount.id,
-        },
-      },
+    const metaAccount = await connectAdAccount({
+      storeId,
+      userId: user.id,
+      accessToken,
+      businessId: choices[0].businessId,
+      adAccountId: choices[0].adAccountId,
     });
 
     // Redirect to success page

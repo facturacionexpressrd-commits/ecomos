@@ -12,8 +12,9 @@ const CALLBACK_ERRORS: Record<string, string> = {
   missing_store: "Store ID missing",
   state_mismatch: "Authorization could not be verified. Please try again.",
   no_store_access: "No access to this store",
-  no_businesses: "No Meta business accounts found",
-  no_ad_accounts: "That Meta business has no ad accounts",
+  no_ad_accounts: "No Meta ad accounts were found for this login",
+  selection_expired: "The account selection expired. Please connect again.",
+  invalid_selection: "That ad account isn't available to this login",
   callback_failed: "OAuth callback failed",
 };
 
