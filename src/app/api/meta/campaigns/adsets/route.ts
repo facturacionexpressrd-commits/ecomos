@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
     // Verify store access
     const grants = await loadStoreAccessGrants(user.id);
-    if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
+    if (!hasCapability(grants, storeId, CAPABILITIES.campaignsManage)) {
       return NextResponse.json({ error: "Access denied" }, { status: 403 });
     }
 

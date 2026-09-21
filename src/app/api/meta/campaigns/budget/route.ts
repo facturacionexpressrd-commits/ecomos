@@ -2,110 +2,52 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
+import { actionFailure, setCampaignBudget } from "@/lib/meta/actions";
 
 /**
  * PATCH /api/meta/campaigns/budget
- * Update campaign budget (daily or lifetime)
+ * Set a campaign's daily budget on Meta. Budgets live on ad sets, so this updates the
+ * campaign's ad set; a campaign with several must say which via `adSetId`.
  *
- * Body:
- * - storeId: string
- * - campaignId: string (EcomOS campaign ID)
- * - metaCampaignId: string (Meta's campaign ID)
- * - dailyBudget?: number (in cents, or null to clear)
- * - lifetimeBudget?: number (in cents, or null to clear)
- *
- * At least one budget parameter must be provided.
+ * Body: { storeId, campaignId (EcomOS id), dailyBudget (whole cents), adSetId? }
  */
-
 export async function PATCH(req: NextRequest) {
-  try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { storeId, campaignId, metaCampaignId, dailyBudget, lifetimeBudget } =
-      await req.json();
-
-    if (!storeId || !metaCampaignId) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
-    }
-
-    if (dailyBudget === undefined && lifetimeBudget === undefined) {
-      return NextResponse.json(
-        { error: "At least one budget parameter required" },
-        { status: 400 }
-      );
-    }
-
-    if (dailyBudget !== undefined && dailyBudget !== null && dailyBudget < 1) {
-      return NextResponse.json({ error: "Daily budget must be >= 1 cent ($0.01)" }, { status: 400 });
-    }
-
-    if (lifetimeBudget !== undefined && lifetimeBudget !== null && lifetimeBudget < 1) {
-      return NextResponse.json({ error: "Lifetime budget must be >= 1 cent ($0.01)" }, { status: 400 });
-    }
-
-    // Verify store access
-    const grants = await loadStoreAccessGrants(user.id);
-    if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
-      return NextResponse.json({ error: "Access denied" }, { status: 403 });
-    }
-
-    // Get Meta account
-    const metaAccount = await prisma.metaAccount.findFirst({
-      where: { storeId },
-    });
-
-    if (!metaAccount) {
-      return NextResponse.json({ error: "Meta account not connected" }, { status: 400 });
-    }
-
-    // Decrypt token
-    // Update in Meta (note: campaigns don't have budgets directly, ad sets do)
-    // For now, we'll just update the campaign in our DB as a marker
-    // Real budget management happens at the ad set level in Meta
-
-    // Note: Campaigns in Meta don't have budgets; budgets are set at the ad set level.
-    // This endpoint is a placeholder for storing budget intent at the campaign level.
-    // Real implementation would update ad sets under this campaign.
-
-    // Log budget update to audit trail
-    const store = await prisma.store.findUniqueOrThrow({ where: { id: storeId } });
-    await prisma.auditLog.create({
-      data: {
-        organizationId: store.organizationId,
-        userId: user.id,
-        storeId,
-        action: "meta_campaign_budget_updated",
-        metadata: {
-          campaignId,
-          metaCampaignId,
-          dailyBudget: dailyBudget ?? null,
-          lifetimeBudget: lifetimeBudget ?? null,
-        },
-      },
-    });
-
-    return NextResponse.json({
-      ok: true,
-      message: "Budget settings updated. Note: Manage ad set budgets in Meta Ads Manager for precise control.",
-      campaign: {
-        id: campaignId,
-        metaCampaignId,
-        dailyBudget: dailyBudget ?? null,
-        lifetimeBudget: lifetimeBudget ?? null,
-      },
-    });
-  } catch (error) {
-    console.error("Error updating budget:", error);
-    return NextResponse.json(
-      { error: "Failed to update budget", details: error instanceof Error ? error.message : String(error) },
-      { status: 500 }
-    );
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const { storeId, campaignId, dailyBudget, adSetId } = await req.json();
+  if (!storeId || !campaignId || dailyBudget === undefined) {
+    return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+  }
+
+  const grants = await loadStoreAccessGrants(user.id);
+  if (!hasCapability(grants, storeId, CAPABILITIES.campaignsManage)) {
+    return NextResponse.json({ error: "Access denied" }, { status: 403 });
+  }
+
+  try {
+    await setCampaignBudget({ storeId, campaignId, dailyBudgetCents: dailyBudget, adSetId });
+  } catch (error) {
+    const { status, message } = actionFailure(error);
+    console.error("Error updating budget:", error);
+    return NextResponse.json({ error: message }, { status });
+  }
+
+  const store = await prisma.store.findUniqueOrThrow({ where: { id: storeId } });
+  await prisma.auditLog.create({
+    data: {
+      organizationId: store.organizationId,
+      userId: user.id,
+      storeId,
+      action: "meta_campaign_budget_updated",
+      metadata: { campaignId, adSetId: adSetId ?? null, dailyBudgetCents: dailyBudget },
+    },
+  });
+
+  return NextResponse.json({ ok: true, dailyBudget });
 }

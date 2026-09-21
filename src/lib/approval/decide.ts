@@ -1,10 +1,28 @@
 import { prisma } from "@/lib/db";
+import { setCampaignBudget, setCampaignStatus } from "@/lib/meta/actions";
 
 export type ExecutorContext = { storeId: string; userId: string };
 export type Executor = (ctx: ExecutorContext, data: Record<string, unknown>) => Promise<void>;
 
+function field<T>(data: Record<string, unknown>, key: string, type: "string" | "number"): T {
+  if (typeof data[key] !== type) throw new Error(`Approval data is missing "${key}" (${type})`);
+  return data[key] as T;
+}
+
 /** Only action types with a real implementation belong here; anything else is recorded, not run. */
-export const EXECUTORS: Record<string, Executor> = {};
+export const EXECUTORS: Record<string, Executor> = {
+  budget_update: ({ storeId }, data) =>
+    setCampaignBudget({
+      storeId,
+      campaignId: field(data, "campaignId", "string"),
+      dailyBudgetCents: field(data, "dailyBudgetCents", "number"),
+      adSetId: typeof data.adSetId === "string" ? data.adSetId : undefined,
+    }).then(() => undefined),
+  campaign_launch: ({ storeId }, data) =>
+    setCampaignStatus({ storeId, campaignId: field(data, "campaignId", "string"), status: "ACTIVE" }).then(
+      () => undefined
+    ),
+};
 
 export type DecideResult =
   | { outcome: "not_found" }

@@ -49,7 +49,8 @@ export default function CampaignActionMenu({
       });
 
       if (!response.ok) {
-        throw new Error(`Action failed: ${response.statusText}`);
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || `Action failed: ${response.statusText}`);
       }
 
       setShowMenu(false);
