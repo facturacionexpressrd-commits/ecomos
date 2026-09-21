@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { MetaClient } from "@/lib/meta/client";
 import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
+import { reportError } from "@/lib/alerts";
 
 /**
  * GET /api/meta/auth/start
@@ -32,7 +33,7 @@ export async function GET(req: NextRequest) {
     }
 
     const grants = await loadStoreAccessGrants(user.id);
-    if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
+    if (!hasCapability(grants, storeId, CAPABILITIES.campaignsManage)) {
       return NextResponse.json({ error: "No access to this store" }, { status: 403 });
     }
 
@@ -61,7 +62,7 @@ export async function GET(req: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error("Error starting Meta auth:", error);
+    await reportError(error, { where: "Error starting Meta auth" });
     return NextResponse.json(
       { error: "Failed to start Meta authentication" },
       { status: 500 }

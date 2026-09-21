@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/db";
+import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import { NextRequest, NextResponse } from "next/server";
+import { reportError } from "@/lib/alerts";
 
 export async function GET(req: NextRequest) {
   const supabase = await createClient();
@@ -23,11 +25,8 @@ export async function GET(req: NextRequest) {
   }
 
   // Verify user has access
-  const access = await prisma.userStoreAccess.findFirst({
-    where: { userId: user.id, storeId },
-  });
-
-  if (!access) {
+  const grants = await loadStoreAccessGrants(user.id);
+  if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
   }
 
@@ -46,7 +45,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ approvals }, { status: 200 });
   } catch (error) {
-    console.error("Approval list error:", error);
+    await reportError(error, { where: "Approval list error" });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Failed to list approvals" },
       { status: 500 }

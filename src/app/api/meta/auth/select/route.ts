@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { MetaClient } from "@/lib/meta/client";
 import { connectAdAccount, listAdAccountChoices, openPending } from "@/lib/meta/connect";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
+import { reportError } from "@/lib/alerts";
 
 // The pending-selection cookie is SameSite=Lax, so a cross-site form post never carries it.
 export async function POST(req: NextRequest) {
@@ -50,7 +51,7 @@ export async function POST(req: NextRequest) {
     });
     return done(`meta_auth_success=true&meta_account_id=${account.id}`);
   } catch (error) {
-    console.error("Error selecting Meta ad account:", error);
+    await reportError(error, { where: "Error selecting Meta ad account" });
     return done("meta_auth_error=callback_failed");
   }
 }

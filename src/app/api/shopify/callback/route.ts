@@ -7,6 +7,7 @@ import { exchangeCodeForToken, verifyState } from "@/lib/shopify/client";
 import { enqueueSyncStore } from "@/lib/jobs/boss";
 import { registerWebhooks } from "@/lib/shopify/webhooks";
 import { OWNER_CAPABILITIES } from "@/lib/auth/capabilities";
+import { reportError } from "@/lib/alerts";
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
@@ -77,8 +78,8 @@ export async function GET(request: NextRequest) {
   await enqueueSyncStore({ storeId: store.id });
   after(async () => {
     // The nightly cron re-checks these, so a failure here delays live updates rather than losing them.
-    await registerWebhooks(shop, accessToken).catch((err) => console.error("[webhooks]", err));
-    await drainQueues().catch((err) => console.error("[drain]", err));
+    await registerWebhooks(shop, accessToken).catch((err) => reportError(err, { where: "[webhooks]" }));
+    await drainQueues().catch((err) => reportError(err, { where: "[drain]" }));
   });
 
   return Response.redirect(new URL(`/dashboard?store=${store.id}`, process.env.SHOPIFY_APP_URL));

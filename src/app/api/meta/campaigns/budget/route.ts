@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import { actionFailure, setCampaignBudget } from "@/lib/meta/actions";
+import { reportError } from "@/lib/alerts";
 
 /**
  * PATCH /api/meta/campaigns/budget
@@ -34,7 +35,7 @@ export async function PATCH(req: NextRequest) {
     await setCampaignBudget({ storeId, campaignId, dailyBudgetCents: dailyBudget, adSetId });
   } catch (error) {
     const { status, message } = actionFailure(error);
-    console.error("Error updating budget:", error);
+    if (status >= 500) await reportError(error, { where: "Error updating budget" });
     return NextResponse.json({ error: message }, { status });
   }
 

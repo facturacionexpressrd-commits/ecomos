@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
+import { reportError } from "@/lib/alerts";
 
 export async function POST(req: NextRequest) {
   try {
@@ -18,7 +19,7 @@ export async function POST(req: NextRequest) {
 
     // Check access
     const grants = await loadStoreAccessGrants(user.id);
-    if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
+    if (!hasCapability(grants, storeId, CAPABILITIES.productsManage)) {
       return NextResponse.json({ error: "No access to this store" }, { status: 403 });
     }
 
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, variant: updated });
   } catch (error) {
-    console.error("Error updating variant cost:", error);
+    await reportError(error, { where: "Error updating variant cost" });
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

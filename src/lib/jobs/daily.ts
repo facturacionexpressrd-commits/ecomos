@@ -4,12 +4,13 @@ import { enqueueSyncStore } from "@/lib/jobs/boss";
 import { drainQueues } from "@/lib/jobs/drain";
 import { registerWebhooks } from "@/lib/shopify/webhooks";
 import { syncAllMetaAccounts } from "@/lib/meta/sync";
+import { reportError } from "@/lib/alerts";
 
 const attempt = async <T>(fn: () => Promise<T>) => {
   try {
     return { ok: true as const, value: await fn() };
   } catch (err) {
-    console.error("[daily]", err);
+    await reportError(err, { where: "nightly job" });
     return { ok: false as const, error: err instanceof Error ? err.message : String(err) };
   }
 };
@@ -35,5 +36,7 @@ export async function runDaily() {
   const drain = await attempt(drainQueues);
   const meta = await attempt(syncAllMetaAccounts);
 
-  return { stores: stores.length, shopify, drain, meta };
+  const failed =
+    shopify.some((s) => !s.webhooks.ok || !s.sync) || !drain.ok || drain.value.failed > 0 || !meta.ok;
+  return { failed, stores: stores.length, shopify, drain, meta };
 }

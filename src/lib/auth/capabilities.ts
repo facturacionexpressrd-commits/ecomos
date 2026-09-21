@@ -9,6 +9,8 @@ export const CAPABILITIES = {
   orgManageUsers: "org:manage_users",
   approvalsDecide: "approvals:decide",
   campaignsManage: "campaigns:manage",
+  aiGenerate: "ai:generate",
+  productsManage: "products:manage",
 } as const;
 
 export const OWNER_CAPABILITIES: string[] = Object.values(CAPABILITIES);

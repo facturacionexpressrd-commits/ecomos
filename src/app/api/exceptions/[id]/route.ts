@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
+import { reportError } from "@/lib/alerts";
 
 export async function PATCH(
   request: NextRequest,
@@ -50,7 +51,7 @@ export async function PATCH(
 
     return NextResponse.json(updated);
   } catch (error) {
-    console.error("Exception update error:", error);
+    await reportError(error, { where: "Exception update error" });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

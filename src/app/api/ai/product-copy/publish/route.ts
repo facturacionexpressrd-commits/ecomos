@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/db";
+import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import { NextRequest, NextResponse } from "next/server";
+import { reportError } from "@/lib/alerts";
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -15,11 +17,8 @@ export async function POST(req: NextRequest) {
   const { storeId, copyId, headline, description } = await req.json();
 
   // Verify user has access
-  const access = await prisma.userStoreAccess.findFirst({
-    where: { userId: user.id, storeId },
-  });
-
-  if (!access) {
+  const grants = await loadStoreAccessGrants(user.id);
+  if (!hasCapability(grants, storeId, CAPABILITIES.productsManage)) {
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
   }
 
@@ -108,7 +107,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ copy: updated }, { status: 200 });
   } catch (error) {
-    console.error("Publish error:", error);
+    await reportError(error, { where: "Publish error" });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Publish failed" },
       { status: 500 }

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import { supplierRegistry } from "@/lib/suppliers/registry";
+import { reportError } from "@/lib/alerts";
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
 
     // Check access
     const grants = await loadStoreAccessGrants(user.id);
-    if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
+    if (!hasCapability(grants, storeId, CAPABILITIES.storeSync)) {
       return NextResponse.json({ error: "No access to this store" }, { status: 403 });
     }
 
@@ -30,7 +31,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, offers });
   } catch (error) {
-    console.error("Error syncing offers:", error);
+    await reportError(error, { where: "Error syncing offers" });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

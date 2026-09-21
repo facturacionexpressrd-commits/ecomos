@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { syncTrackingEvents } from "@/lib/orders/tracking-sync";
+import { reportError } from "@/lib/alerts";
 
 // This endpoint is designed to be called by a cron job
 // For security, you should add authentication (e.g., check for a cron secret)
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
       message: `Synced tracking events for ${synced} shipments`,
     });
   } catch (error) {
-    console.error("Tracking sync error:", error);
+    await reportError(error, { where: "Tracking sync error" });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

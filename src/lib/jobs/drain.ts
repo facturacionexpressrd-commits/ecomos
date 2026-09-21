@@ -1,5 +1,6 @@
 import { getBoss, QUEUES } from "@/lib/jobs/boss";
 import { handleSyncStore } from "@/lib/jobs/handlers";
+import { reportError } from "@/lib/alerts";
 
 // Vercel can't host the long-running `npm run worker`, so jobs are drained on demand instead.
 // ponytail: capped per call so one invocation stays inside the function timeout.
@@ -18,6 +19,7 @@ export async function drainQueues() {
       await boss.complete(QUEUES.syncStore, jobs[0].id);
       result.processed++;
     } catch (err) {
+      await reportError(err, { where: "sync-store job", storeId: (jobs[0].data as { storeId?: string }).storeId });
       await boss.fail(QUEUES.syncStore, jobs[0].id, { message: err instanceof Error ? err.message : String(err) });
       result.failed++;
     }

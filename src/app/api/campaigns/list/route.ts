@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import { metaRevenueRoas, metaContributionRoas, metaProfitabilityIndex } from "@/lib/finance/formulas";
+import { reportError } from "@/lib/alerts";
 
 /**
  * GET /api/campaigns/list
@@ -131,7 +132,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error fetching campaigns:", error);
+    await reportError(error, { where: "Error fetching campaigns" });
     return NextResponse.json(
       { error: "Failed to fetch campaigns" },
       { status: 500 }

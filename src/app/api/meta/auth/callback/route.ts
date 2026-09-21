@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { MetaClient } from "@/lib/meta/client";
 import { connectAdAccount, listAdAccountChoices, sealPending } from "@/lib/meta/connect";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
+import { reportError } from "@/lib/alerts";
 
 /**
  * GET /api/meta/auth/callback
@@ -67,7 +68,7 @@ export async function GET(req: NextRequest) {
 
     // Verify store access
     const grants = await loadStoreAccessGrants(user.id);
-    if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
+    if (!hasCapability(grants, storeId, CAPABILITIES.campaignsManage)) {
       return redirectTo(req, `/dashboard?meta_auth_error=no_store_access`);
     }
 
@@ -115,7 +116,7 @@ export async function GET(req: NextRequest) {
       `/dashboard?meta_auth_success=true&meta_account_id=${metaAccount.id}`
     );
   } catch (error) {
-    console.error("Error in Meta auth callback:", error);
+    await reportError(error, { where: "Error in Meta auth callback" });
     return redirectTo(req, `/dashboard?meta_auth_error=callback_failed`);
   }
 }

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { verifyWebhookHmac } from "@/lib/shopify/hmac";
 import { isDuplicateWebhookError } from "@/lib/shopify/webhook-idempotency";
 import { enqueueSyncStore } from "@/lib/jobs/boss";
+import { reportError } from "@/lib/alerts";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ topic: string }> }) {
   const { topic: pathTopic } = await params;
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   // Every other topic means "something changed": request a sync of the store. Bursts collapse into
   // one trailing sync, and the sync marks this event processed once it has run.
   await enqueueSyncStore({ storeId: store.id });
-  after(() => drainQueues().catch((err) => console.error("[drain]", err)));
+  after(() => drainQueues().catch((err) => reportError(err, { where: "[drain]" })));
 
   return new Response("OK", { status: 200 });
 }

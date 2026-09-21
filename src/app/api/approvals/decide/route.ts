@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { NextRequest, NextResponse } from "next/server";
 import { CAPABILITIES, hasCapability, loadStoreAccessGrants } from "@/lib/auth/capabilities";
 import { decideApproval } from "@/lib/approval/decide";
+import { reportError } from "@/lib/alerts";
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
       }
     }
   } catch (error) {
-    console.error("Approval decision error:", error);
+    await reportError(error, { where: "Approval decision error" });
     return NextResponse.json({ error: "Decision failed" }, { status: 500 });
   }
 }

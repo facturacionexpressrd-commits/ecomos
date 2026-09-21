@@ -4,6 +4,7 @@ import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/c
 import { attributeOrders } from "@/lib/meta/attribution";
 import { prisma } from "@/lib/db";
 import { Prisma } from "@prisma/client";
+import { reportError } from "@/lib/alerts";
 
 /**
  * POST /api/campaigns/attribute
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
       result,
     });
   } catch (error) {
-    console.error("[Attribution API] Error:", error);
+    await reportError(error, { where: "[Attribution API] Error" });
     return NextResponse.json(
       { error: "Attribution failed", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }

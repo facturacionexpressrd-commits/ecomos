@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/db";
+import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import {
   metaRevenueRoas,
   metaContributionRoas,
@@ -15,7 +16,8 @@ export const metadata = {
   title: "Campaign Details | EcomOS",
 };
 
-export default async function CampaignDetailPage({ params }: { params: { id: string } }) {
+export default async function CampaignDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   const supabase = await createClient();
   const {
     data: { user },
@@ -26,7 +28,7 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
   }
 
   const campaign = await prisma.metaCampaign.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       spendDaily: true,
       store: true,
@@ -43,14 +45,8 @@ export default async function CampaignDetailPage({ params }: { params: { id: str
   }
 
   // Verify user has access to this store
-  const access = await prisma.userStoreAccess.findFirst({
-    where: {
-      userId: user.id,
-      storeId: campaign.storeId,
-    },
-  });
-
-  if (!access) {
+  const grants = await loadStoreAccessGrants(user.id);
+  if (!hasCapability(grants, campaign.storeId, CAPABILITIES.storeRead)) {
     notFound();
   }
 

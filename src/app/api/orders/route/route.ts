@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import { routeOrderLineItems, createSupplierOrdersFromRoutes } from "@/lib/orders/routing";
+import { reportError } from "@/lib/alerts";
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,7 +55,7 @@ export async function POST(request: NextRequest) {
       })),
     });
   } catch (error) {
-    console.error("Order routing error:", error);
+    await reportError(error, { where: "Order routing error" });
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
 }

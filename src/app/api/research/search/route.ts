@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/db";
+import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import { OpportunityScorer } from "@/lib/research/scoring";
 import { NextRequest, NextResponse } from "next/server";
+import { reportError } from "@/lib/alerts";
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -17,11 +19,8 @@ export async function POST(req: NextRequest) {
     await req.json();
 
   // Verify user has access
-  const access = await prisma.userStoreAccess.findFirst({
-    where: { userId: user.id, storeId },
-  });
-
-  if (!access) {
+  const grants = await loadStoreAccessGrants(user.id);
+  if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
   }
 
@@ -69,7 +68,7 @@ export async function POST(req: NextRequest) {
       { status: 200 }
     );
   } catch (error) {
-    console.error("Research search error:", error);
+    await reportError(error, { where: "Research search error" });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Search failed" },
       { status: 500 }

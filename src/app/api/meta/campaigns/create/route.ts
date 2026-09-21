@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { MetaClient, decryptToken } from "@/lib/meta/client";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
+import { reportError } from "@/lib/alerts";
 
 /**
  * POST /api/meta/campaigns/create
@@ -124,7 +125,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error creating campaign:", error);
+    await reportError(error, { where: "Error creating campaign" });
     return NextResponse.json(
       { error: "Failed to create campaign", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }

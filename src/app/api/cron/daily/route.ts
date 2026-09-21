@@ -10,5 +10,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  return NextResponse.json({ ok: true, ...(await runDaily()) });
+  // A 500 marks the run as failed in Vercel's cron log instead of reporting success.
+  const result = await runDaily();
+  return NextResponse.json({ ok: !result.failed, ...result }, { status: result.failed ? 500 : 200 });
 }

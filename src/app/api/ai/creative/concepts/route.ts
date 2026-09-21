@@ -1,7 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/db";
+import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
+import { aiQuotaExceeded } from "@/lib/limits";
 import { ClaudeCreativeProvider } from "@/lib/ai/providers/claude-creative";
 import { NextRequest, NextResponse } from "next/server";
+import { reportError } from "@/lib/alerts";
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient();
@@ -16,12 +19,17 @@ export async function POST(req: NextRequest) {
   const { storeId, productId, targetAudience } = await req.json();
 
   // Verify user has access
-  const access = await prisma.userStoreAccess.findFirst({
-    where: { userId: user.id, storeId },
-  });
-
-  if (!access) {
+  const grants = await loadStoreAccessGrants(user.id);
+  if (!hasCapability(grants, storeId, CAPABILITIES.aiGenerate)) {
     return NextResponse.json({ error: "Access denied" }, { status: 403 });
+  }
+
+  const limited = await aiQuotaExceeded("ideas", storeId);
+  if (limited) {
+    return NextResponse.json(
+      { error: "AI generation limit reached. Try again later." },
+      { status: 429, headers: { "Retry-After": String(limited.retryAfterSeconds) } }
+    );
   }
 
   try {
@@ -76,9 +84,9 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ideas: savedIdeas }, { status: 200 });
   } catch (error) {
-    console.error("Creative generation error:", error);
+    await reportError(error, { where: "Creative generation error" });
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Generation failed" },
+      { error: "Generation failed" },
       { status: 500 }
     );
   }

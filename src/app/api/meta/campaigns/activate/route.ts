@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import { actionFailure, setCampaignStatus } from "@/lib/meta/actions";
+import { reportError } from "@/lib/alerts";
 
 /**
  * POST /api/meta/campaigns/activate
@@ -32,7 +33,7 @@ export async function POST(req: NextRequest) {
     ({ metaCampaignId } = await setCampaignStatus({ storeId, campaignId, status: "ACTIVE" }));
   } catch (error) {
     const { status, message } = actionFailure(error);
-    console.error("Error activating campaign:", error);
+    if (status >= 500) await reportError(error, { where: "Error activating campaign" });
     return NextResponse.json({ error: message }, { status });
   }
 

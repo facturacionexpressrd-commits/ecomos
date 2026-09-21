@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { MetaClient, decryptToken } from "@/lib/meta/client";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
+import { reportError } from "@/lib/alerts";
 
 /**
  * POST /api/meta/campaigns/duplicate
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
 
     const { storeId, campaignId, metaCampaignId, newName } = await req.json();
 
-    if (!storeId || !metaCampaignId) {
+    if (!storeId || !campaignId) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
 
@@ -39,9 +40,12 @@ export async function POST(req: NextRequest) {
     }
 
     // Get original campaign
-    const campaign = await prisma.metaCampaign.findUniqueOrThrow({
-      where: { id: campaignId },
+    const campaign = await prisma.metaCampaign.findFirst({
+      where: { id: campaignId, storeId },
     });
+    if (!campaign) {
+      return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
+    }
 
     // Get Meta account
     const metaAccount = await prisma.metaAccount.findFirst({
@@ -117,7 +121,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Error duplicating campaign:", error);
+    await reportError(error, { where: "Error duplicating campaign" });
     return NextResponse.json(
       { error: "Failed to duplicate campaign", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
