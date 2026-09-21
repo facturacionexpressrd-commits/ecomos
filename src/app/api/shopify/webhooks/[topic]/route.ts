@@ -1,4 +1,5 @@
-import { NextRequest } from "next/server";
+import { after, NextRequest } from "next/server";
+import { drainQueues } from "@/lib/jobs/drain";
 import { prisma } from "@/lib/db";
 import { verifyWebhookHmac } from "@/lib/shopify/hmac";
 import { isDuplicateWebhookError } from "@/lib/shopify/webhook-idempotency";
@@ -43,6 +44,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     webhookEventId: webhookEvent.id,
     payload: JSON.parse(rawBody),
   });
+  after(() => drainQueues().catch((err) => console.error("[drain]", err)));
 
   return new Response("OK", { status: 200 });
 }

@@ -1,4 +1,5 @@
-import { NextRequest } from "next/server";
+import { after, NextRequest } from "next/server";
+import { drainQueues } from "@/lib/jobs/drain";
 import { prisma } from "@/lib/db";
 import { encryptSecret } from "@/lib/crypto";
 import { verifyOAuthHmac } from "@/lib/shopify/hmac";
@@ -73,6 +74,7 @@ export async function GET(request: NextRequest) {
   });
 
   await enqueueSyncStore({ storeId: store.id });
+  after(() => drainQueues().catch((err) => console.error("[drain]", err)));
 
   return Response.redirect(new URL(`/dashboard?store=${store.id}`, process.env.SHOPIFY_APP_URL));
 }
