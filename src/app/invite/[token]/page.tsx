@@ -35,7 +35,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
       {!user ? (
         <p className="text-sm">
           Sign in or create an account with <strong>{invitation.email}</strong> first, then come back to this link.{" "}
-          <a href="/login" className="underline">
+          <a href={`/login?next=${encodeURIComponent(`/invite/${token}`)}`} className="underline">
             Go to login
           </a>
         </p>

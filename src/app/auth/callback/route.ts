@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { safePath } from "@/lib/redirect";
 import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 
@@ -9,8 +10,7 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get("type") as EmailOtpType | null;
 
   // Only same-origin relative paths — a caller-supplied absolute URL would be an open redirect.
-  const requested = searchParams.get("next") ?? "/dashboard";
-  const next = requested.startsWith("/") && !requested.startsWith("//") ? requested : "/dashboard";
+  const next = safePath(searchParams.get("next"));
 
   const supabase = await createClient();
 

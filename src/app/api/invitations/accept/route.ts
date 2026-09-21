@@ -23,6 +23,11 @@ export async function POST(request: NextRequest) {
     return new Response("This invitation was sent to a different email address", { status: 403 });
   }
 
+  const existing = await prisma.user.findUnique({ where: { id: user.id }, select: { organizationId: true } });
+  if (existing && existing.organizationId !== invitation.organizationId) {
+    return new Response("This account already belongs to a different workspace", { status: 409 });
+  }
+
   await prisma.$transaction(async (tx) => {
     await tx.user.upsert({
       where: { id: user.id },

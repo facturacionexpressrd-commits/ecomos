@@ -19,14 +19,34 @@ export default async function DashboardPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  // A signed-in account with no workspace yet is a new sign-up (invitees arrive via their link).
+  const account = await prisma.user.findUnique({ where: { id: user.id }, select: { id: true } });
+  if (!account) redirect("/onboarding");
+
   const grants = await loadStoreAccessGrants(user.id);
   if (grants.length === 0) {
     return (
-      <Empty>
-        You don&apos;t have access to any store yet. Connect one at{" "}
-        <code>/api/shopify/install?shop=your-store.myshopify.com</code>, or ask an org admin
-        for an invite.
-      </Empty>
+      <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 px-4">
+        <h1 className="text-xl font-semibold">Connect your Shopify store</h1>
+        <p className="text-sm text-gray-600">
+          Enter your store&apos;s Shopify address. You&apos;ll approve read access to products, orders,
+          customers and inventory on Shopify, then come back here.
+        </p>
+        <form method="GET" action="/api/shopify/install" className="flex flex-col gap-3">
+          <input
+            name="shop"
+            required
+            placeholder="your-store.myshopify.com"
+            pattern="[a-zA-Z0-9\-]+\.myshopify\.com"
+            title="Your store's .myshopify.com address"
+            className="rounded border px-3 py-2"
+          />
+          <button type="submit" className="rounded bg-black px-3 py-2 text-white">
+            Connect store
+          </button>
+        </form>
+        <p className="text-xs text-gray-500">Waiting on an invitation instead? Open the link you were sent.</p>
+      </main>
     );
   }
 
