@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface AdSet {
   id: string;
@@ -16,15 +17,14 @@ interface AdSetManagerProps {
   storeId: string;
   metaCampaignId: string;
   adSets: AdSet[];
-  onAdSetCreated: () => void;
 }
 
 export default function AdSetManager({
   storeId,
   metaCampaignId,
   adSets,
-  onAdSetCreated,
 }: AdSetManagerProps) {
+  const router = useRouter();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
@@ -68,7 +68,7 @@ export default function AdSetManager({
 
       setShowCreateForm(false);
       setFormData({ name: "", billing_event: "CLICKS", optimization_goal: "LINK_CLICKS", daily_budget: "1" });
-      onAdSetCreated();
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error creating ad set");
     } finally {

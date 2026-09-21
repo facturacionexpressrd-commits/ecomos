@@ -313,10 +313,6 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
             campaignId={campaign.id}
             metaCampaignId={campaign.metaCampaignId}
             currentBudget={campaign.dailyBudget?.toNumber() ?? 0}
-            onSave={() => {
-              // Refresh page data
-              window.location.reload();
-            }}
           />
         </div>
         {campaign.dailyBudget && (
@@ -341,10 +337,6 @@ export default async function CampaignDetailPage({ params }: { params: Promise<{
             creatives: adSet.creatives ?? [],
           })) ?? []
         }
-        onAdSetCreated={() => {
-          // Refresh page data
-          window.location.reload();
-        }}
       />
 
       {/* Attribution Note */}

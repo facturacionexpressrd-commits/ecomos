@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface BudgetEditorProps {
   storeId: string;
   campaignId: string;
   metaCampaignId: string;
   currentBudget?: number;
-  onSave: () => void;
 }
 
 export default function BudgetEditor({
@@ -15,8 +15,8 @@ export default function BudgetEditor({
   campaignId,
   metaCampaignId,
   currentBudget,
-  onSave,
 }: BudgetEditorProps) {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [budget, setBudget] = useState(currentBudget?.toString() || "");
   const [loading, setLoading] = useState(false);
@@ -50,7 +50,7 @@ export default function BudgetEditor({
       }
 
       setIsOpen(false);
-      onSave();
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Error updating budget");
     } finally {
