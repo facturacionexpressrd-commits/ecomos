@@ -130,18 +130,18 @@ export default function CampaignWizard({ storeId }: CampaignWizardProps) {
             <div key={s} className="flex items-center">
               <div
                 className={`flex h-8 w-8 items-center justify-center rounded-full font-bold ${
-                  s <= step ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"
+                  s <= step ? "bg-gold text-ink" : "bg-white/10 text-lo"
                 }`}
               >
                 {s}
               </div>
               {s < 5 && (
-                <div className={`h-1 w-12 ${s < step ? "bg-blue-600" : "bg-gray-200"}`} />
+                <div className={`h-1 w-12 ${s < step ? "bg-gold" : "bg-white/10"}`} />
               )}
             </div>
           ))}
         </div>
-        <div className="mt-2 flex justify-between text-xs text-gray-600">
+        <div className="mt-2 flex justify-between text-xs text-lo">
           <span>Details</span>
           <span>Product</span>
           <span>Creative</span>
@@ -151,7 +151,7 @@ export default function CampaignWizard({ storeId }: CampaignWizardProps) {
       </div>
 
       {/* Step Content */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6">
+      <div className="rounded-lg border border-line bg-white/5 p-6">
         {step === 1 && (
           <div className="space-y-6">
             <div>
@@ -162,10 +162,10 @@ export default function CampaignWizard({ storeId }: CampaignWizardProps) {
                 value={campaignData.name}
                 onChange={(e) => setCampaignData({ ...campaignData, name: e.target.value })}
                 placeholder="E.g., Summer Sale 2024"
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+                className="mt-1 w-full rounded border border-line-hi px-3 py-2"
                 maxLength={100}
               />
-              <p className="mt-1 text-xs text-gray-500">{campaignData.name.length}/100</p>
+              <p className="mt-1 text-xs text-faint">{campaignData.name.length}/100</p>
             </div>
             <div>
               <label className="block text-sm font-medium mb-3">Select Product to Promote</label>
@@ -195,7 +195,7 @@ export default function CampaignWizard({ storeId }: CampaignWizardProps) {
                   }
                 />
               ) : (
-                <p className="text-sm text-yellow-600">Select a product first</p>
+                <p className="text-sm text-gold-hi">Select a product first</p>
               )}
             </div>
             <div>
@@ -236,7 +236,7 @@ export default function CampaignWizard({ storeId }: CampaignWizardProps) {
                       onChange={(e) =>
                         setCampaignData({ ...campaignData, objective: e.target.value })
                       }
-                      className="rounded border-gray-300"
+                      className="rounded border-line-hi"
                     />
                     <span className="ml-3 text-sm">{obj.label}</span>
                   </label>
@@ -254,7 +254,7 @@ export default function CampaignWizard({ storeId }: CampaignWizardProps) {
               <select
                 value={campaignData.market}
                 onChange={(e) => setCampaignData({ ...campaignData, market: e.target.value })}
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+                className="mt-1 w-full rounded border border-line-hi px-3 py-2"
               >
                 <option value="us">United States</option>
                 <option value="ca">Canada</option>
@@ -274,7 +274,7 @@ export default function CampaignWizard({ storeId }: CampaignWizardProps) {
                   }
                   min={13}
                   max={65}
-                  className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+                  className="mt-1 w-full rounded border border-line-hi px-3 py-2"
                 />
               </div>
               <div>
@@ -287,11 +287,11 @@ export default function CampaignWizard({ storeId }: CampaignWizardProps) {
                   }
                   min={13}
                   max={65}
-                  className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+                  className="mt-1 w-full rounded border border-line-hi px-3 py-2"
                 />
               </div>
             </div>
-            <p className="text-xs text-gray-600">
+            <p className="text-xs text-lo">
               Full audience targeting (interests, behaviors, placements) will be configured in Meta Ads Manager
               after campaign creation.
             </p>
@@ -313,14 +313,14 @@ export default function CampaignWizard({ storeId }: CampaignWizardProps) {
                   }
                   min={1}
                   step={1}
-                  className="ml-2 flex-1 rounded border border-gray-300 px-3 py-2"
+                  className="ml-2 flex-1 rounded border border-line-hi px-3 py-2"
                 />
               </div>
-              <p className="mt-2 text-xs text-gray-600">
+              <p className="mt-2 text-xs text-lo">
                 Minimum daily budget is $1 USD. You can change this anytime.
               </p>
             </div>
-            <div className="rounded bg-blue-50 p-3 text-sm text-blue-800">
+            <div className="rounded bg-gold/10 p-3 text-sm text-gold-hi">
               <p>
                 <strong>Campaign will start PAUSED.</strong> After review, you&apos;ll set up ad sets,
                 upload creatives, and then activate.
@@ -329,7 +329,7 @@ export default function CampaignWizard({ storeId }: CampaignWizardProps) {
           </div>
         )}
 
-        {error && <div className="rounded bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+        {error && <div className="rounded bg-coral/15 p-3 text-sm text-coral">{error}</div>}
       </div>
 
       {/* Navigation Buttons */}
@@ -337,14 +337,14 @@ export default function CampaignWizard({ storeId }: CampaignWizardProps) {
         <button
           onClick={handlePrevious}
           disabled={step === 1 || loading}
-          className="rounded bg-gray-200 px-4 py-2 font-medium hover:bg-gray-300 disabled:opacity-50"
+          className="rounded bg-white/10 px-4 py-2 font-medium hover:bg-white/15 disabled:opacity-50"
         >
           ← Previous
         </button>
         <button
           onClick={handleNext}
           disabled={loading}
-          className="rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+          className="rounded bg-gold px-4 py-2 font-medium text-ink hover:bg-gold-hi disabled:opacity-50"
         >
           {step === 5 ? "Review & Publish →" : "Next →"}
         </button>

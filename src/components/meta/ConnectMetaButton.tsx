@@ -62,17 +62,17 @@ export default function ConnectMetaButton({ storeId }: ConnectMetaButtonProps) {
       <button
         onClick={handleConnect}
         disabled={loading || success}
-        className="w-full rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        className="w-full rounded bg-gold px-4 py-2 font-medium text-ink hover:bg-gold-hi disabled:opacity-50"
       >
         {loading ? "Connecting..." : success ? "Connected!" : "Connect Meta Account"}
       </button>
 
-      {error && <p className="text-sm text-red-600">Error: {error}</p>}
+      {error && <p className="text-sm text-coral">Error: {error}</p>}
       {success && (
-        <p className="text-sm text-green-600">✓ Meta account connected! Redirecting...</p>
+        <p className="text-sm text-teal">✓ Meta account connected! Redirecting...</p>
       )}
 
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-faint">
         This will open Meta&apos;s authorization page. You&apos;ll need to log in with your Meta
         Business account and grant permission to access your ad campaigns.
       </p>

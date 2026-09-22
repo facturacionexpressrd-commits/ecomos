@@ -22,6 +22,10 @@
   --font-display: "Fraunces", serif;
   --font-body: "Public Sans", sans-serif;
   --font-mono: "IBM Plex Mono", monospace;
+
+  /* Native widgets (select option lists, date pickers, scrollbars) render dark too, instead of
+     popping open white with the app's light text on them. */
+  color-scheme: dark;
 }
 
 @theme inline {

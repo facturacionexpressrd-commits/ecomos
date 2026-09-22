@@ -62,13 +62,13 @@ export default function BudgetEditor({
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="rounded bg-blue-100 px-3 py-1 text-sm text-blue-700 hover:bg-blue-200"
+        className="rounded bg-gold/10 px-3 py-1 text-sm text-gold-hi hover:bg-gold/20"
       >
         ✎ Edit Budget
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-10 z-50 rounded-lg border border-gray-200 bg-white p-4 shadow-lg">
+        <div className="absolute right-0 top-10 z-50 rounded-lg border border-line bg-white/5 p-4 shadow-lg">
           <div className="space-y-3 min-w-80">
             <div>
               <label className="block text-sm font-medium">Daily Budget (USD)</label>
@@ -81,26 +81,26 @@ export default function BudgetEditor({
                   placeholder="0.00"
                   step="0.01"
                   min="0.01"
-                  className="ml-2 flex-1 rounded border border-gray-300 px-2 py-1"
+                  className="ml-2 flex-1 rounded border border-line-hi px-2 py-1"
                 />
               </div>
-              <p className="mt-1 text-xs text-gray-500">Minimum: $0.01/day</p>
+              <p className="mt-1 text-xs text-faint">Minimum: $0.01/day</p>
             </div>
 
-            {error && <div className="rounded bg-red-50 p-2 text-xs text-red-700">{error}</div>}
+            {error && <div className="rounded bg-coral/15 p-2 text-xs text-coral">{error}</div>}
 
             <div className="flex gap-2">
               <button
                 onClick={() => setIsOpen(false)}
                 disabled={loading}
-                className="flex-1 rounded bg-gray-200 px-3 py-1 text-sm hover:bg-gray-300 disabled:opacity-50"
+                className="flex-1 rounded bg-white/10 px-3 py-1 text-sm hover:bg-white/15 disabled:opacity-50"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
                 disabled={loading || !budget}
-                className="flex-1 rounded bg-blue-600 px-3 py-1 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
+                className="flex-1 rounded bg-gold px-3 py-1 text-sm text-ink hover:bg-gold-hi disabled:opacity-50"
               >
                 {loading ? "Saving..." : "Save"}
               </button>

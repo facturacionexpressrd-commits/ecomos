@@ -35,7 +35,7 @@ export default async function NewCampaignPage({
   const storeId = requestedStoreId ?? grants[0].storeId;
 
   if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
-    return <div className="p-4 text-red-600">No access to this store</div>;
+    return <div className="p-4 text-coral">No access to this store</div>;
   }
 
   // Verify Meta account is connected
@@ -46,14 +46,14 @@ export default async function NewCampaignPage({
   if (!metaAccount) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-8">
-        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-6 text-center">
-          <h1 className="text-xl font-bold text-yellow-900">Meta Account Not Connected</h1>
-          <p className="mt-2 text-yellow-800">
+        <div className="rounded-lg border border-gold/30 bg-gold/15 p-6 text-center">
+          <h1 className="text-xl font-bold text-gold-hi">Meta Account Not Connected</h1>
+          <p className="mt-2 text-gold-hi">
             You need to connect a Meta Business account before creating campaigns.
           </p>
           <a
             href="/dashboard/integrations"
-            className="mt-4 inline-block rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-700"
+            className="mt-4 inline-block rounded bg-gold px-4 py-2 font-medium text-ink hover:bg-gold-hi"
           >
             Go to Integrations
           </a>

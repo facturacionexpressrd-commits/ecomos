@@ -73,19 +73,19 @@ export default function LoginForm({ linkExpired }: { linkExpired: boolean }) {
           onChange={(e) => setPassword(e.target.value)}
           className="rounded border px-3 py-2"
         />
-        {error && <p className="text-sm text-red-600">{error}</p>}
-        {notice && <p className="text-sm text-green-700">{notice}</p>}
+        {error && <p className="text-sm text-coral">{error}</p>}
+        {notice && <p className="text-sm text-teal">{notice}</p>}
         <button
           type="submit"
           disabled={loading}
-          className="rounded bg-black px-3 py-2 text-white disabled:opacity-50"
+          className="rounded bg-gold px-3 py-2 text-ink disabled:opacity-50"
         >
           {mode === "sign-in" ? "Sign in" : "Create account"}
         </button>
       </form>
       <button
         type="button"
-        className="text-sm text-gray-600 underline"
+        className="text-sm text-lo underline"
         onClick={() => setMode(mode === "sign-in" ? "sign-up" : "sign-in")}
       >
         {mode === "sign-in" ? "Need an account? Sign up" : "Already have an account? Sign in"}

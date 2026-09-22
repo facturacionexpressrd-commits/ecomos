@@ -29,7 +29,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 px-4 text-center">
       <h1 className="text-xl font-semibold">Join {invitation.organization.name}</h1>
-      <p className="text-sm text-gray-600">
+      <p className="text-sm text-lo">
         Invited as <strong>{invitation.role.name}</strong> to {invitation.email}.
       </p>
       {!user ? (
@@ -40,7 +40,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
           </a>
         </p>
       ) : !emailMatches ? (
-        <p className="text-sm text-red-600">
+        <p className="text-sm text-coral">
           You are signed in as {user.email}, but this invitation was sent to {invitation.email}.
         </p>
       ) : (
@@ -54,7 +54,7 @@ function Message({ title, children }: { title: string; children: React.ReactNode
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-2 px-4 text-center">
       <h1 className="text-xl font-semibold">{title}</h1>
-      <p className="text-sm text-gray-600">{children}</p>
+      <p className="text-sm text-lo">{children}</p>
     </main>
   );
 }

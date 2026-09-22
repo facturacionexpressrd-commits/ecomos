@@ -63,7 +63,7 @@ export default function CreativeLibrary({
   return (
     <div className="space-y-6">
       {/* Generate Section */}
-      <div className="rounded-lg border border-gray-200 bg-gray-50 p-6">
+      <div className="rounded-lg border border-line bg-white/5 p-6">
         <h3 className="mb-4 text-lg font-semibold">Generate Creative Concepts</h3>
         <div className="space-y-3">
           <div>
@@ -73,26 +73,26 @@ export default function CreativeLibrary({
               value={targetAudience}
               onChange={(e) => setTargetAudience(e.target.value)}
               placeholder="e.g., busy professionals, eco-conscious buyers"
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+              className="mt-1 w-full rounded border border-line-hi px-3 py-2"
             />
           </div>
           <button
             onClick={handleGenerateConcepts}
             disabled={generating}
-            className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded bg-gold px-4 py-2 text-ink hover:bg-gold-hi disabled:opacity-50"
           >
             {generating ? "Generating..." : "Generate 3 Concepts"}
           </button>
           {error && (
-            <p className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</p>
+            <p className="rounded bg-coral/15 p-2 text-sm text-coral">{error}</p>
           )}
         </div>
       </div>
 
       {/* Ideas Grid */}
       {ideas.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-gray-300 p-12 text-center">
-          <p className="text-gray-600">
+        <div className="rounded-lg border border-dashed border-line-hi p-12 text-center">
+          <p className="text-lo">
             No creative concepts yet. Generate some to get started!
           </p>
         </div>
@@ -104,13 +104,13 @@ export default function CreativeLibrary({
               onClick={() => setSelectedIdea(idea)}
               className={`cursor-pointer rounded-lg border-2 p-4 transition ${
                 selectedIdea?.id === idea.id
-                  ? "border-blue-600 bg-blue-50"
-                  : "border-gray-200 hover:border-blue-300"
+                  ? "border-gold bg-gold/10"
+                  : "border-line hover:border-gold/50"
               }`}
             >
               <h4 className="mb-2 font-semibold">{idea.headlineText}</h4>
-              <p className="text-sm text-gray-600">{idea.headlineHook}</p>
-              <p className="mt-2 text-xs text-gray-500">{idea.targetAudience}</p>
+              <p className="text-sm text-lo">{idea.headlineHook}</p>
+              <p className="mt-2 text-xs text-faint">{idea.targetAudience}</p>
             </div>
           ))}
         </div>
@@ -118,12 +118,12 @@ export default function CreativeLibrary({
 
       {/* Detail View */}
       {selectedIdea && (
-        <div className="rounded-lg border border-gray-200 bg-white p-6">
+        <div className="rounded-lg border border-line bg-white/5 p-6">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-xl font-bold">{selectedIdea.headlineText}</h3>
             <button
               onClick={() => setSelectedIdea(null)}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-faint hover:text-hi"
             >
               ✕
             </button>
@@ -131,8 +131,8 @@ export default function CreativeLibrary({
 
           <div className="space-y-4">
             {/* Headline Details */}
-            <div className="rounded bg-blue-50 p-4">
-              <p className="mb-2 text-sm font-medium text-blue-900">Headline Strategy</p>
+            <div className="rounded bg-gold/10 p-4">
+              <p className="mb-2 text-sm font-medium text-gold-hi">Headline Strategy</p>
               <p className="text-sm">
                 <strong>Hook:</strong> {selectedIdea.headlineHook}
               </p>
@@ -143,13 +143,13 @@ export default function CreativeLibrary({
 
             {/* Visual Concepts */}
             <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded border border-gray-200 p-4">
+              <div className="rounded border border-line p-4">
                 <p className="mb-2 font-medium">Image Concept</p>
-                <p className="text-sm text-gray-700">{selectedIdea.imageConceptText}</p>
+                <p className="text-sm text-lo">{selectedIdea.imageConceptText}</p>
               </div>
-              <div className="rounded border border-gray-200 p-4">
+              <div className="rounded border border-line p-4">
                 <p className="mb-2 font-medium">Video Concept</p>
-                <p className="text-sm text-gray-700">{selectedIdea.videoConceptText}</p>
+                <p className="text-sm text-lo">{selectedIdea.videoConceptText}</p>
               </div>
             </div>
 
@@ -161,7 +161,7 @@ export default function CreativeLibrary({
                   {selectedIdea.emotionalApeals.map((appeal, i) => (
                     <span
                       key={i}
-                      className="rounded-full bg-green-100 px-3 py-1 text-sm text-green-700"
+                      className="rounded-full bg-teal/15 px-3 py-1 text-sm text-teal"
                     >
                       {appeal}
                     </span>
@@ -171,20 +171,20 @@ export default function CreativeLibrary({
             )}
 
             {/* Target Audience */}
-            <div className="rounded bg-gray-50 p-4">
+            <div className="rounded bg-white/5 p-4">
               <p className="text-sm font-medium">Target Audience</p>
-              <p className="mt-1 text-sm text-gray-700">{selectedIdea.targetAudience}</p>
+              <p className="mt-1 text-sm text-lo">{selectedIdea.targetAudience}</p>
             </div>
 
             {/* Actions */}
             <div className="flex gap-2 pt-4">
-              <button className="flex-1 rounded bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700">
+              <button className="flex-1 rounded bg-teal px-4 py-2 text-sm text-ink hover:opacity-90">
                 Generate Image
               </button>
-              <button className="flex-1 rounded bg-purple-600 px-4 py-2 text-sm text-white hover:bg-purple-700">
+              <button className="flex-1 rounded bg-violet px-4 py-2 text-sm text-ink hover:opacity-90">
                 Generate Video
               </button>
-              <button className="flex-1 rounded bg-gray-200 px-4 py-2 text-sm hover:bg-gray-300">
+              <button className="flex-1 rounded bg-white/10 px-4 py-2 text-sm hover:bg-white/15">
                 Save to Campaign
               </button>
             </div>

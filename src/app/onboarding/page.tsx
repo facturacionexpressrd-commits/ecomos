@@ -22,7 +22,7 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
   return (
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 px-4">
       <h1 className="text-xl font-semibold">Set up your workspace</h1>
-      <p className="text-sm text-gray-600">
+      <p className="text-sm text-lo">
         A workspace holds your stores, ad accounts and team. You can invite teammates once it exists.
       </p>
       <form method="POST" action="/api/onboarding" className="flex flex-col gap-3">
@@ -37,12 +37,12 @@ export default async function OnboardingPage({ searchParams }: { searchParams: P
             className="rounded border px-3 py-2"
           />
         </label>
-        {error && ERRORS[error] && <p className="text-sm text-red-600">{ERRORS[error]}</p>}
-        <button type="submit" className="rounded bg-black px-3 py-2 text-white">
+        {error && ERRORS[error] && <p className="text-sm text-coral">{ERRORS[error]}</p>}
+        <button type="submit" className="rounded bg-gold px-3 py-2 text-ink">
           Create workspace
         </button>
       </form>
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-faint">
         Were you invited to someone else&apos;s workspace? Open the invitation link you were sent instead.
       </p>
     </main>

@@ -51,7 +51,7 @@ export default function CostEntryForm({ variantId, storeId, currentCost }: CostE
   return (
     <form onSubmit={handleSubmit} className="space-y-3">
       <div>
-        <label className="block text-xs font-medium text-gray-700">Manual Cost (COGS)</label>
+        <label className="block text-xs font-medium text-lo">Manual Cost (COGS)</label>
         <input
           type="number"
           step="0.01"
@@ -59,18 +59,18 @@ export default function CostEntryForm({ variantId, storeId, currentCost }: CostE
           value={cost}
           onChange={(e) => setCost(e.target.value)}
           placeholder="0.00"
-          className="mt-1 w-full rounded border border-gray-300 px-2 py-1 text-sm"
+          className="mt-1 w-full rounded border border-line-hi px-2 py-1 text-sm"
         />
-        <p className="mt-1 text-xs text-gray-500">Your cost per unit (wholesale price, manufacturing, etc.)</p>
+        <p className="mt-1 text-xs text-faint">Your cost per unit (wholesale price, manufacturing, etc.)</p>
       </div>
 
-      {error && <p className="text-xs text-red-600">{error}</p>}
-      {success && <p className="text-xs text-green-600">✓ Cost updated</p>}
+      {error && <p className="text-xs text-coral">{error}</p>}
+      {success && <p className="text-xs text-teal">✓ Cost updated</p>}
 
       <button
         type="submit"
         disabled={loading}
-        className="w-full rounded bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        className="w-full rounded bg-gold px-3 py-2 text-sm font-medium text-ink hover:bg-gold-hi disabled:opacity-50"
       >
         {loading ? "Saving..." : "Save Cost"}
       </button>

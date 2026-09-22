@@ -16,7 +16,7 @@ export default async function ChooseMetaAccountPage() {
   if (!pending) {
     return (
       <main className="mx-auto max-w-2xl px-4 py-10">
-        <p className="text-sm text-gray-700">
+        <p className="text-sm text-lo">
           This selection has expired. <Link className="underline" href="/dashboard/integrations">Start the Meta connection again.</Link>
         </p>
       </main>
@@ -33,22 +33,22 @@ export default async function ChooseMetaAccountPage() {
   return (
     <main className="mx-auto max-w-2xl px-4 py-10">
       <h1 className="text-2xl font-semibold">Choose an ad account</h1>
-      <p className="mb-6 mt-1 text-sm text-gray-600">
+      <p className="mb-6 mt-1 text-sm text-lo">
         Your Meta login can reach several ad accounts. EcomOS will create and change campaigns, and set
         budgets, on the one you pick.
       </p>
       <ul className="space-y-3">
         {choices.map((c) => (
           <li key={c.adAccountId}>
-            <form method="POST" action="/api/meta/auth/select" className="flex items-center justify-between rounded-lg border border-gray-200 p-4">
+            <form method="POST" action="/api/meta/auth/select" className="flex items-center justify-between rounded-lg border border-line p-4">
               <div>
                 <p className="font-medium">{c.adAccountName}</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-faint">
                   {c.businessName} · <code>{c.adAccountId}</code>
                 </p>
               </div>
               <input type="hidden" name="adAccountId" value={c.adAccountId} />
-              <button type="submit" className="rounded bg-gray-900 px-4 py-2 text-sm text-white hover:bg-gray-700">
+              <button type="submit" className="rounded bg-gold px-4 py-2 text-sm text-ink hover:opacity-90">
                 Use this account
               </button>
             </form>

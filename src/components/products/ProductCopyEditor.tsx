@@ -108,14 +108,14 @@ export default function ProductCopyEditor({
     <div className="space-y-6">
       {/* Generate Section */}
       {!copy ? (
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-6 text-center">
-          <p className="mb-4 text-sm text-gray-600">
+        <div className="rounded-lg border border-line bg-white/5 p-6 text-center">
+          <p className="mb-4 text-sm text-lo">
             AI will generate optimized product copy tailored to your audience
           </p>
           <button
             onClick={() => handleGenerate()}
             disabled={generating}
-            className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+            className="rounded bg-gold px-4 py-2 text-ink hover:bg-gold-hi disabled:opacity-50"
           >
             {generating ? "Generating..." : "Generate Product Copy"}
           </button>
@@ -126,7 +126,7 @@ export default function ProductCopyEditor({
           <div>
             <div className="mb-2 flex items-center justify-between">
               <label className="text-sm font-medium">Headline</label>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-faint">
                 Confidence: {(copy.confidence * 100).toFixed(0)}%
               </span>
             </div>
@@ -134,10 +134,10 @@ export default function ProductCopyEditor({
               type="text"
               value={editHeadline}
               onChange={(e) => setEditHeadline(e.target.value)}
-              className="w-full rounded border border-gray-300 px-3 py-2"
+              className="w-full rounded border border-line-hi px-3 py-2"
               maxLength={60}
             />
-            <p className="mt-1 text-xs text-gray-500">
+            <p className="mt-1 text-xs text-faint">
               {editHeadline.length}/60 characters
             </p>
           </div>
@@ -148,7 +148,7 @@ export default function ProductCopyEditor({
             <textarea
               value={editDescription}
               onChange={(e) => setEditDescription(e.target.value)}
-              className="h-40 w-full rounded border border-gray-300 px-3 py-2"
+              className="h-40 w-full rounded border border-line-hi px-3 py-2"
               placeholder="Edit product description..."
             />
           </div>
@@ -157,7 +157,7 @@ export default function ProductCopyEditor({
           {copy.bulletPoints.length > 0 && (
             <div>
               <label className="mb-2 block text-sm font-medium">Bullet Points</label>
-              <div className="space-y-2 rounded-lg bg-gray-50 p-4">
+              <div className="space-y-2 rounded-lg bg-white/5 p-4">
                 {copy.bulletPoints.map((point, i) => (
                   <p key={i} className="text-sm">
                     • {point}
@@ -175,7 +175,7 @@ export default function ProductCopyEditor({
                 {copy.seoKeywords.map((keyword, i) => (
                   <span
                     key={i}
-                    className="rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-700"
+                    className="rounded-full bg-gold/10 px-3 py-1 text-sm text-gold-hi"
                   >
                     {keyword}
                   </span>
@@ -186,7 +186,7 @@ export default function ProductCopyEditor({
 
           {/* Errors */}
           {error && (
-            <div className="rounded bg-red-50 p-3 text-sm text-red-700">{error}</div>
+            <div className="rounded bg-coral/15 p-3 text-sm text-coral">{error}</div>
           )}
 
           {/* Actions */}
@@ -194,21 +194,21 @@ export default function ProductCopyEditor({
             <button
               onClick={() => handleGenerate()}
               disabled={generating || publishing || copy.isPublished}
-              className="flex-1 rounded bg-gray-200 px-4 py-2 text-sm hover:bg-gray-300 disabled:opacity-50"
+              className="flex-1 rounded bg-white/10 px-4 py-2 text-sm hover:bg-white/15 disabled:opacity-50"
             >
               {generating ? "Generating..." : "Regenerate"}
             </button>
             <button
               onClick={handlePublish}
               disabled={publishing || copy.isPublished}
-              className="flex-1 rounded bg-green-600 px-4 py-2 text-sm text-white hover:bg-green-700 disabled:opacity-50"
+              className="flex-1 rounded bg-teal px-4 py-2 text-sm text-ink hover:opacity-90 disabled:opacity-50"
             >
               {publishing ? "Publishing..." : copy.isPublished ? "Published" : "Publish to Shopify"}
             </button>
           </div>
 
           {copy.isPublished && (
-            <p className="rounded bg-green-50 p-3 text-sm text-green-700">
+            <p className="rounded bg-teal/15 p-3 text-sm text-teal">
               ✓ Published to Shopify
             </p>
           )}

@@ -46,12 +46,12 @@ export default function OfferSelector({
     loadOffers();
   }, [storeId, productId]);
 
-  if (loading) return <div className="text-gray-600">Loading offers...</div>;
-  if (error) return <div className="text-red-600">Error: {error}</div>;
+  if (loading) return <div className="text-lo">Loading offers...</div>;
+  if (error) return <div className="text-coral">Error: {error}</div>;
 
   if (offers.length === 0) {
     return (
-      <div className="rounded bg-yellow-50 p-3 text-center text-sm text-yellow-700">
+      <div className="rounded bg-gold/15 p-3 text-center text-sm text-gold-hi">
         No offers found for this product. Create one in your sourcing tool.
       </div>
     );
@@ -65,18 +65,18 @@ export default function OfferSelector({
           onClick={() => onSelect(offer.id, offer)}
           className={`w-full rounded border-2 p-3 text-left transition ${
             selectedOfferId === offer.id
-              ? "border-green-600 bg-green-50"
-              : "border-gray-200 hover:border-green-300"
+              ? "border-teal bg-teal/15"
+              : "border-line hover:border-teal/50"
           }`}
         >
           <div className="flex justify-between">
             <div>
               <p className="font-medium">{offer.name}</p>
-              <p className="text-xs text-gray-500">{offer.url}</p>
+              <p className="text-xs text-faint">{offer.url}</p>
             </div>
             <div className="text-right">
               <p className="text-sm font-medium">Cost: ${offer.cost.toFixed(2)}</p>
-              <p className="text-xs text-green-600">Margin: {(offer.margin * 100).toFixed(0)}%</p>
+              <p className="text-xs text-teal">Margin: {(offer.margin * 100).toFixed(0)}%</p>
             </div>
           </div>
         </button>

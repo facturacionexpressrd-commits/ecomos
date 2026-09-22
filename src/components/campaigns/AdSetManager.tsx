@@ -82,14 +82,14 @@ export default function AdSetManager({
         <h3 className="text-lg font-semibold">Ad Sets ({adSets.length})</h3>
         <button
           onClick={() => setShowCreateForm(!showCreateForm)}
-          className="rounded bg-green-600 px-3 py-1 text-sm font-medium text-white hover:bg-green-700"
+          className="rounded bg-teal px-3 py-1 text-sm font-medium text-ink hover:opacity-90"
         >
           + New Ad Set
         </button>
       </div>
 
       {showCreateForm && (
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4 space-y-3">
+        <div className="rounded-lg border border-line bg-white/5 p-4 space-y-3">
           <div>
             <label className="block text-sm font-medium">Ad Set Name</label>
             <input
@@ -97,7 +97,7 @@ export default function AdSetManager({
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               placeholder="E.g., Audience A - Test"
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+              className="mt-1 w-full rounded border border-line-hi px-3 py-2"
             />
           </div>
 
@@ -107,7 +107,7 @@ export default function AdSetManager({
               <select
                 value={formData.billing_event}
                 onChange={(e) => setFormData({ ...formData, billing_event: e.target.value })}
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+                className="mt-1 w-full rounded border border-line-hi px-3 py-2"
               >
                 <option value="CLICKS">Clicks</option>
                 <option value="IMPRESSIONS">Impressions</option>
@@ -119,7 +119,7 @@ export default function AdSetManager({
               <select
                 value={formData.optimization_goal}
                 onChange={(e) => setFormData({ ...formData, optimization_goal: e.target.value })}
-                className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+                className="mt-1 w-full rounded border border-line-hi px-3 py-2"
               >
                 <option value="LINK_CLICKS">Link Clicks</option>
                 <option value="CONVERSIONS">Conversions</option>
@@ -138,25 +138,25 @@ export default function AdSetManager({
                 onChange={(e) => setFormData({ ...formData, daily_budget: e.target.value })}
                 min="0.01"
                 step="0.01"
-                className="ml-2 flex-1 rounded border border-gray-300 px-3 py-2"
+                className="ml-2 flex-1 rounded border border-line-hi px-3 py-2"
               />
             </div>
           </div>
 
-          {error && <div className="rounded bg-red-50 p-2 text-sm text-red-700">{error}</div>}
+          {error && <div className="rounded bg-coral/15 p-2 text-sm text-coral">{error}</div>}
 
           <div className="flex gap-2">
             <button
               onClick={() => setShowCreateForm(false)}
               disabled={loading}
-              className="flex-1 rounded bg-gray-300 px-3 py-2 font-medium hover:bg-gray-400 disabled:opacity-50"
+              className="flex-1 rounded bg-white/10 px-3 py-2 font-medium hover:bg-white/15 disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               onClick={handleCreate}
               disabled={loading || !formData.name}
-              className="flex-1 rounded bg-green-600 px-3 py-2 font-medium text-white hover:bg-green-700 disabled:opacity-50"
+              className="flex-1 rounded bg-teal px-3 py-2 font-medium text-ink hover:opacity-90 disabled:opacity-50"
             >
               {loading ? "Creating..." : "Create Ad Set"}
             </button>
@@ -165,16 +165,16 @@ export default function AdSetManager({
       )}
 
       {adSets.length === 0 ? (
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-6 text-center">
-          <p className="text-gray-600">No ad sets yet. Create one to add creatives and start spending.</p>
+        <div className="rounded-lg border border-line bg-white/5 p-6 text-center">
+          <p className="text-lo">No ad sets yet. Create one to add creatives and start spending.</p>
         </div>
       ) : (
         <div className="space-y-2">
           {adSets.map((adSet) => (
-            <div key={adSet.id} className="flex items-center justify-between rounded-lg border border-gray-200 p-4">
+            <div key={adSet.id} className="flex items-center justify-between rounded-lg border border-line p-4">
               <div>
                 <p className="font-medium">{adSet.name}</p>
-                <p className="text-xs text-gray-600">
+                <p className="text-xs text-lo">
                   {adSet.billingEvent} • {adSet.optimizationGoal} • {adSet.creatives.length} creatives
                 </p>
               </div>
@@ -182,8 +182,8 @@ export default function AdSetManager({
                 <span
                   className={`inline-block rounded px-2 py-1 text-xs font-medium ${
                     adSet.status === "ACTIVE"
-                      ? "bg-green-100 text-green-700"
-                      : "bg-yellow-100 text-yellow-700"
+                      ? "bg-teal/15 text-teal"
+                      : "bg-gold/15 text-gold-hi"
                   }`}
                 >
                   {adSet.status}

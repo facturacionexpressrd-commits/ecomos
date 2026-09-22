@@ -51,35 +51,35 @@ export default function ExceptionList({ exceptions, storeId }: ExceptionListProp
   };
 
   const severityColor: Record<string, string> = {
-    critical: "bg-red-100 text-red-700",
-    high: "bg-orange-100 text-orange-700",
-    medium: "bg-yellow-100 text-yellow-700",
-    low: "bg-blue-100 text-blue-700",
+    critical: "bg-coral/15 text-coral",
+    high: "bg-gold/15 text-gold-hi",
+    medium: "bg-gold/15 text-gold-hi",
+    low: "bg-gold/10 text-gold-hi",
   };
 
   return (
     <div className="space-y-4">
       {exceptions.map((exc) => (
-        <div key={exc.id} className="rounded-lg border border-gray-200 p-6">
+        <div key={exc.id} className="rounded-lg border border-line p-6">
           <div className="mb-4 flex items-start justify-between">
             <div>
               <div className="mb-2 flex items-center gap-2">
                 <p className="font-semibold">Order #{exc.orderShopifyGid?.slice(-8)}</p>
-                <span className="text-sm text-gray-600">{exc.supplier}</span>
+                <span className="text-sm text-lo">{exc.supplier}</span>
               </div>
-              <p className="text-sm text-gray-600">{exc.type}</p>
+              <p className="text-sm text-lo">{exc.type}</p>
             </div>
             <div className="flex items-center gap-2">
               <span className={`rounded px-3 py-1 text-xs font-semibold ${severityColor[exc.severity] || severityColor.medium}`}>
                 {exc.severity}
               </span>
-              <span className={`rounded px-3 py-1 text-xs font-semibold ${exc.isResolved ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-700"}`}>
+              <span className={`rounded px-3 py-1 text-xs font-semibold ${exc.isResolved ? "bg-teal/15 text-teal" : "bg-white/5 text-lo"}`}>
                 {exc.isResolved ? "Resolved" : "Open"}
               </span>
             </div>
           </div>
 
-          <p className="mb-4 text-sm text-gray-700">{exc.description}</p>
+          <p className="mb-4 text-sm text-lo">{exc.description}</p>
 
           {editing === exc.id ? (
             <div className="mb-4 space-y-2">
@@ -87,14 +87,14 @@ export default function ExceptionList({ exceptions, storeId }: ExceptionListProp
                 value={action}
                 onChange={(e) => setAction(e.target.value)}
                 placeholder="Enter recommended action..."
-                className="w-full rounded border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+                className="w-full rounded border border-line-hi px-3 py-2 text-sm focus:border-gold/50 focus:outline-none"
                 rows={3}
               />
               <div className="flex gap-2">
                 <button
                   onClick={() => handleUpdate(exc.id, true)}
                   disabled={loading}
-                  className="rounded bg-green-600 px-3 py-1 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50"
+                  className="rounded bg-teal px-3 py-1 text-sm font-medium text-ink hover:opacity-90 disabled:opacity-50"
                 >
                   Resolve
                 </button>
@@ -103,7 +103,7 @@ export default function ExceptionList({ exceptions, storeId }: ExceptionListProp
                     setEditing(null);
                     setAction("");
                   }}
-                  className="rounded bg-gray-200 px-3 py-1 text-sm font-medium text-gray-700 hover:bg-gray-300"
+                  className="rounded bg-white/10 px-3 py-1 text-sm font-medium text-lo hover:bg-white/15"
                 >
                   Cancel
                 </button>
@@ -112,9 +112,9 @@ export default function ExceptionList({ exceptions, storeId }: ExceptionListProp
           ) : (
             <div className="space-y-3">
               {exc.recommendedAction && (
-                <div className="rounded-md bg-blue-50 p-3">
-                  <p className="text-xs font-semibold text-blue-700">Recommended Action</p>
-                  <p className="text-sm text-blue-700">{exc.recommendedAction}</p>
+                <div className="rounded-md bg-gold/10 p-3">
+                  <p className="text-xs font-semibold text-gold-hi">Recommended Action</p>
+                  <p className="text-sm text-gold-hi">{exc.recommendedAction}</p>
                 </div>
               )}
 
@@ -124,7 +124,7 @@ export default function ExceptionList({ exceptions, storeId }: ExceptionListProp
                     setEditing(exc.id);
                     setAction(exc.recommendedAction || "");
                   }}
-                  className="text-sm text-blue-600 hover:underline"
+                  className="text-sm text-gold-hi hover:underline"
                 >
                   Add action & resolve
                 </button>
@@ -132,7 +132,7 @@ export default function ExceptionList({ exceptions, storeId }: ExceptionListProp
             </div>
           )}
 
-          <p className="mt-3 text-xs text-gray-500">Opened {new Date(exc.createdAt).toLocaleString()}</p>
+          <p className="mt-3 text-xs text-faint">Opened {new Date(exc.createdAt).toLocaleString()}</p>
         </div>
       ))}
     </div>

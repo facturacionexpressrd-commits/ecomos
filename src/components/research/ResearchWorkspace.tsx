@@ -69,23 +69,23 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
   };
 
   const scoreColor = (score: number) => {
-    if (score >= 80) return "text-green-700";
-    if (score >= 60) return "text-blue-700";
-    if (score >= 40) return "text-yellow-700";
-    return "text-red-700";
+    if (score >= 80) return "text-teal";
+    if (score >= 60) return "text-gold-hi";
+    if (score >= 40) return "text-gold-hi";
+    return "text-coral";
   };
 
   const scoreBg = (score: number) => {
-    if (score >= 80) return "bg-green-50 border-green-200";
-    if (score >= 60) return "bg-blue-50 border-blue-200";
-    if (score >= 40) return "bg-yellow-50 border-yellow-200";
-    return "bg-red-50 border-red-200";
+    if (score >= 80) return "bg-teal/15 border-teal/30";
+    if (score >= 60) return "bg-gold/10 border-gold/40";
+    if (score >= 40) return "bg-gold/15 border-gold/30";
+    return "bg-coral/15 border-coral/30";
   };
 
   return (
     <div className="space-y-6">
       {/* Search Filters */}
-      <div className="rounded-lg border border-gray-200 bg-white p-6">
+      <div className="rounded-lg border border-line bg-white/5 p-6">
         <h2 className="mb-4 text-lg font-semibold">Search Opportunities</h2>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -98,7 +98,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
               step={5}
               min={0}
               max={100}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+              className="mt-1 w-full rounded border border-line-hi px-3 py-2"
             />
           </div>
 
@@ -110,7 +110,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
               onChange={(e) => setMaxCost(parseFloat(e.target.value))}
               step={5}
               min={0}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+              className="mt-1 w-full rounded border border-line-hi px-3 py-2"
             />
           </div>
 
@@ -122,7 +122,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
               onChange={(e) => setMaxShipping(parseFloat(e.target.value))}
               step={1}
               min={0}
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+              className="mt-1 w-full rounded border border-line-hi px-3 py-2"
             />
           </div>
 
@@ -135,7 +135,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
                   e.target.value as "" | "low" | "medium" | "high"
                 )
               }
-              className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+              className="mt-1 w-full rounded border border-line-hi px-3 py-2"
             >
               <option value="">Any</option>
               <option value="low">Low</option>
@@ -146,13 +146,13 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
         </div>
 
         {error && (
-          <p className="mt-4 rounded bg-red-50 p-2 text-sm text-red-700">{error}</p>
+          <p className="mt-4 rounded bg-coral/15 p-2 text-sm text-coral">{error}</p>
         )}
 
         <button
           onClick={handleSearch}
           disabled={searching}
-          className="mt-4 rounded bg-blue-600 px-6 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
+          className="mt-4 rounded bg-gold px-6 py-2 text-ink hover:bg-gold-hi disabled:opacity-50"
         >
           {searching ? "Searching..." : "Search Opportunities"}
         </button>
@@ -161,7 +161,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
       {/* Results Grid */}
       {results.length > 0 ? (
         <div>
-          <p className="mb-4 text-sm text-gray-600">
+          <p className="mb-4 text-sm text-lo">
             Found <strong>{results.length}</strong> matching opportunities
           </p>
 
@@ -172,14 +172,14 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
                 onClick={() => setSelectedOpportunity(opp)}
                 className={`cursor-pointer rounded-lg border-2 p-4 transition ${
                   selectedOpportunity?.productId === opp.productId
-                    ? "border-blue-600 bg-blue-50"
-                    : "border-gray-200 hover:border-blue-300"
+                    ? "border-gold bg-gold/10"
+                    : "border-line hover:border-gold/50"
                 }`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h3 className="font-semibold">{opp.productTitle}</h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-lo">
                       Cost: ${opp.cost.toFixed(2)} | Retail: ${opp.estimatedRetailPrice.toFixed(2)} | Margin: {(opp.margin * 100).toFixed(0)}%
                     </p>
                   </div>
@@ -187,8 +187,8 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
                     <p className={`text-3xl font-bold ${scoreColor(opp.opportunityScore)}`}>
                       {opp.opportunityScore.toFixed(0)}
                     </p>
-                    <p className="text-xs text-gray-600">Score</p>
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="text-xs text-lo">Score</p>
+                    <p className="mt-1 text-xs text-faint">
                       {(opp.confidence * 100).toFixed(0)}% confidence
                     </p>
                   </div>
@@ -198,8 +198,8 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
           </div>
         </div>
       ) : searching ? null : (
-        <div className="rounded-lg border border-dashed border-gray-300 p-12 text-center">
-          <p className="text-gray-600">No opportunities found. Adjust filters and search.</p>
+        <div className="rounded-lg border border-dashed border-line-hi p-12 text-center">
+          <p className="text-lo">No opportunities found. Adjust filters and search.</p>
         </div>
       )}
 
@@ -210,7 +210,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
             <h3 className="text-xl font-bold">{selectedOpportunity.productTitle}</h3>
             <button
               onClick={() => setSelectedOpportunity(null)}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-faint hover:text-hi"
             >
               ✕
             </button>
@@ -218,26 +218,26 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
 
           {/* Score Breakdown */}
           <div className="mb-6 grid gap-4 md:grid-cols-4">
-            <div className="rounded bg-white p-3">
-              <p className="text-xs text-gray-600">Margin Score</p>
+            <div className="rounded bg-white/5 p-3">
+              <p className="text-xs text-lo">Margin Score</p>
               <p className={`text-2xl font-bold ${scoreColor(selectedOpportunity.scoreBreakdown.marginScore)}`}>
                 {selectedOpportunity.scoreBreakdown.marginScore.toFixed(0)}
               </p>
             </div>
-            <div className="rounded bg-white p-3">
-              <p className="text-xs text-gray-600">Cost Score</p>
+            <div className="rounded bg-white/5 p-3">
+              <p className="text-xs text-lo">Cost Score</p>
               <p className={`text-2xl font-bold ${scoreColor(selectedOpportunity.scoreBreakdown.costScore)}`}>
                 {selectedOpportunity.scoreBreakdown.costScore.toFixed(0)}
               </p>
             </div>
-            <div className="rounded bg-white p-3">
-              <p className="text-xs text-gray-600">Demand Score</p>
+            <div className="rounded bg-white/5 p-3">
+              <p className="text-xs text-lo">Demand Score</p>
               <p className={`text-2xl font-bold ${scoreColor(selectedOpportunity.scoreBreakdown.demandScore)}`}>
                 {selectedOpportunity.scoreBreakdown.demandScore.toFixed(0)}
               </p>
             </div>
-            <div className="rounded bg-white p-3">
-              <p className="text-xs text-gray-600">Competition Score</p>
+            <div className="rounded bg-white/5 p-3">
+              <p className="text-xs text-lo">Competition Score</p>
               <p className={`text-2xl font-bold ${scoreColor(selectedOpportunity.scoreBreakdown.competitionScore)}`}>
                 {selectedOpportunity.scoreBreakdown.competitionScore.toFixed(0)}
               </p>
@@ -246,23 +246,23 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
 
           {/* Metrics */}
           <div className="mb-6 grid gap-3 md:grid-cols-2">
-            <div className="rounded bg-white p-4">
-              <p className="text-sm text-gray-600">Cost</p>
+            <div className="rounded bg-white/5 p-4">
+              <p className="text-sm text-lo">Cost</p>
               <p className="text-2xl font-bold">${selectedOpportunity.cost.toFixed(2)}</p>
             </div>
-            <div className="rounded bg-white p-4">
-              <p className="text-sm text-gray-600">Estimated Retail</p>
+            <div className="rounded bg-white/5 p-4">
+              <p className="text-sm text-lo">Estimated Retail</p>
               <p className="text-2xl font-bold">
                 ${selectedOpportunity.estimatedRetailPrice.toFixed(2)}
               </p>
             </div>
-            <div className="rounded bg-white p-4">
-              <p className="text-sm text-gray-600">Shipping Cost</p>
+            <div className="rounded bg-white/5 p-4">
+              <p className="text-sm text-lo">Shipping Cost</p>
               <p className="text-2xl font-bold">${selectedOpportunity.shippingCost.toFixed(2)}</p>
             </div>
-            <div className="rounded bg-white p-4">
-              <p className="text-sm text-gray-600">Net Margin</p>
-              <p className="text-2xl font-bold text-green-700">
+            <div className="rounded bg-white/5 p-4">
+              <p className="text-sm text-lo">Net Margin</p>
+              <p className="text-2xl font-bold text-teal">
                 {(selectedOpportunity.margin * 100).toFixed(0)}%
               </p>
             </div>
@@ -270,7 +270,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
 
           {/* Reasoning */}
           {selectedOpportunity.reasoning.length > 0 && (
-            <div className="rounded bg-white p-4">
+            <div className="rounded bg-white/5 p-4">
               <p className="mb-2 font-medium">Why This Opportunity</p>
               <ul className="space-y-1">
                 {selectedOpportunity.reasoning.map((reason, i) => (
@@ -284,10 +284,10 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
 
           {/* Actions */}
           <div className="mt-6 flex gap-2">
-            <button className="flex-1 rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700">
+            <button className="flex-1 rounded bg-teal px-4 py-2 text-ink hover:opacity-90">
               Add to Watchlist
             </button>
-            <button className="flex-1 rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
+            <button className="flex-1 rounded bg-gold px-4 py-2 text-ink hover:bg-gold-hi">
               Create Campaign
             </button>
           </div>

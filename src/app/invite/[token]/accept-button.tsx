@@ -30,11 +30,11 @@ export default function AcceptInvitationButton({ token }: { token: string }) {
       <button
         onClick={accept}
         disabled={loading}
-        className="rounded bg-black px-3 py-2 text-white disabled:opacity-50"
+        className="rounded bg-gold px-3 py-2 text-ink disabled:opacity-50"
       >
         {loading ? "Joining…" : "Accept invitation"}
       </button>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-coral">{error}</p>}
     </div>
   );
 }

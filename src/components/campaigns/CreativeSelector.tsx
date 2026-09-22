@@ -67,14 +67,14 @@ export default function CreativeSelector({
         <h4 className="font-medium">Creatives</h4>
         <button
           onClick={() => setShowUpload(!showUpload)}
-          className="rounded bg-blue-100 px-3 py-1 text-sm text-blue-700 hover:bg-blue-200"
+          className="rounded bg-gold/10 px-3 py-1 text-sm text-gold-hi hover:bg-gold/20"
         >
           + Upload Creative
         </button>
       </div>
 
       {showUpload && (
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+        <div className="rounded-lg border border-line bg-white/5 p-4">
           <input
             type="file"
             accept="image/*,video/*"
@@ -82,21 +82,21 @@ export default function CreativeSelector({
             disabled={uploading}
             className="block w-full text-sm"
           />
-          {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
-          {uploading && <p className="mt-2 text-sm text-gray-600">Uploading...</p>}
+          {error && <p className="mt-2 text-sm text-coral">{error}</p>}
+          {uploading && <p className="mt-2 text-sm text-lo">Uploading...</p>}
         </div>
       )}
 
       {creatives.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center">
-          <p className="text-sm text-gray-600">No creatives yet. Upload images or videos.</p>
+        <div className="rounded-lg border border-dashed border-line-hi p-6 text-center">
+          <p className="text-sm text-lo">No creatives yet. Upload images or videos.</p>
         </div>
       ) : (
         <div className="space-y-2">
           {creatives.map((creative) => (
             <label
               key={creative.id}
-              className="flex items-center gap-3 rounded-lg border border-gray-200 p-3 hover:bg-gray-50"
+              className="flex items-center gap-3 rounded-lg border border-line p-3 hover:bg-white/5"
             >
               <input
                 type="checkbox"
@@ -106,7 +106,7 @@ export default function CreativeSelector({
               />
               <div>
                 <p className="font-medium">{creative.name}</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-faint">
                   {creative.type} • {new Date(creative.uploadedAt).toLocaleDateString()}
                 </p>
               </div>

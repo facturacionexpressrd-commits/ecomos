@@ -47,8 +47,8 @@ export default function ProductSelector({
     p.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading) return <div className="text-gray-600">Loading products...</div>;
-  if (error) return <div className="text-red-600">Error: {error}</div>;
+  if (loading) return <div className="text-lo">Loading products...</div>;
+  if (error) return <div className="text-coral">Error: {error}</div>;
 
   return (
     <div className="space-y-3">
@@ -59,12 +59,12 @@ export default function ProductSelector({
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           placeholder="Search by name..."
-          className="mt-1 w-full rounded border border-gray-300 px-3 py-2"
+          className="mt-1 w-full rounded border border-line-hi px-3 py-2"
         />
       </div>
 
       {filtered.length === 0 ? (
-        <div className="rounded bg-gray-50 p-3 text-center text-sm text-gray-600">
+        <div className="rounded bg-white/5 p-3 text-center text-sm text-lo">
           {products.length === 0 ? "No products found" : "No matches"}
         </div>
       ) : (
@@ -75,12 +75,12 @@ export default function ProductSelector({
               onClick={() => onSelect(product.id, product)}
               className={`w-full rounded border-2 p-3 text-left transition ${
                 selectedProductId === product.id
-                  ? "border-blue-600 bg-blue-50"
-                  : "border-gray-200 hover:border-blue-300"
+                  ? "border-gold bg-gold/10"
+                  : "border-line hover:border-gold/50"
               }`}
             >
               <p className="font-medium">{product.title}</p>
-              <p className="text-xs text-gray-500">{product.shopifyGid}</p>
+              <p className="text-xs text-faint">{product.shopifyGid}</p>
             </button>
           ))}
         </div>

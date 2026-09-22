@@ -101,15 +101,15 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
   const priorityColor = (priority: string) => {
     switch (priority) {
       case "critical":
-        return "bg-red-100 text-red-800 border-red-300";
+        return "bg-coral/15 text-coral border-coral/30";
       case "high":
-        return "bg-orange-100 text-orange-800 border-orange-300";
+        return "bg-gold/15 text-gold-hi border-gold/30";
       case "medium":
-        return "bg-yellow-100 text-yellow-800 border-yellow-300";
+        return "bg-gold/15 text-gold-hi border-gold/30";
       case "low":
-        return "bg-blue-100 text-blue-800 border-blue-300";
+        return "bg-gold/10 text-gold-hi border-gold/40";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-300";
+        return "bg-white/5 text-hi border-line-hi";
     }
   };
 
@@ -135,7 +135,7 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
   };
 
   if (loading) {
-    return <div className="text-center text-gray-600">Loading approvals...</div>;
+    return <div className="text-center text-lo">Loading approvals...</div>;
   }
 
   return (
@@ -143,21 +143,21 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
       {/* Header */}
       <div>
         <h2 className="text-2xl font-bold">Approval Center</h2>
-        <p className="mt-1 text-gray-600">
+        <p className="mt-1 text-lo">
           {approvals.length} action{approvals.length !== 1 ? "s" : ""} awaiting approval
         </p>
       </div>
 
       {error && (
-        <div className="rounded-lg bg-red-50 p-4 text-sm text-red-700">{error}</div>
+        <div className="rounded-lg bg-coral/15 p-4 text-sm text-coral">{error}</div>
       )}
       {notice && (
-        <div className="rounded-lg bg-blue-50 p-4 text-sm text-blue-800">{notice}</div>
+        <div className="rounded-lg bg-gold/10 p-4 text-sm text-gold-hi">{notice}</div>
       )}
 
       {approvals.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-12 text-center">
-          <p className="text-gray-600">No pending approvals. Everything is up to date!</p>
+        <div className="rounded-lg border border-dashed border-line-hi bg-white/5 p-12 text-center">
+          <p className="text-lo">No pending approvals. Everything is up to date!</p>
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-3">
@@ -170,15 +170,15 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
                   onClick={() => setSelectedApproval(approval)}
                   className={`w-full rounded-lg border-2 p-4 text-left transition ${
                     selectedApproval?.id === approval.id
-                      ? "border-blue-600 bg-blue-50"
-                      : "border-gray-200 hover:border-blue-300"
+                      ? "border-gold bg-gold/10"
+                      : "border-line hover:border-gold/50"
                   }`}
                 >
                   <div className="flex items-start gap-3">
                     <span className="text-2xl">{actionTypeIcon(approval.actionType)}</span>
                     <div className="flex-1">
                       <p className="font-semibold">{approval.title}</p>
-                      <p className="text-xs text-gray-600 line-clamp-2">
+                      <p className="text-xs text-lo line-clamp-2">
                         {approval.description}
                       </p>
                       <div className="mt-2 flex items-center gap-2">
@@ -189,7 +189,7 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
                         >
                           {approval.priority.toUpperCase()}
                         </span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-faint">
                           {(approval.confidenceScore * 100).toFixed(0)}% confident
                         </span>
                       </div>
@@ -202,20 +202,20 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
 
           {/* Detail Panel */}
           {selectedApproval && (
-            <div className="rounded-lg border-2 border-blue-600 bg-blue-50 p-6 lg:col-span-2">
+            <div className="rounded-lg border-2 border-gold bg-gold/10 p-6 lg:col-span-2">
               <div className="mb-4">
                 <div className="flex items-center gap-3 mb-4">
                   <span className="text-4xl">{actionTypeIcon(selectedApproval.actionType)}</span>
                   <div>
                     <h3 className="text-2xl font-bold">{selectedApproval.title}</h3>
-                    <p className="text-sm text-gray-600">{selectedApproval.actionType}</p>
+                    <p className="text-sm text-lo">{selectedApproval.actionType}</p>
                   </div>
                 </div>
               </div>
 
               {/* Executive Explanation */}
-              <div className="mb-6 rounded-lg bg-white p-4 border-l-4 border-blue-500">
-                <p className="text-sm font-medium text-gray-700 mb-2">Executive Summary</p>
+              <div className="mb-6 rounded-lg bg-white/5 p-4 border-l-4 border-gold">
+                <p className="text-sm font-medium text-lo mb-2">Executive Summary</p>
                 <p className="text-base leading-relaxed">
                   {selectedApproval.executiveExplanation}
                 </p>
@@ -223,33 +223,33 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
 
               {/* Details */}
               <div className="mb-6 grid gap-4 md:grid-cols-2">
-                <div className="rounded bg-white p-4">
-                  <p className="text-sm text-gray-600">Priority</p>
+                <div className="rounded bg-white/5 p-4">
+                  <p className="text-sm text-lo">Priority</p>
                   <p className={`mt-1 inline-block rounded px-3 py-1 text-sm font-medium ${priorityColor(
                     selectedApproval.priority
                   )}`}>
                     {selectedApproval.priority.toUpperCase()}
                   </p>
                 </div>
-                <div className="rounded bg-white p-4">
-                  <p className="text-sm text-gray-600">Confidence</p>
-                  <p className="mt-1 text-2xl font-bold text-blue-600">
+                <div className="rounded bg-white/5 p-4">
+                  <p className="text-sm text-lo">Confidence</p>
+                  <p className="mt-1 text-2xl font-bold text-gold-hi">
                     {(selectedApproval.confidenceScore * 100).toFixed(0)}%
                   </p>
                 </div>
               </div>
 
               {/* Reasoning */}
-              <div className="mb-6 rounded bg-white p-4">
+              <div className="mb-6 rounded bg-white/5 p-4">
                 <p className="mb-2 text-sm font-medium">AI Reasoning</p>
-                <p className="text-sm text-gray-700">{selectedApproval.reasoning}</p>
+                <p className="text-sm text-lo">{selectedApproval.reasoning}</p>
               </div>
 
               {/* Decision Section */}
               {selectedApproval.status === "pending" && (
                 <div className="space-y-4 border-t pt-6">
                   {selectedApproval.priority === "critical" && (
-                    <div className="rounded bg-red-50 p-4 text-sm text-red-700">
+                    <div className="rounded bg-coral/15 p-4 text-sm text-coral">
                       ⚠️ This is a critical action requiring immediate attention
                     </div>
                   )}
@@ -260,7 +260,7 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
                       <textarea
                         value={rejectionReason}
                         onChange={(e) => setRejectionReason(e.target.value)}
-                        className="mt-2 h-20 w-full rounded border border-gray-300 px-3 py-2"
+                        className="mt-2 h-20 w-full rounded border border-line-hi px-3 py-2"
                         placeholder="Why are you rejecting this action?"
                       />
                     </div>
@@ -270,7 +270,7 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
                     <button
                       onClick={() => handleDecision("approved")}
                       disabled={deciding}
-                      className="flex-1 rounded bg-green-600 px-4 py-3 text-white hover:bg-green-700 disabled:opacity-50 font-medium"
+                      className="flex-1 rounded bg-teal px-4 py-3 text-ink hover:opacity-90 disabled:opacity-50 font-medium"
                     >
                       {deciding ? "Processing..." : "✓ Approve"}
                     </button>
@@ -283,7 +283,7 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
                         }
                       }}
                       disabled={deciding}
-                      className="flex-1 rounded bg-red-600 px-4 py-3 text-white hover:bg-red-700 disabled:opacity-50 font-medium"
+                      className="flex-1 rounded bg-coral px-4 py-3 text-ink hover:opacity-90 disabled:opacity-50 font-medium"
                     >
                       {rejectionReason ? "✗ Confirm Reject" : "✗ Reject"}
                     </button>
@@ -292,7 +292,7 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
               )}
 
               {selectedApproval.status !== "pending" && (
-                <div className="rounded bg-gray-100 p-4 text-center text-sm text-gray-600">
+                <div className="rounded bg-white/5 p-4 text-center text-sm text-lo">
                   Status: <span className="font-medium capitalize">{selectedApproval.status}</span>
                 </div>
               )}
