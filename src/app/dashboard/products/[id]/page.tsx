@@ -3,7 +3,9 @@ import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import { contributionProfit, contributionMargin } from "@/lib/finance/formulas";
+import type { SupplierLink } from "@prisma/client";
 import CostEntryForm from "@/components/products/CostEntryForm";
+import CjLinkForm from "@/components/products/CjLinkForm";
 import { PageHeader } from "@/components/dashboard/ui/PageHeader";
 import { StatTile } from "@/components/dashboard/ui/StatTile";
 
@@ -39,6 +41,7 @@ export default async function ProductDetailPage({
         include: {
           inventoryLevels: { select: { available: true } },
           costAllocations: { select: { amount: true, costType: true } },
+          supplierLinks: { where: { supplier: "cj" } },
         },
       },
     },
@@ -59,6 +62,11 @@ export default async function ProductDetailPage({
   }
 
   const store = await prisma.store.findUniqueOrThrow({ where: { id: storeId } });
+  const cjConnected = !!(await prisma.supplierConnection.findUnique({
+    where: { organizationId_supplier: { organizationId: store.organizationId, supplier: "cj" } },
+    select: { id: true },
+  }));
+  const canManageProducts = hasCapability(grants, storeId, CAPABILITIES.productsManage);
   const PAYMENT_FEES_PCT = Number(store.paymentFeePercent);
   const PAYMENT_FEES_FIXED = Number(store.paymentFeeFixed);
 
@@ -117,7 +125,17 @@ export default async function ProductDetailPage({
                   <Figure label="Stock" value={`${inventory} units`} />
                 </div>
 
-                {/* Cost Entry Form */}
+                {canManageProducts && (
+                  <div className="mb-4">
+                    <CjLinkForm
+                      storeId={storeId}
+                      variantId={variant.id}
+                      connected={cjConnected}
+                      link={cjLinkProps(variant.supplierLinks[0])}
+                    />
+                  </div>
+                )}
+
                 <CostEntryForm variantId={variant.id} storeId={storeId} currentCost={variant.cost?.toString()} />
               </div>
             );
@@ -147,6 +165,23 @@ export default async function ProductDetailPage({
       </section>
     </div>
   );
+}
+
+/** Decimals and Dates can't cross into a client component, so flatten them to strings. */
+function cjLinkProps(link: SupplierLink | undefined) {
+  if (!link) return null;
+  return {
+    supplierVariantId: link.supplierVariantId,
+    supplierSku: link.supplierSku,
+    supplierName: link.supplierName,
+    cost: link.cost?.toString() ?? null,
+    shippingCost: link.shippingCost?.toString() ?? null,
+    shippingMethod: link.shippingMethod,
+    shippingDays: link.shippingDays,
+    availableQty: link.availableQty,
+    lastSyncedAt: link.lastSyncedAt?.toISOString() ?? null,
+    syncError: link.syncError,
+  };
 }
 
 function Figure({ label, value, tone = "text-hi" }: { label: string; value: string; tone?: string }) {

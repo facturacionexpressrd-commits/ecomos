@@ -6,6 +6,7 @@ import { registerWebhooks } from "@/lib/shopify/webhooks";
 import { syncAllMetaAccounts } from "@/lib/meta/sync";
 import { generateApprovalRecommendations } from "@/lib/approval/recommender";
 import { reportError } from "@/lib/alerts";
+import { refreshAllCjLinks, syncCjOrders } from "@/lib/suppliers/cj-service";
 
 const attempt = async <T>(fn: () => Promise<T>) => {
   try {
@@ -35,11 +36,20 @@ export async function runDaily() {
   }
 
   const drain = await attempt(drainQueues);
+  // After the Shopify drain, so newly synced orders' CJ status is pulled in the same run.
+  const cjOrders = await attempt(syncCjOrders);
+  const cjLinks = await attempt(refreshAllCjLinks);
   const meta = await attempt(syncAllMetaAccounts);
   // Runs after the Meta sync above so recommendations are based on today's spend data.
   const recommendations = await attempt(generateApprovalRecommendations);
 
   const failed =
-    shopify.some((s) => !s.webhooks.ok || !s.sync) || !drain.ok || drain.value.failed > 0 || !meta.ok;
-  return { failed, stores: stores.length, shopify, drain, meta, recommendations };
+    shopify.some((s) => !s.webhooks.ok || !s.sync) ||
+    !drain.ok ||
+    drain.value.failed > 0 ||
+    !meta.ok ||
+    !cjOrders.ok ||
+    cjOrders.value.failed > 0;
+  // Individual CJ link failures are recorded on each link (shown on the product page), not as a job failure.
+  return { failed, stores: stores.length, shopify, drain, cjOrders, cjLinks, meta, recommendations };
 }

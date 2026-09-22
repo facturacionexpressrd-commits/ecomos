@@ -2,19 +2,19 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
-import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
+import { loadStoreAccessGrants, hasCapability, hasOrgCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import ConnectMetaButton from "@/components/meta/ConnectMetaButton";
 import { PageHeader, StatusPill } from "@/components/dashboard/ui/PageHeader";
-import { ShoppingBag, Megaphone } from "lucide-react";
+import { ShoppingBag, Megaphone, Truck } from "lucide-react";
 
 const SOON = ["Google Ads", "TikTok Ads", "Pinterest Ads", "Email (Klaviyo)"];
 
 export default async function IntegrationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ store?: string }>;
+  searchParams: Promise<{ store?: string; cj?: string; cj_error?: string }>;
 }) {
-  const { store: requestedStoreId } = await searchParams;
+  const { store: requestedStoreId, cj: cjNotice, cj_error: cjError } = await searchParams;
 
   const supabase = await createClient();
   const {
@@ -31,7 +31,15 @@ export default async function IntegrationsPage({
   }
 
   const store = await prisma.store.findUniqueOrThrow({ where: { id: storeId } });
-  const metaAccount = await prisma.metaAccount.findFirst({ where: { storeId } });
+  const [metaAccount, cjConnection, cjLinkCount] = await Promise.all([
+    prisma.metaAccount.findFirst({ where: { storeId } }),
+    prisma.supplierConnection.findUnique({
+      where: { organizationId_supplier: { organizationId: store.organizationId, supplier: "cj" } },
+      select: { connectedAt: true },
+    }),
+    prisma.supplierLink.count({ where: { storeId, supplier: "cj" } }),
+  ]);
+  const canManageOrg = hasOrgCapability(grants, CAPABILITIES.orgManageUsers);
   const shopifyConnected = store.status === "connected" && !!store.accessTokenEncrypted;
 
   return (
@@ -106,6 +114,66 @@ export default async function IntegrationsPage({
             <p className="text-sm text-lo">Connect your Meta Business account to sync ad campaigns and track ROAS.</p>
             <ConnectMetaButton storeId={storeId} />
           </div>
+        )}
+      </section>
+
+      <section className="glass rise-in mt-6 p-6">
+        <div className="mb-5 flex items-start justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/5">
+              <Truck size={20} className="text-hi" strokeWidth={1.75} />
+            </div>
+            <div>
+              <h2 className="text-lg font-medium text-hi">CJ Dropshipping</h2>
+              <p className="text-sm text-lo">Real supplier costs, stock and shipping, and send orders to CJ.</p>
+            </div>
+          </div>
+          <StatusPill status={cjConnection ? "connected" : "not connected"} />
+        </div>
+
+        {cjError && <p className="mb-4 rounded-lg bg-coral/15 p-3 text-sm text-coral">{cjError}</p>}
+        {cjNotice === "connected" && (
+          <p className="mb-4 rounded-lg bg-teal/15 p-3 text-sm text-teal">
+            CJ connected. Link products to CJ from each product&apos;s page.
+          </p>
+        )}
+
+        {cjConnection ? (
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-lo">
+              Connected {cjConnection.connectedAt.toLocaleDateString()} · {cjLinkCount} variant
+              {cjLinkCount === 1 ? "" : "s"} linked in this store
+            </p>
+            {canManageOrg && (
+              <form method="POST" action="/api/suppliers/cj/connect">
+                <input type="hidden" name="action" value="disconnect" />
+                <button className="rounded-lg border border-line-hi px-4 py-2 text-sm text-lo hover:text-hi">Disconnect</button>
+              </form>
+            )}
+          </div>
+        ) : canManageOrg ? (
+          <form method="POST" action="/api/suppliers/cj/connect" className="space-y-3">
+            <label className="block text-sm text-lo">
+              CJ API key
+              <input
+                name="apiKey"
+                type="password"
+                required
+                autoComplete="off"
+                placeholder="CJUserNum@api@…"
+                className="mt-1 w-full rounded-lg border border-line-hi bg-white/5 px-3 py-2 font-mono text-sm text-hi placeholder:text-faint focus:border-gold/50 focus:outline-none"
+              />
+            </label>
+            <p className="text-xs text-faint">
+              In your CJ account: personal center → API → Add API, with type &ldquo;API Key&rdquo;. Stored encrypted and
+              only used for this workspace.
+            </p>
+            <button className="rounded-lg bg-gradient-to-b from-gold-hi to-gold px-4 py-2.5 text-sm font-medium text-ink hover:opacity-90">
+              Connect CJ
+            </button>
+          </form>
+        ) : (
+          <p className="text-sm text-lo">Ask a workspace owner to connect CJ.</p>
         )}
       </section>
 

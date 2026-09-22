@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import { PageHeader, EmptyState, StatusPill } from "@/components/dashboard/ui/PageHeader";
+import SendToCjButton from "@/components/orders/SendToCjButton";
 
 export default async function OrderHubPage({
   searchParams,
@@ -25,11 +26,19 @@ export default async function OrderHubPage({
     return <div className="glass mx-auto mt-16 max-w-md p-8 text-center text-sm text-lo">No access to this store.</div>;
   }
 
+  const store = await prisma.store.findUniqueOrThrow({ where: { id: storeId }, select: { organizationId: true } });
+  const cjConnected = !!(await prisma.supplierConnection.findUnique({
+    where: { organizationId_supplier: { organizationId: store.organizationId, supplier: "cj" } },
+    select: { id: true },
+  }));
+  const canSend = cjConnected && hasCapability(grants, storeId, CAPABILITIES.storeSync);
+
   const orders = await prisma.order.findMany({
     where: { storeId },
     orderBy: { placedAt: "desc" },
     take: 50,
     include: {
+      lineItems: { select: { variant: { select: { supplierLinks: { where: { supplier: "cj" }, select: { id: true } } } } } },
       supplierOrders: {
         include: {
           fulfillments: {
@@ -60,6 +69,8 @@ export default async function OrderHubPage({
             const allCompleted =
               order.supplierOrders.length > 0 &&
               order.supplierOrders.every((so) => so.status === "delivered" || so.status === "cancelled");
+            const cjLinkedItems = order.lineItems.filter((li) => (li.variant?.supplierLinks.length ?? 0) > 0).length;
+            const showSendToCj = canSend && cjLinkedItems > 0 && !order.supplierOrders.some((so) => so.supplier === "cj");
 
             return (
               <div key={order.id} className="glass rise-in p-6">
@@ -79,6 +90,11 @@ export default async function OrderHubPage({
                         {allCompleted ? "Completed" : "In progress"}
                       </p>
                     )}
+                    {showSendToCj && (
+                      <div className="mt-2">
+                        <SendToCjButton storeId={storeId} orderId={order.id} linkedItems={cjLinkedItems} />
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -89,9 +105,26 @@ export default async function OrderHubPage({
                       return (
                         <div key={supplierOrder.id} className="rounded-lg border border-line bg-white/3 p-4">
                           <div className="mb-3 flex items-center justify-between">
-                            <p className="text-sm font-medium text-hi capitalize">{supplierOrder.supplier}</p>
+                            <p className="text-sm font-medium text-hi">
+                              {supplierOrder.supplier === "cj" ? "CJ Dropshipping" : supplierOrder.supplier}
+                              {supplierOrder.supplierOrderId && (
+                                <span className="ml-2 font-mono text-xs text-faint">#{supplierOrder.supplierOrderId}</span>
+                              )}
+                            </p>
                             <StatusPill status={supplierOrder.status} />
                           </div>
+                          {supplierOrder.status === "awaiting_payment" && (
+                            <p className="mb-3 rounded-lg bg-gold/10 p-2.5 text-xs text-gold-hi">
+                              Created at CJ, not paid yet. Pay it in your CJ account and CJ will start fulfilling.
+                            </p>
+                          )}
+                          {supplierOrder.fulfillments[0]?.shipment?.trackingNumber && (
+                            <p className="mb-3 text-xs text-lo">
+                              Tracking:{" "}
+                              <span className="font-mono text-hi">{supplierOrder.fulfillments[0].shipment.trackingNumber}</span>
+                              {supplierOrder.fulfillments[0].shipment.carrier && ` · ${supplierOrder.fulfillments[0].shipment.carrier}`}
+                            </p>
+                          )}
 
                           <div className="mb-3 grid grid-cols-3 gap-2 text-sm">
                             <Field label="Cost" value={`$${Number(supplierOrder.totalCost).toFixed(2)}`} />
