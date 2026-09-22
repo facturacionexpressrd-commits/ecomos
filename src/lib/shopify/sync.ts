@@ -6,20 +6,20 @@ type PageInfo = { hasNextPage: boolean; endCursor: string | null };
 
 const PRODUCTS_QUERY = /* GraphQL */ `
   query Products($cursor: String) {
-    products(first: 50, after: $cursor) {
+    products(first: 15, after: $cursor) {
       pageInfo { hasNextPage endCursor }
       nodes {
         id
         title
         status
-        variants(first: 100) {
+        variants(first: 30) {
           nodes {
             id
             sku
             title
             price
             inventoryItem {
-              inventoryLevels(first: 10) {
+              inventoryLevels(first: 5) {
                 nodes {
                   location { id }
                   quantities(names: ["available"]) { name quantity }
@@ -74,15 +74,13 @@ const ORDERS_QUERY = /* GraphQL */ `
             }
           }
         }
-        transactions(first: 20) {
-          nodes {
-            id
-            kind
-            status
-            gateway
-            processedAt
-            amountSet { shopMoney { amount currencyCode } }
-          }
+        transactions {
+          id
+          kind
+          status
+          gateway
+          processedAt
+          amountSet { shopMoney { amount currencyCode } }
         }
       }
     }
@@ -154,16 +152,14 @@ type OrdersResponse = {
           }>;
         };
       }>;
-      transactions: {
-        nodes: Array<{
-          id: string;
-          kind: string;
-          status: string;
-          gateway: string | null;
-          processedAt: string | null;
-          amountSet: { shopMoney: { amount: string; currencyCode: string } };
-        }>;
-      };
+      transactions: Array<{
+        id: string;
+        kind: string;
+        status: string;
+        gateway: string | null;
+        processedAt: string | null;
+        amountSet: { shopMoney: { amount: string; currencyCode: string } };
+      }>;
     }>;
   };
 };
@@ -337,7 +333,7 @@ async function syncOrders(storeId: string, shop: string, accessToken: string) {
       }
 
       // Sync payment transactions
-      for (const tx of o.transactions.nodes) {
+      for (const tx of o.transactions) {
         await prisma.financialTransaction.upsert({
           where: { storeId_shopifyGid: { storeId, shopifyGid: tx.id } },
           create: {
