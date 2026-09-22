@@ -234,6 +234,10 @@ async function syncProducts(storeId: string, shop: string, accessToken: string) 
 }
 
 async function syncOrders(storeId: string, shop: string, accessToken: string) {
+  // Line items reference our ProductVariant.id, not Shopify's gid; products sync first, so this is complete.
+  const variants = await prisma.productVariant.findMany({ where: { storeId }, select: { id: true, shopifyGid: true } });
+  const variantIdByGid = new Map(variants.map((v) => [v.shopifyGid, v.id]));
+
   let cursor: string | null = null;
   do {
     const data: OrdersResponse = await shopifyGraphQL(shop, accessToken, ORDERS_QUERY, { cursor });
@@ -272,13 +276,14 @@ async function syncOrders(storeId: string, shop: string, accessToken: string) {
           create: {
             storeId,
             orderId: order.id,
-            variantId: line.variant?.id ?? null,
+            variantId: (line.variant && variantIdByGid.get(line.variant.id)) ?? null,
             shopifyGid: line.id,
             quantity: line.quantity,
             grossAmount: line.originalTotalSet.shopMoney.amount,
             netAmount: line.discountedTotalSet.shopMoney.amount,
           },
           update: {
+            variantId: (line.variant && variantIdByGid.get(line.variant.id)) ?? null,
             quantity: line.quantity,
             grossAmount: line.originalTotalSet.shopMoney.amount,
             netAmount: line.discountedTotalSet.shopMoney.amount,
