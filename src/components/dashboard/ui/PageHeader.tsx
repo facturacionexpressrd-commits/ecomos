@@ -12,13 +12,12 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
+    // Compact on purpose: the page's data should start near the top of the screen, not under a banner.
+    <header className="mb-5 flex flex-wrap items-center justify-between gap-3">
       <div>
-        {eyebrow && <p className="mb-2 text-xs font-medium uppercase tracking-[0.2em] text-gold">{eyebrow}</p>}
-        <h1 className="font-[family-name:var(--font-display)] text-3xl font-medium italic text-hi sm:text-4xl">
-          {title}
-        </h1>
-        {subtitle && <p className="mt-2 max-w-xl text-sm text-lo">{subtitle}</p>}
+        {eyebrow && <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.2em] text-gold">{eyebrow}</p>}
+        <h1 className="font-[family-name:var(--font-display)] text-2xl font-medium italic text-hi">{title}</h1>
+        {subtitle && <p className="mt-1 max-w-xl text-sm text-lo">{subtitle}</p>}
       </div>
       {action}
     </header>

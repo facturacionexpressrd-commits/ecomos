@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import { contributionProfit, contributionMargin } from "@/lib/finance/formulas";
 import CostEntryForm from "@/components/products/CostEntryForm";
+import { PageHeader } from "@/components/dashboard/ui/PageHeader";
+import { StatTile } from "@/components/dashboard/ui/StatTile";
 
 export default async function ProductDetailPage({
   params,
@@ -26,7 +28,7 @@ export default async function ProductDetailPage({
 
   const storeId = requestedStoreId ?? grants[0].storeId;
   if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
-    return <div className="p-4 text-red-600">No access to this store</div>;
+    return <div className="glass mx-auto mt-16 max-w-md p-8 text-center text-sm text-lo">No access to this store.</div>;
   }
 
   // Fetch product + variants + sales data
@@ -42,7 +44,9 @@ export default async function ProductDetailPage({
     },
   });
 
-  if (!product) return <div className="p-4 text-red-600">Product not found</div>;
+  if (!product) {
+    return <div className="glass mx-auto mt-16 max-w-md p-8 text-center text-sm text-lo">Product not found.</div>;
+  }
 
   // Fetch refunds per variant upfront (needed for economics calculation)
   const variantRefunds: Record<string, number> = {};
@@ -68,16 +72,23 @@ export default async function ProductDetailPage({
   const uniqueCustomers = await prisma.customer.count({ where: { storeId } });
 
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">{product.title}</h1>
-        <p className="text-sm text-gray-600">Store: {store.name}</p>
+    <div className="mx-auto max-w-6xl">
+      <PageHeader eyebrow={store.name} title={product.title} />
+
+      {/* Store-level summary first, so the headline numbers are on screen without scrolling. */}
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatTile label="Store revenue" value={`$${storeRevenue.toFixed(2)}`} />
+        <StatTile label="Customers" value={uniqueCustomers.toLocaleString()} />
+        <StatTile
+          label="Revenue / customer"
+          value={`$${uniqueCustomers > 0 ? (storeRevenue / uniqueCustomers).toFixed(2) : "0.00"}`}
+        />
+        <StatTile label="Payment fee" value={`${PAYMENT_FEES_PCT}% + $${PAYMENT_FEES_FIXED}`} />
       </div>
 
-      {/* Variants Grid */}
-      <section className="mb-12">
-        <h2 className="mb-6 text-xl font-semibold">Variants</h2>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <section className="mb-6">
+        <p className="mb-3 text-xs font-medium tracking-[0.14em] text-faint uppercase">Variants</p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {product.variants.map((variant) => {
             const inventory = variant.inventoryLevels.reduce((sum, inv) => sum + inv.available, 0);
             const totalCogs = variant.costAllocations.reduce((sum, alloc) => sum + Number(alloc.amount), 0);
@@ -91,40 +102,19 @@ export default async function ProductDetailPage({
             const margin = contributionMargin(variantShare, refunded, PAYMENT_FEES_PCT, totalCogs);
 
             return (
-              <div key={variant.id} className="rounded-lg border border-gray-200 p-6">
-                <h3 className="mb-2 font-semibold">{variant.title || "Untitled"}</h3>
-                <p className="mb-4 text-sm text-gray-600">SKU: {variant.sku || "—"}</p>
+              <div key={variant.id} className="glass rise-in p-5">
+                <p className="font-medium text-hi">{variant.title || "Untitled"}</p>
+                <p className="mb-4 text-xs text-faint">SKU: {variant.sku || "—"}</p>
 
-                {/* Pricing & Inventory */}
-                <div className="mb-4 space-y-1 text-sm">
-                  <p>
-                    <strong>Price:</strong> ${Number(variant.price ?? 0).toFixed(2)}
-                  </p>
-                  <p>
-                    <strong>Cost:</strong>{" "}
-                    {variant.cost != null ? `$${Number(variant.cost).toFixed(2)}` : "not entered"}
-                  </p>
-                  <p>
-                    <strong>Stock:</strong> {inventory} units
-                  </p>
-                </div>
-
-                {/* Economics */}
-                <div className="mb-6 space-y-2 rounded-md bg-blue-50 p-4 text-sm">
-                  <p>
-                    <strong>Contribution Profit:</strong> ${profit.toFixed(2)}
-                    <br />
-                    <em className="text-xs text-gray-700">
-                      = (Revenue - Refunds - Payment Fees) - COGS
-                    </em>
-                  </p>
-                  <p>
-                    <strong>Contribution Margin:</strong> {margin.toFixed(1)}%
-                    <br />
-                    <em className="text-xs text-gray-700">
-                      = Contribution Profit ÷ Revenue
-                    </em>
-                  </p>
+                <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
+                  <Figure label="Profit" value={`$${profit.toFixed(2)}`} tone={profit >= 0 ? "text-teal" : "text-coral"} />
+                  <Figure label="Margin" value={`${margin.toFixed(1)}%`} />
+                  <Figure label="Price" value={`$${Number(variant.price ?? 0).toFixed(2)}`} />
+                  <Figure
+                    label="Cost"
+                    value={variant.cost != null ? `$${Number(variant.cost).toFixed(2)}` : "not entered"}
+                  />
+                  <Figure label="Stock" value={`${inventory} units`} />
                 </div>
 
                 {/* Cost Entry Form */}
@@ -135,58 +125,35 @@ export default async function ProductDetailPage({
         </div>
       </section>
 
-      {/* Store-Level Summary */}
-      <section className="rounded-lg border border-gray-200 p-8">
-        <h2 className="mb-6 text-xl font-semibold">Store Economics</h2>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          <div>
-            <p className="text-sm text-gray-600">Gross Revenue</p>
-            <p className="text-2xl font-bold">${storeRevenue.toFixed(2)}</p>
-            <p className="mt-1 text-xs text-gray-500">Sum of all orders</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Unique Customers</p>
-            <p className="text-2xl font-bold">{uniqueCustomers}</p>
-            <p className="mt-1 text-xs text-gray-500">From Shopify data</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Payment Fee</p>
-            <p className="text-2xl font-bold">{PAYMENT_FEES_PCT}% + ${PAYMENT_FEES_FIXED}</p>
-            <p className="mt-1 text-xs text-gray-500">Per-transaction estimate (update in Store settings)</p>
-          </div>
-          <div>
-            <p className="text-sm text-gray-600">Avg Revenue/Customer</p>
-            <p className="text-2xl font-bold">
-              ${uniqueCustomers > 0 ? (storeRevenue / uniqueCustomers).toFixed(2) : "0.00"}
-            </p>
-            <p className="mt-1 text-xs text-gray-500">For break-even analysis</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Methodology */}
-      <section className="mt-12 rounded-lg bg-gray-50 p-8">
-        <h3 className="mb-4 font-semibold">📌 Methodology</h3>
-        <ul className="space-y-2 text-sm text-gray-700">
+      <section className="glass p-5">
+        <p className="mb-3 text-sm font-medium text-hi">How these numbers are calculated</p>
+        <ul className="space-y-2 text-sm text-lo">
           <li>
-            <strong>Contribution Profit:</strong> Only includes known costs (COGS from your entries, Stripe fees).
-            Excludes labor, rent, platform fees, taxes.
+            <span className="text-hi">Profit</span> = revenue − refunds − payment fees − cost. Only known costs are
+            counted: labor, rent, platform fees and taxes are not.
           </li>
           <li>
-            <strong>COGS Entry:</strong> Manual per-variant cost. Use this for your landed cost or wholesale price.
+            <span className="text-hi">Cost</span> is what you enter per variant, such as your landed or wholesale price.
           </li>
           <li>
-            <strong>Payment Fees:</strong> Fixed at 2.9% (Stripe standard). Update this if using a different processor.
+            <span className="text-hi">Payment fee</span> is this store&apos;s estimated rate shown above, not
+            Shopify&apos;s actual per-order fees.
           </li>
           <li>
-            <strong>Refunds:</strong> Tracked per variant from RefundLineItems. Revenue shown is still gross, but
-            contribution profit deducts actual refunds.
-          </li>
-          <li>
-            <strong>Attribution:</strong> For MVP, revenue is split equally across variants. Real impl. uses order_line_items.
+            <span className="text-hi">Revenue per variant</span> is currently the store&apos;s revenue split evenly
+            across variants, not each variant&apos;s real sales.
           </li>
         </ul>
       </section>
-    </main>
+    </div>
+  );
+}
+
+function Figure({ label, value, tone = "text-hi" }: { label: string; value: string; tone?: string }) {
+  return (
+    <div>
+      <p className="text-[11px] tracking-wide text-faint uppercase">{label}</p>
+      <p className={`font-mono ${tone}`}>{value}</p>
+    </div>
   );
 }

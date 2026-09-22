@@ -45,7 +45,7 @@ export default async function BillingPage({
   const active = hasAccess(org.subscriptionStatus);
 
   return (
-    <main className="relative z-10 mx-auto max-w-2xl px-4 pt-12 pb-16">
+    <main className="relative z-10 mx-auto max-w-2xl px-4 pt-6 pb-16">
       <PageHeader eyebrow={org.name} title="Billing" subtitle="Your EcomOS subscription." />
 
       {error && ERRORS[error] && <p className="glass mb-6 p-4 text-sm text-coral">{ERRORS[error]}</p>}

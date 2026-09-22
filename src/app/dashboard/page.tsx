@@ -5,7 +5,7 @@ import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/c
 import ConnectStoreForm from "@/components/dashboard/ConnectStoreForm";
 import { StatTile } from "@/components/dashboard/ui/StatTile";
 import { Sparkline } from "@/components/dashboard/ui/Sparkline";
-import { StatusPill } from "@/components/dashboard/ui/PageHeader";
+import { PageHeader, StatusPill } from "@/components/dashboard/ui/PageHeader";
 import { TrendingUp, Package, Wallet, Percent } from "lucide-react";
 
 const money = (n: number, currency = "USD") =>
@@ -30,7 +30,7 @@ export default async function DashboardPage({
   const grants = await loadStoreAccessGrants(user.id);
   if (grants.length === 0) {
     return (
-      <div className="mx-auto flex min-h-[80vh] max-w-md flex-col justify-center gap-5 text-center">
+      <div className="mx-auto mt-6 flex max-w-md flex-col gap-5 text-center">
         <p className="font-[family-name:var(--font-display)] text-3xl font-medium italic text-hi">
           Build. Sell. Scale.
         </p>
@@ -79,22 +79,18 @@ export default async function DashboardPage({
 
   return (
     <div className="mx-auto max-w-6xl">
-      <div className="glass rise-in relative mb-8 overflow-hidden p-8 sm:p-10">
-        <div
-          className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full opacity-40 blur-3xl"
-          style={{ background: "radial-gradient(circle, var(--gold) 0%, transparent 70%)" }}
-        />
-        <p className="mb-2 text-xs font-medium tracking-[0.2em] text-gold uppercase">{store.name}</p>
-        <h1 className="max-w-lg font-[family-name:var(--font-display)] text-4xl font-medium text-balance text-hi italic sm:text-5xl">
-          Build. Sell. Scale.
-        </h1>
-        <div className="mt-4 flex items-center gap-3">
-          <StatusPill status={store.status} />
-          {store.connectedAt && (
-            <span className="text-xs text-faint">Connected {store.connectedAt.toLocaleDateString()}</span>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        eyebrow={store.name}
+        title="Overview"
+        action={
+          <div className="flex items-center gap-3">
+            <StatusPill status={store.status} />
+            {store.connectedAt && (
+              <span className="text-xs text-faint">Connected {store.connectedAt.toLocaleDateString()}</span>
+            )}
+          </div>
+        }
+      />
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile label="Revenue (14d)" value={money(revenue14d, currency)} icon={<TrendingUp size={16} />} />

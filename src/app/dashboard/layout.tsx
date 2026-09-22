@@ -38,7 +38,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <Sidebar stores={stores} />
       <MobileTopBar />
       <div className="relative z-10 lg:pl-[17.5rem]">
-        <div className="px-4 pt-6 pb-16 sm:px-6 lg:px-8 lg:pt-8">{children}</div>
+        <div className="px-4 pt-4 pb-16 sm:px-6 lg:px-8 lg:pt-5">{children}</div>
       </div>
     </div>
   );
