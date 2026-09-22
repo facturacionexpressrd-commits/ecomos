@@ -5,6 +5,7 @@ import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/c
 import RevenueCard from "@/components/dashboard/RevenueCard";
 import OrdersCard from "@/components/dashboard/OrdersCard";
 import InventoryCard from "@/components/dashboard/InventoryCard";
+import ConnectStoreForm from "@/components/dashboard/ConnectStoreForm";
 
 export default async function DashboardPage({
   searchParams,
@@ -32,19 +33,7 @@ export default async function DashboardPage({
           Enter your store&apos;s Shopify address. You&apos;ll approve read access to products, orders,
           customers and inventory on Shopify, then come back here.
         </p>
-        <form method="GET" action="/api/shopify/install" className="flex flex-col gap-3">
-          <input
-            name="shop"
-            required
-            placeholder="your-store.myshopify.com"
-            pattern="[a-zA-Z0-9\-]+\.myshopify\.com"
-            title="Your store's .myshopify.com address"
-            className="rounded border px-3 py-2"
-          />
-          <button type="submit" className="rounded bg-black px-3 py-2 text-white">
-            Connect store
-          </button>
-        </form>
+        <ConnectStoreForm />
         <p className="text-xs text-gray-500">Waiting on an invitation instead? Open the link you were sent.</p>
       </main>
     );

@@ -1,40 +1,29 @@
-"use client";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import { prisma } from "@/lib/db";
+import { loadStoreAccessGrants } from "@/lib/auth/capabilities";
+import Nav from "@/components/dashboard/Nav";
 
-import Link from "next/link";
-import { usePathname } from "next/navigation";
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
-const LINKS = [
-  { href: "/dashboard", label: "Overview" },
-  { href: "/dashboard/meta/campaigns", label: "Campaigns" },
-  { href: "/dashboard/orders", label: "Orders" },
-  { href: "/dashboard/exceptions", label: "Exceptions" },
-  { href: "/dashboard/integrations", label: "Integrations" },
-];
-
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
+  const grants = await loadStoreAccessGrants(user.id);
+  const stores =
+    grants.length === 0
+      ? []
+      : await prisma.store.findMany({
+          where: { id: { in: grants.map((g) => g.storeId) } },
+          select: { id: true, name: true, status: true },
+          orderBy: { name: "asc" },
+        });
 
   return (
     <>
-      <nav className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-4xl flex-wrap items-center gap-1 px-4 py-2">
-          <span className="mr-4 font-semibold">EcomOS</span>
-          {LINKS.map(({ href, label }) => {
-            const active = href === "/dashboard" ? pathname === href : pathname.startsWith(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={`rounded px-3 py-1.5 text-sm ${
-                  active ? "bg-gray-900 text-white" : "text-gray-700 hover:bg-gray-100"
-                }`}
-              >
-                {label}
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
+      <Nav stores={stores} />
       {children}
     </>
   );
