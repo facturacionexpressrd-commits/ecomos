@@ -1,60 +1,45 @@
-import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { prisma } from "@/lib/db";
+import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import CampaignsTable from "@/components/campaigns/CampaignsTable";
+import { PageHeader, EmptyState } from "@/components/dashboard/ui/PageHeader";
 
 export const metadata = {
   title: "Campaigns | EcomOS",
 };
 
-export default async function CampaignsPage() {
-  // Verify user is authenticated
+export default async function CampaignsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ store?: string }>;
+}) {
+  const { store: requestedStoreId } = await searchParams;
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
-  if (!user) {
-    redirect("/login");
-  }
-
-  // Get user's active store (first store they have access to)
-  const userStores = await prisma.userStoreAccess.findMany({
-    where: { userId: user.id },
-    include: { store: true },
-    take: 1,
-  });
-
-  if (!userStores.length) {
+  const grants = await loadStoreAccessGrants(user.id);
+  if (grants.length === 0) {
     return (
-      <div className="space-y-4 p-8">
-        <h1 className="text-2xl font-bold">Campaigns</h1>
-        <div className="rounded-lg border border-gray-200 bg-gray-50 p-6 text-center">
-          <p className="text-gray-600">
-            You don&apos;t have access to any stores yet. Contact your admin to grant access.
-          </p>
-        </div>
+      <div className="mx-auto max-w-6xl">
+        <PageHeader eyebrow="Advertising" title="Campaigns" subtitle="Launch, manage and optimize your ad spend." />
+        <EmptyState title="No store access yet">Contact your admin to grant access.</EmptyState>
       </div>
     );
   }
 
-  const storeId = userStores[0].store.id;
+  const storeId = requestedStoreId && grants.some((g) => g.storeId === requestedStoreId) ? requestedStoreId : grants[0].storeId;
+  if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
+    return <div className="glass mx-auto mt-16 max-w-md p-8 text-center text-sm text-lo">No access to this store.</div>;
+  }
 
   return (
-    <div className="space-y-6 p-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Meta Campaigns</h1>
-        <p className="mt-2 text-gray-600">
-          View performance metrics, ROAS, and profitability for all your Meta campaigns.
-        </p>
-      </div>
-
-      {/* Campaigns Table */}
-      <Suspense fallback={<div className="p-4 text-gray-600">Loading campaigns...</div>}>
-        <CampaignsTable storeId={storeId} />
-      </Suspense>
+    <div className="mx-auto max-w-6xl">
+      <PageHeader eyebrow="Advertising" title="Meta Campaigns" subtitle="Performance, ROAS and profitability for every Meta campaign." />
+      <CampaignsTable storeId={storeId} />
     </div>
   );
 }

@@ -3,6 +3,9 @@ import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import ExceptionList from "@/components/orders/ExceptionList";
+import { PageHeader, EmptyState } from "@/components/dashboard/ui/PageHeader";
+import { StatTile } from "@/components/dashboard/ui/StatTile";
+import { ListChecks, TriangleAlert, Flame, Clock } from "lucide-react";
 
 export default async function ExceptionsPage({
   searchParams,
@@ -20,29 +23,15 @@ export default async function ExceptionsPage({
   const grants = await loadStoreAccessGrants(user.id);
   if (grants.length === 0) redirect("/dashboard");
 
-  const storeId = requestedStoreId ?? grants[0].storeId;
+  const storeId = requestedStoreId && grants.some((g) => g.storeId === requestedStoreId) ? requestedStoreId : grants[0].storeId;
   if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
-    return <div className="p-4 text-red-600">No access to this store</div>;
+    return <div className="glass mx-auto mt-16 max-w-md p-8 text-center text-sm text-lo">No access to this store.</div>;
   }
 
-  // Build filters
-  const where = {
-    supplierOrder: {
-      storeId,
-    },
-  };
-
-  // Fetch exceptions with supplier order details
   const exceptions = await prisma.fulfillmentException.findMany({
-    where,
+    where: { supplierOrder: { storeId } },
     orderBy: [{ createdAt: "desc" }],
-    include: {
-      supplierOrder: {
-        include: {
-          order: true,
-        },
-      },
-    },
+    include: { supplierOrder: { include: { order: true } } },
   });
 
   const stats = {
@@ -53,36 +42,18 @@ export default async function ExceptionsPage({
   };
 
   return (
-    <main className="mx-auto max-w-7xl px-4 py-10">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Fulfillment Exception Center</h1>
-        <p className="text-sm text-gray-600">Manage issues across all supplier orders</p>
-      </div>
+    <div className="mx-auto max-w-6xl">
+      <PageHeader eyebrow="Fulfillment" title="Exception Center" subtitle="Manage issues across all supplier orders." />
 
-      {/* Stats */}
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-4">
-        <div className="rounded-lg border border-gray-200 p-4">
-          <p className="text-sm text-gray-600">Total Issues</p>
-          <p className="text-2xl font-bold">{stats.total}</p>
-        </div>
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4">
-          <p className="text-sm text-red-700">Critical</p>
-          <p className="text-2xl font-bold text-red-700">{stats.critical}</p>
-        </div>
-        <div className="rounded-lg border border-orange-200 bg-orange-50 p-4">
-          <p className="text-sm text-orange-700">High</p>
-          <p className="text-2xl font-bold text-orange-700">{stats.high}</p>
-        </div>
-        <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-4">
-          <p className="text-sm text-yellow-700">Unresolved</p>
-          <p className="text-2xl font-bold text-yellow-700">{stats.unresolved}</p>
-        </div>
+      <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatTile label="Total issues" value={stats.total.toString()} icon={<ListChecks size={16} />} />
+        <StatTile label="Critical" value={stats.critical.toString()} icon={<Flame size={16} />} />
+        <StatTile label="High" value={stats.high.toString()} icon={<TriangleAlert size={16} />} />
+        <StatTile label="Unresolved" value={stats.unresolved.toString()} icon={<Clock size={16} />} />
       </div>
 
       {exceptions.length === 0 ? (
-        <div className="rounded-lg border border-gray-200 p-8 text-center">
-          <p className="text-gray-600">No exceptions found. Great job! ✨</p>
-        </div>
+        <EmptyState title="No exceptions">Every supplier order is clean — nothing needs attention. ✨</EmptyState>
       ) : (
         <ExceptionList
           exceptions={exceptions.map((e) => ({
@@ -101,6 +72,6 @@ export default async function ExceptionsPage({
           storeId={storeId}
         />
       )}
-    </main>
+    </div>
   );
 }

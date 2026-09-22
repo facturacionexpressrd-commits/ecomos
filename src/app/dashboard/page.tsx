@@ -2,10 +2,14 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
-import RevenueCard from "@/components/dashboard/RevenueCard";
-import OrdersCard from "@/components/dashboard/OrdersCard";
-import InventoryCard from "@/components/dashboard/InventoryCard";
 import ConnectStoreForm from "@/components/dashboard/ConnectStoreForm";
+import { StatTile } from "@/components/dashboard/ui/StatTile";
+import { Sparkline } from "@/components/dashboard/ui/Sparkline";
+import { StatusPill } from "@/components/dashboard/ui/PageHeader";
+import { TrendingUp, Package, Wallet, Percent } from "lucide-react";
+
+const money = (n: number, currency = "USD") =>
+  new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
 
 export default async function DashboardPage({
   searchParams,
@@ -20,61 +24,109 @@ export default async function DashboardPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  // A signed-in account with no workspace yet is a new sign-up (invitees arrive via their link).
   const account = await prisma.user.findUnique({ where: { id: user.id }, select: { id: true } });
   if (!account) redirect("/onboarding");
 
   const grants = await loadStoreAccessGrants(user.id);
   if (grants.length === 0) {
     return (
-      <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 px-4">
-        <h1 className="text-xl font-semibold">Connect your Shopify store</h1>
-        <p className="text-sm text-gray-600">
-          Enter your store&apos;s Shopify address. You&apos;ll approve read access to products, orders,
-          customers and inventory on Shopify, then come back here.
+      <div className="mx-auto flex min-h-[80vh] max-w-md flex-col justify-center gap-5 text-center">
+        <p className="font-[family-name:var(--font-display)] text-3xl font-medium italic text-hi">
+          Build. Sell. Scale.
         </p>
-        <ConnectStoreForm />
-        <p className="text-xs text-gray-500">Waiting on an invitation instead? Open the link you were sent.</p>
-      </main>
+        <p className="text-sm text-lo">
+          Connect your Shopify store to bring products, orders and inventory into one command center.
+        </p>
+        <div className="glass p-5 text-left">
+          <ConnectStoreForm />
+        </div>
+        <p className="text-xs text-faint">Waiting on an invitation instead? Open the link you were sent.</p>
+      </div>
     );
   }
 
-  const storeId = requestedStoreId ?? grants[0].storeId;
+  const storeId = requestedStoreId && grants.some((g) => g.storeId === requestedStoreId) ? requestedStoreId : grants[0].storeId;
   if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
-    return <Empty>You don&apos;t have access to this store.</Empty>;
+    return (
+      <div className="glass mx-auto mt-16 max-w-md p-8 text-center text-sm text-lo">
+        You don&apos;t have access to this store.
+      </div>
+    );
   }
 
-  const store = await prisma.store.findUniqueOrThrow({ where: { id: storeId } });
+  const since = new Date();
+  since.setDate(since.getDate() - 14);
 
-  const [revenue, orderCount, inventoryTotal, latestOrder] = await Promise.all([
-    prisma.order.aggregate({ where: { storeId }, _sum: { totalPrice: true } }),
-    prisma.order.count({ where: { storeId } }),
-    prisma.inventoryLevel.aggregate({ where: { storeId }, _sum: { available: true } }),
-    prisma.order.findFirst({ where: { storeId }, select: { currency: true } }),
-  ]);
+  const [store, orderCount, inventoryTotal, latestOrder, dailyMetrics, campaignCount, exceptionCount] =
+    await Promise.all([
+      prisma.store.findUniqueOrThrow({ where: { id: storeId } }),
+      prisma.order.count({ where: { storeId } }),
+      prisma.inventoryLevel.aggregate({ where: { storeId }, _sum: { available: true } }),
+      prisma.order.findFirst({ where: { storeId }, select: { currency: true } }),
+      prisma.dailyFinancialMetric.findMany({
+        where: { storeId, date: { gte: since } },
+        orderBy: { date: "asc" },
+      }),
+      prisma.metaCampaign.count({ where: { storeId, status: "ACTIVE" } }),
+      prisma.fulfillmentException.count({ where: { supplierOrder: { storeId }, isResolved: false } }),
+    ]);
+
+  const currency = latestOrder?.currency ?? "USD";
+  const revenue14d = dailyMetrics.reduce((s, d) => s + d.grossRevenue.toNumber(), 0);
+  const profit14d = dailyMetrics.reduce((s, d) => s + d.contributionProfit.toNumber(), 0);
+  const margin = revenue14d > 0 ? (profit14d / revenue14d) * 100 : 0;
+  const trend = dailyMetrics.map((d) => d.grossRevenue.toNumber());
 
   return (
-    <main className="mx-auto flex max-w-4xl flex-col gap-6 px-4 py-10">
-      <header>
-        <h1 className="text-2xl font-semibold">{store.name}</h1>
-        <p className="text-sm text-gray-600">
-          {store.status === "connected" ? `Connected ${store.connectedAt?.toLocaleString()}` : store.status}
-        </p>
-      </header>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <RevenueCard amount={revenue._sum.totalPrice?.toNumber() ?? 0} currency={latestOrder?.currency ?? "USD"} />
-        <OrdersCard count={orderCount} />
-        <InventoryCard unitsAvailable={inventoryTotal._sum.available ?? 0} />
+    <div className="mx-auto max-w-6xl">
+      <div className="glass rise-in relative mb-8 overflow-hidden p-8 sm:p-10">
+        <div
+          className="pointer-events-none absolute -top-24 -right-24 h-64 w-64 rounded-full opacity-40 blur-3xl"
+          style={{ background: "radial-gradient(circle, var(--gold) 0%, transparent 70%)" }}
+        />
+        <p className="mb-2 text-xs font-medium tracking-[0.2em] text-gold uppercase">{store.name}</p>
+        <h1 className="max-w-lg font-[family-name:var(--font-display)] text-4xl font-medium text-balance text-hi italic sm:text-5xl">
+          Build. Sell. Scale.
+        </h1>
+        <div className="mt-4 flex items-center gap-3">
+          <StatusPill status={store.status} />
+          {store.connectedAt && (
+            <span className="text-xs text-faint">Connected {store.connectedAt.toLocaleDateString()}</span>
+          )}
+        </div>
       </div>
-    </main>
+
+      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <StatTile label="Revenue (14d)" value={money(revenue14d, currency)} icon={<TrendingUp size={16} />} />
+        <StatTile label="Orders" value={orderCount.toLocaleString()} icon={<Package size={16} />} />
+        <StatTile label="Contribution profit (14d)" value={money(profit14d, currency)} icon={<Wallet size={16} />} />
+        <StatTile label="Margin" value={`${margin.toFixed(1)}%`} icon={<Percent size={16} />} />
+      </div>
+
+      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="glass rise-in p-6 lg:col-span-2">
+          <div className="mb-4 flex items-center justify-between">
+            <p className="text-sm font-medium text-hi">Revenue, last 14 days</p>
+            <span className="font-mono text-xs text-faint">{currency}</span>
+          </div>
+          <Sparkline points={trend} />
+        </div>
+        <div className="glass rise-in flex flex-col gap-4 p-6">
+          <p className="text-sm font-medium text-hi">At a glance</p>
+          <Row label="Inventory on hand" value={(inventoryTotal._sum.available ?? 0).toLocaleString()} />
+          <Row label="Active campaigns" value={campaignCount.toLocaleString()} />
+          <Row label="Open exceptions" value={exceptionCount.toLocaleString()} warn={exceptionCount > 0} />
+        </div>
+      </div>
+    </div>
   );
 }
 
-function Empty({ children }: { children: React.ReactNode }) {
+function Row({ label, value, warn }: { label: string; value: string; warn?: boolean }) {
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col justify-center gap-2 px-4 text-center">
-      <p className="text-sm text-gray-600">{children}</p>
-    </main>
+    <div className="flex items-center justify-between border-t border-line pt-3 first:border-t-0 first:pt-0">
+      <span className="text-sm text-lo">{label}</span>
+      <span className={`font-mono text-sm font-medium ${warn ? "text-coral" : "text-hi"}`}>{value}</span>
+    </div>
   );
 }

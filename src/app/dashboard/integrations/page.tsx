@@ -4,6 +4,10 @@ import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import ConnectMetaButton from "@/components/meta/ConnectMetaButton";
+import { PageHeader, StatusPill } from "@/components/dashboard/ui/PageHeader";
+import { ShoppingBag, Megaphone } from "lucide-react";
+
+const SOON = ["Google Ads", "TikTok Ads", "Pinterest Ads", "Email (Klaviyo)"];
 
 export default async function IntegrationsPage({
   searchParams,
@@ -21,103 +25,101 @@ export default async function IntegrationsPage({
   const grants = await loadStoreAccessGrants(user.id);
   if (grants.length === 0) redirect("/dashboard");
 
-  const storeId = requestedStoreId ?? grants[0].storeId;
+  const storeId = requestedStoreId && grants.some((g) => g.storeId === requestedStoreId) ? requestedStoreId : grants[0].storeId;
   if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
-    return <div className="p-4 text-red-600">No access to this store</div>;
+    return <div className="glass mx-auto mt-16 max-w-md p-8 text-center text-sm text-lo">No access to this store.</div>;
   }
 
   const store = await prisma.store.findUniqueOrThrow({ where: { id: storeId } });
-  const metaAccount = await prisma.metaAccount.findFirst({
-    where: { storeId },
-  });
+  const metaAccount = await prisma.metaAccount.findFirst({ where: { storeId } });
+  const shopifyConnected = store.status === "connected" && !!store.accessTokenEncrypted;
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-10">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Integrations</h1>
-        <p className="text-sm text-gray-600">Connect external platforms to EcomOS</p>
-      </div>
+    <div className="mx-auto max-w-4xl">
+      <PageHeader eyebrow="Connections" title="Integrations" subtitle="Connect external platforms to EcomOS." />
 
-      {/* Shopify (always connected) */}
-      <section className="mb-8 rounded-lg border border-green-200 bg-green-50 p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-semibold">Shopify</h2>
-            <p className="text-sm text-gray-600">
-              Store: <code className="font-mono">{store.shopDomain}</code>
-            </p>
-            <p className="mt-2 text-sm">Connected on {store.connectedAt?.toLocaleDateString()}</p>
+      <section className="glass rise-in mb-6 p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-4">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/5">
+              <ShoppingBag size={20} className="text-hi" strokeWidth={1.75} />
+            </div>
+            <div>
+              <h2 className="text-lg font-medium text-hi">Shopify</h2>
+              <p className="mt-0.5 font-mono text-xs text-lo">{store.shopDomain}</p>
+              {store.connectedAt && (
+                <p className="mt-2 text-xs text-faint">Connected {store.connectedAt.toLocaleDateString()}</p>
+              )}
+            </div>
           </div>
-          <div className="rounded bg-green-200 px-3 py-1 text-sm font-medium text-green-800">
-            ✓ Connected
-          </div>
+          <StatusPill status={shopifyConnected ? "connected" : store.status} />
         </div>
       </section>
 
-      {/* Meta Ads */}
-      <section className="rounded-lg border border-gray-200 p-6">
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold">Meta Ads</h2>
-          <p className="text-sm text-gray-600">Track ad campaigns and calculate ROAS</p>
+      <section className="glass rise-in p-6">
+        <div className="mb-6 flex items-center gap-4">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/5">
+            <Megaphone size={20} className="text-hi" strokeWidth={1.75} />
+          </div>
+          <div>
+            <h2 className="text-lg font-medium text-hi">Meta Ads</h2>
+            <p className="text-sm text-lo">Track ad campaigns and calculate ROAS</p>
+          </div>
         </div>
 
         {metaAccount ? (
           <div className="space-y-4">
-            <div className="rounded bg-blue-50 p-4">
-              <p className="text-sm">
-                <strong>Business ID:</strong>{" "}
-                <code className="font-mono">{metaAccount.metaBusinessId}</code>
-              </p>
-              <p className="mt-2 text-sm">
-                <strong>Status:</strong> <span className="font-medium">{metaAccount.status}</span>
-              </p>
-              <p className="mt-2 text-sm">
-                <strong>Connected:</strong> {metaAccount.createdAt.toLocaleDateString()}
-              </p>
-              {metaAccount.lastSyncedAt && (
-                <p className="mt-2 text-sm">
-                  <strong>Last Synced:</strong> {metaAccount.lastSyncedAt.toLocaleString()}
+            <div className="grid grid-cols-1 gap-3 rounded-lg bg-white/5 p-4 text-sm sm:grid-cols-3">
+              <div>
+                <p className="text-xs text-faint">Business ID</p>
+                <p className="mt-0.5 font-mono text-hi">{metaAccount.metaBusinessId}</p>
+              </div>
+              <div>
+                <p className="text-xs text-faint">Status</p>
+                <p className="mt-0.5"><StatusPill status={metaAccount.status} /></p>
+              </div>
+              <div>
+                <p className="text-xs text-faint">{metaAccount.lastSyncedAt ? "Last synced" : "Connected"}</p>
+                <p className="mt-0.5 text-hi">
+                  {(metaAccount.lastSyncedAt ?? metaAccount.createdAt).toLocaleDateString()}
                 </p>
-              )}
+              </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <Link
                 href="/dashboard/meta/campaigns"
-                className="block w-full rounded bg-blue-600 px-4 py-2 text-center font-medium text-white hover:bg-blue-700"
+                className="flex-1 rounded-lg bg-gradient-to-b from-gold-hi to-gold px-4 py-2.5 text-center text-sm font-medium text-ink transition-opacity hover:opacity-90"
               >
-                View Campaigns
+                View campaigns
               </Link>
               <button
                 disabled
-                className="w-full rounded bg-gray-300 px-4 py-2 font-medium text-gray-600"
+                className="flex-1 cursor-not-allowed rounded-lg border border-line-hi px-4 py-2.5 text-sm font-medium text-faint"
               >
-                Disconnect Meta (coming soon)
+                Disconnect (coming soon)
               </button>
             </div>
           </div>
         ) : (
           <div className="space-y-4">
-            <p className="text-sm text-gray-600">
-              Connect your Meta Business account to sync ad campaigns and track ROAS.
-            </p>
+            <p className="text-sm text-lo">Connect your Meta Business account to sync ad campaigns and track ROAS.</p>
             <ConnectMetaButton storeId={storeId} />
           </div>
         )}
       </section>
 
-      {/* Coming Soon */}
-      <section className="mt-8 space-y-4">
-        <h3 className="font-semibold">Coming Soon</h3>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          {["Google Ads", "TikTok Ads", "Pinterest Ads", "Email (Klaviyo)"].map((name) => (
-            <div key={name} className="rounded border border-gray-200 p-4 opacity-50">
-              <p className="font-medium">{name}</p>
-              <p className="text-xs text-gray-500">Phase 3+</p>
+      <section className="mt-6">
+        <p className="mb-3 text-xs font-medium tracking-[0.14em] text-faint uppercase">Coming soon</p>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {SOON.map((name) => (
+            <div key={name} className="glass flex items-center justify-between p-4 opacity-50">
+              <p className="text-sm font-medium text-hi">{name}</p>
+              <span className="text-xs text-faint">Phase 3+</span>
             </div>
           ))}
         </div>
       </section>
-    </main>
+    </div>
   );
 }

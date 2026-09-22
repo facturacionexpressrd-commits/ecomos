@@ -1,26 +1,131 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Cinematic dusk palette — deep navy/teal ground, warm amber for accents & signal. */
+  --ink: #05080f;
+  --deep: #0a1220;
+  --panel: #0e1626;
+  --panel-hi: #131e33;
+  --line: rgba(233, 227, 214, 0.1);
+  --line-hi: rgba(233, 227, 214, 0.18);
+
+  --text-hi: #f3ede1;
+  --text-lo: #9aa5bd;
+  --text-faint: #66708a;
+
+  --gold: #e7b158;
+  --gold-hi: #f6cd82;
+  --teal: #57d6c4;
+  --coral: #ec7c6a;
+  --violet: #8f8fe0;
+
+  --font-display: "Fraunces", serif;
+  --font-body: "Public Sans", sans-serif;
+  --font-mono: "IBM Plex Mono", monospace;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-ink: var(--ink);
+  --color-deep: var(--deep);
+  --color-panel: var(--panel);
+  --color-panel-hi: var(--panel-hi);
+  --color-line: var(--line);
+  --color-line-hi: var(--line-hi);
+  --color-hi: var(--text-hi);
+  --color-lo: var(--text-lo);
+  --color-faint: var(--text-faint);
+  --color-gold: var(--gold);
+  --color-gold-hi: var(--gold-hi);
+  --color-teal: var(--teal);
+  --color-coral: var(--coral);
+  --color-violet: var(--violet);
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--ink);
+  color: var(--text-hi);
+  font-family: var(--font-body);
+}
+
+/* The cinematic backdrop: layered radial glows over a near-black ground, plus a fine grain so
+   large dark areas don't look flat. Fixed so it stays put while content scrolls over it. */
+.cinematic-ground {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  background-color: var(--ink);
+  background-image:
+    radial-gradient(ellipse 70% 55% at 18% -8%, rgba(87, 214, 196, 0.16), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 100% 8%, rgba(231, 177, 88, 0.14), transparent 60%),
+    radial-gradient(ellipse 80% 60% at 50% 118%, rgba(20, 34, 56, 0.9), transparent 60%),
+    linear-gradient(180deg, #060a12 0%, #0a1220 45%, #0c1524 100%);
+}
+
+.cinematic-ground::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.05;
+  mix-blend-mode: overlay;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* Frosted glass panel — the one visual unit every dashboard surface is built from. */
+.glass {
+  position: relative;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.04) inset, 0 20px 40px -20px rgba(0, 0, 0, 0.6);
+}
+
+.glass-hover {
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+.glass-hover:hover {
+  border-color: var(--line-hi);
+  transform: translateY(-1px);
+  box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.06) inset, 0 24px 48px -20px rgba(0, 0, 0, 0.7);
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+::selection {
+  background: rgba(231, 177, 88, 0.3);
+  color: var(--text-hi);
+}
+
+/* Thin, muted scrollbars so a scrolling glass panel doesn't fight the aesthetic. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line-hi) transparent;
+}
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line-hi);
+  border-radius: 8px;
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.rise-in {
+  animation: rise-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }

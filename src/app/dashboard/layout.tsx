@@ -2,7 +2,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/db";
 import { loadStoreAccessGrants } from "@/lib/auth/capabilities";
-import Nav from "@/components/dashboard/Nav";
+import Sidebar from "@/components/dashboard/Sidebar";
+import MobileTopBar from "@/components/dashboard/MobileTopBar";
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -22,9 +23,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
         });
 
   return (
-    <>
-      <Nav stores={stores} />
-      {children}
-    </>
+    <div className="min-h-screen">
+      <div className="cinematic-ground" />
+      <Sidebar stores={stores} />
+      <MobileTopBar />
+      <div className="relative z-10 lg:pl-[17.5rem]">
+        <div className="px-4 pt-6 pb-16 sm:px-6 lg:px-8 lg:pt-8">{children}</div>
+      </div>
+    </div>
   );
 }

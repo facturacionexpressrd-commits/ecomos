@@ -66,18 +66,18 @@ export default function CampaignActionMenu({
     <div className="relative inline-block">
       <button
         onClick={() => setShowMenu(!showMenu)}
-        className="rounded bg-gray-200 px-3 py-1 text-sm font-medium hover:bg-gray-300"
+        className="rounded-lg border border-line-hi bg-white/5 px-3 py-1 text-sm font-medium text-hi hover:bg-white/10"
         disabled={loading}
       >
         ⋯
       </button>
 
       {showMenu && (
-        <div className="absolute right-0 top-full z-10 mt-1 rounded border border-gray-200 bg-white shadow-lg">
+        <div className="glass absolute top-full right-0 z-10 mt-1 w-40 overflow-hidden p-1">
           {status === "ACTIVE" && (
             <button
               onClick={() => handleAction("pause")}
-              className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-50 disabled:opacity-50"
+              className="block w-full rounded-md px-3 py-2 text-left text-sm text-hi hover:bg-white/8 disabled:opacity-50"
               disabled={loading}
             >
               ⏸ Pause
@@ -86,7 +86,7 @@ export default function CampaignActionMenu({
           {status === "PAUSED" && (
             <button
               onClick={() => handleAction("activate")}
-              className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-50 disabled:opacity-50"
+              className="block w-full rounded-md px-3 py-2 text-left text-sm text-hi hover:bg-white/8 disabled:opacity-50"
               disabled={loading}
             >
               ▶ Activate
@@ -94,7 +94,7 @@ export default function CampaignActionMenu({
           )}
           <button
             onClick={() => handleAction("duplicate")}
-            className="block w-full px-4 py-2 text-left text-sm hover:bg-gray-50 disabled:opacity-50"
+            className="block w-full rounded-md px-3 py-2 text-left text-sm text-hi hover:bg-white/8 disabled:opacity-50"
             disabled={loading}
           >
             📋 Duplicate
@@ -102,7 +102,7 @@ export default function CampaignActionMenu({
         </div>
       )}
 
-      {error && <div className="absolute mt-1 text-xs text-red-600">{error}</div>}
+      {error && <div className="absolute mt-1 text-xs text-coral">{error}</div>}
     </div>
   );
 }
