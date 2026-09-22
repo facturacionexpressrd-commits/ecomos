@@ -179,11 +179,6 @@ plain text field for now.
 - Request: `{ orderId, storeId }`
 - Response: list of SupplierOrders created, with costs and margins
 
-**POST `/api/orders/sync-tracking`** — Poll suppliers for tracking updates
-- Requires `x-cron-secret` header (if CRON_SECRET env var is set)
-- Syncs all open shipments, creates TrackingEvents, updates Fulfillment status
-- Called by background job (configure in Vercel, AWS Lambda, etc.)
-
 **PATCH `/api/exceptions/[id]`** — Update exception status
 - Request: `{ storeId, isResolved, recommendedAction }`
 - Response: updated exception record
@@ -217,10 +212,9 @@ plain text field for now.
 4. Order Hub displays progress
 
 **When a supplier ships:**
-1. External system (supplier API) creates tracking record
-2. Cron job calls `POST /api/orders/sync-tracking` periodically
-3. Tracking events populated, Fulfillment status updated
-4. Order Hub shows tracking link + ETA
+Not automated yet. The old tracking sync invented random statuses and was removed; real
+tracking arrives with the first real supplier adapter (`SupplierAdapter` in
+`src/lib/suppliers/adapter.ts`), which should write TrackingEvents from the supplier's API.
 
 **When an issue occurs:**
 1. External system or manual entry creates FulfillmentException
@@ -228,33 +222,6 @@ plain text field for now.
 3. User adds recommended action and marks resolved
 4. Exception removed from "unresolved" count
 
-### Tracking Sync Job Setup
-
-For production, configure one of:
-
-**Vercel Crons** (if deployed on Vercel):
-```ts
-// vercel.json
-"crons": [{ "path": "/api/orders/sync-tracking", "schedule": "0 */6 * * *" }]
-```
-
-**AWS Lambda / EventBridge:**
-```bash
-# Schedule: every 6 hours
-# Call: POST https://your-domain.com/api/orders/sync-tracking
-# Header: x-cron-secret: ${CRON_SECRET}
-```
-
-**Self-hosted (e.g., node-cron package):**
-```ts
-import cron from 'node-cron';
-cron.schedule('0 */6 * * *', () => {
-  fetch('http://localhost:3000/api/orders/sync-tracking', {
-    method: 'POST',
-    headers: { 'x-cron-secret': process.env.CRON_SECRET }
-  });
-});
-```
 
 ## Product Economics Flow
 
