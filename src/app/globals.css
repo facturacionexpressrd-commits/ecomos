@@ -44,33 +44,24 @@
   --font-mono: var(--font-mono);
 }
 
+/* The cinematic backdrop: a real misty-mountain photo, darkened and color-graded toward the
+   teal/gold palette with layered scrims — never the bare photo — so text keeps 4.5:1+ contrast
+   anywhere on the page. Fixed so it stays put behind the glass panels while content scrolls.
+   Photo: Slava Auchynnikau (@auchynnikau) on Unsplash, used under the Unsplash License. */
 body {
-  background: var(--ink);
   color: var(--text-hi);
   font-family: var(--font-body);
-}
-
-/* The cinematic backdrop: layered radial glows over a near-black ground, plus a fine grain so
-   large dark areas don't look flat. Fixed so it stays put while content scrolls over it. */
-.cinematic-ground {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
   background-color: var(--ink);
   background-image:
-    radial-gradient(ellipse 70% 55% at 18% -8%, rgba(87, 214, 196, 0.16), transparent 60%),
-    radial-gradient(ellipse 60% 50% at 100% 8%, rgba(231, 177, 88, 0.14), transparent 60%),
-    radial-gradient(ellipse 80% 60% at 50% 118%, rgba(20, 34, 56, 0.9), transparent 60%),
-    linear-gradient(180deg, #060a12 0%, #0a1220 45%, #0c1524 100%);
-}
-
-.cinematic-ground::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  opacity: 0.05;
-  mix-blend-mode: overlay;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    radial-gradient(ellipse 70% 55% at 18% -8%, rgba(87, 214, 196, 0.22), transparent 60%),
+    radial-gradient(ellipse 60% 50% at 100% 8%, rgba(231, 177, 88, 0.18), transparent 60%),
+    radial-gradient(ellipse 90% 70% at 50% 105%, rgba(5, 8, 15, 0.96), transparent 55%),
+    linear-gradient(180deg, rgba(5, 8, 15, 0.88) 0%, rgba(8, 13, 23, 0.82) 45%, rgba(6, 10, 18, 0.94) 100%),
+    url("https://images.unsplash.com/photo-1744309328133-bb0f88e1cca1?auto=format,compress&fit=crop&w=2400&q=60");
+  background-size: cover;
+  background-position: center 40%;
+  background-repeat: no-repeat;
+  background-attachment: fixed;
 }
 
 /* Frosted glass panel — the one visual unit every dashboard surface is built from. */

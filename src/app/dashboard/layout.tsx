@@ -24,7 +24,6 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <div className="min-h-screen">
-      <div className="cinematic-ground" />
       <Sidebar stores={stores} />
       <MobileTopBar />
       <div className="relative z-10 lg:pl-[17.5rem]">
