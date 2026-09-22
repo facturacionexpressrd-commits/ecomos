@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { Notification, NotificationType } from "./types";
+import { emailLayout, sendEmail } from "@/lib/email";
 
 export class NotificationService {
   static async notify(
@@ -35,7 +36,7 @@ export class NotificationService {
 
         // Send email if enabled
         if (!prefs || prefs.emailNotifications) {
-          this.sendEmail(userId, storeId, type, title).catch(
+          this.sendEmail(userId, type, title, message).catch(
             (err) => console.error("Email send failed:", err)
           );
         }
@@ -101,57 +102,31 @@ export class NotificationService {
 
   private static async sendEmail(
     userId: string,
-    storeId: string,
     type: NotificationType,
-    title: string
+    title: string,
+    message: string
   ): Promise<void> {
-    // Get user email
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { email: true },
     });
-
     if (!user?.email) {
       console.warn(`No email found for user ${userId}`);
       return;
     }
 
-    // TODO: Integrate with email service (SendGrid, Resend, etc.)
-    // For now, just log
-    console.log(`Would send email to ${user.email}: ${title}`);
-
-    // Example SendGrid integration:
-    // const sgMail = require('@sendgrid/mail');
-    // sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-    // await sgMail.send({
-    //   to: user.email,
-    //   from: 'noreply@ecomos.app',
-    //   subject: title,
-    //   text: message,
-    //   html: this.buildEmailTemplate(type, title, message, link),
-    // });
+    await sendEmail({
+      to: user.email,
+      subject: title,
+      html: this.buildEmailTemplate(type, title, message),
+    });
   }
 
-  private static buildEmailTemplate(
-    type: NotificationType,
-    title: string,
-    message: string,
-    link?: string
-  ): string {
-    const actionUrl = link ? `https://app.ecomos.app${link}` : "";
-
-    return `
-      <h2>${title}</h2>
-      <p>${message}</p>
-      ${
-        actionUrl
-          ? `<p><a href="${actionUrl}" style="background: #2563eb; color: white; padding: 10px 20px; text-decoration: none; border-radius: 4px; display: inline-block;">View Details</a></p>`
-          : ""
-      }
-      <p style="color: #666; font-size: 12px; margin-top: 20px;">
-        You received this because you have notifications enabled for this type of activity.
-        You can change your notification preferences in your account settings.
-      </p>
-    `;
+  private static buildEmailTemplate(type: NotificationType, title: string, message: string): string {
+    return emailLayout(`
+      <h2 style="font-size: 18px; margin: 0 0 8px;">${title}</h2>
+      <p style="font-size: 14px; color: #333; line-height: 1.5;">${message}</p>
+      <p style="font-size: 11px; color: #999; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 16px;">${type}</p>
+    `);
   }
 }

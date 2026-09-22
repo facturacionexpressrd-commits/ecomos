@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import { contributionProfit, contributionMargin } from "@/lib/finance/formulas";
 import CostEntryForm from "@/components/products/CostEntryForm";
-import SupplierComparison from "@/components/products/SupplierComparison";
 
 export default async function ProductDetailPage({
   params,
@@ -44,35 +43,6 @@ export default async function ProductDetailPage({
   });
 
   if (!product) return <div className="p-4 text-red-600">Product not found</div>;
-
-  // Get or create canonical product for supplier comparison
-  let canonicalProductId: string | null = null;
-  const mapping = await prisma.productMapping.findFirst({
-    where: { storeId, shopifyProductId: productId },
-  });
-  if (mapping) {
-    canonicalProductId = mapping.canonicalProductId;
-  } else if (product.raw && typeof product.raw === "object" && "title" in product.raw) {
-    // Auto-create canonical product from Shopify data for demo
-    const canonical = await prisma.canonicalProduct.create({
-      data: {
-        title: product.title,
-        sku: product.raw.sku ? String(product.raw.sku) : undefined,
-        externalId: product.shopifyGid,
-        description: typeof product.raw === "object" && product.raw !== null && "bodyHtml" in product.raw ? String(product.raw.bodyHtml) : undefined,
-      },
-    });
-    canonicalProductId = canonical.id;
-    // Create mapping
-    await prisma.productMapping.create({
-      data: {
-        storeId,
-        shopifyProductId: productId,
-        canonicalProductId: canonical.id,
-        mappedBy: user.id,
-      },
-    });
-  }
 
   // Fetch refunds per variant upfront (needed for economics calculation)
   const variantRefunds: Record<string, number> = {};
@@ -131,7 +101,8 @@ export default async function ProductDetailPage({
                     <strong>Price:</strong> ${Number(variant.price ?? 0).toFixed(2)}
                   </p>
                   <p>
-                    <strong>Cost:</strong> ${Number(variant.cost ?? 0).toFixed(2)}
+                    <strong>Cost:</strong>{" "}
+                    {variant.cost != null ? `$${Number(variant.cost).toFixed(2)}` : "not entered"}
                   </p>
                   <p>
                     <strong>Stock:</strong> {inventory} units
@@ -192,13 +163,6 @@ export default async function ProductDetailPage({
           </div>
         </div>
       </section>
-
-      {/* Supplier Comparison */}
-      {canonicalProductId && (
-        <section className="mt-12">
-          <SupplierComparison canonicalProductId={canonicalProductId} storeId={storeId} />
-        </section>
-      )}
 
       {/* Methodology */}
       <section className="mt-12 rounded-lg bg-gray-50 p-8">

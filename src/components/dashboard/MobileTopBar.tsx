@@ -12,6 +12,7 @@ import {
   LineChart,
   Plug,
   TriangleAlert,
+  Users2,
 } from "lucide-react";
 
 const LINKS = [
@@ -24,6 +25,7 @@ const LINKS = [
   { href: "/dashboard/analytics", label: "Analytics", icon: LineChart },
   { href: "/dashboard/integrations", label: "Integrations", icon: Plug },
   { href: "/dashboard/exceptions", label: "Exceptions", icon: TriangleAlert },
+  { href: "/dashboard/team", label: "Team", icon: Users2 },
 ];
 
 export default function MobileTopBar() {

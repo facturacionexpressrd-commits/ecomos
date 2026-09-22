@@ -3,6 +3,7 @@ import { randomBytes } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/db";
 import { requireOrgCapability, ForbiddenError, CAPABILITIES } from "@/lib/auth/capabilities";
+import { emailLayout, sendEmail } from "@/lib/email";
 
 const INVITATION_TTL_DAYS = 7;
 
@@ -53,8 +54,23 @@ export async function POST(request: NextRequest) {
     },
   });
 
-  return Response.json({
-    token: invitation.token,
-    acceptUrl: `${process.env.SHOPIFY_APP_URL}/invite/${invitation.token}`,
+  const organization = await prisma.organization.findUniqueOrThrow({ where: { id: dbUser.organizationId } });
+  const acceptUrl = `${process.env.NEXT_PUBLIC_APP_URL}/invite/${invitation.token}`;
+  const emailResult = await sendEmail({
+    to: body.email,
+    subject: `You're invited to ${organization.name} on EcomOS`,
+    replyTo: dbUser.email,
+    html: emailLayout(`
+      <h2 style="font-size: 18px; margin: 0 0 8px;">Join ${organization.name}</h2>
+      <p style="font-size: 14px; color: #333; line-height: 1.5;">
+        ${dbUser.email} invited you to join their workspace on EcomOS as
+        <strong>${role.name}</strong>. This invitation expires in ${INVITATION_TTL_DAYS} days.
+      </p>
+      <p style="margin-top: 20px;">
+        <a href="${acceptUrl}" style="background: #e7b158; color: #05080f; padding: 10px 20px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">Accept invitation</a>
+      </p>
+    `),
   });
+
+  return Response.json({ token: invitation.token, acceptUrl, emailSent: emailResult.sent });
 }

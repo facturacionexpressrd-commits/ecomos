@@ -4,6 +4,7 @@ import { enqueueSyncStore } from "@/lib/jobs/boss";
 import { drainQueues } from "@/lib/jobs/drain";
 import { registerWebhooks } from "@/lib/shopify/webhooks";
 import { syncAllMetaAccounts } from "@/lib/meta/sync";
+import { generateApprovalRecommendations } from "@/lib/approval/recommender";
 import { reportError } from "@/lib/alerts";
 
 const attempt = async <T>(fn: () => Promise<T>) => {
@@ -35,8 +36,10 @@ export async function runDaily() {
 
   const drain = await attempt(drainQueues);
   const meta = await attempt(syncAllMetaAccounts);
+  // Runs after the Meta sync above so recommendations are based on today's spend data.
+  const recommendations = await attempt(generateApprovalRecommendations);
 
   const failed =
     shopify.some((s) => !s.webhooks.ok || !s.sync) || !drain.ok || drain.value.failed > 0 || !meta.ok;
-  return { failed, stores: stores.length, shopify, drain, meta };
+  return { failed, stores: stores.length, shopify, drain, meta, recommendations };
 }

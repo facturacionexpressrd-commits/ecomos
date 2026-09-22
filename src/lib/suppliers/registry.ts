@@ -1,25 +1,16 @@
 import { PrismaClient } from "@prisma/client";
 import { SupplierAdapter } from "./adapter";
-import { AutoDSAdapter } from "./autods";
 
 export type SupplierNameType = "autods" | "spocket" | "printful" | "zendrop";
 
 /**
  * SupplierRegistry — wires up all supplier adapters.
- * Adapters can be real (connected) or stub (not connected).
+ * Empty until a real supplier adapter exists: an earlier AutoDS adapter always returned
+ * fabricated costs/inventory, which was worse than no integration since it looked real.
+ * `syncOffer` below already no-ops safely when a name has no registered adapter.
  */
 export class SupplierRegistry {
   private adapters: Map<SupplierNameType, SupplierAdapter> = new Map();
-
-  constructor() {
-    // Initialize adapters
-    // Only AutoDS is connected; others are stubbed (see below)
-    const autoDsKey = process.env.AUTODS_API_KEY ?? null;
-    this.adapters.set("autods", new AutoDSAdapter(autoDsKey ?? undefined));
-
-    // TODO: stub adapters for Spocket, Printful, Zendrop
-    // For now, skip them
-  }
 
   get(name: SupplierNameType): SupplierAdapter | null {
     return this.adapters.get(name) ?? null;
