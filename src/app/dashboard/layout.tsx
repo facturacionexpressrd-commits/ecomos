@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/db";
 import { loadStoreAccessGrants } from "@/lib/auth/capabilities";
+import { billingEnabled, hasAccess } from "@/lib/billing";
 import Sidebar from "@/components/dashboard/Sidebar";
 import MobileTopBar from "@/components/dashboard/MobileTopBar";
 
@@ -11,6 +12,16 @@ export default async function DashboardLayout({ children }: { children: React.Re
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
+
+  // ponytail: gates the dashboard UI only; API routes don't re-check the subscription. Add the
+  // same check to spend-money routes (Meta writes, AI) if a lapsed workspace is ever seen using them.
+  if (billingEnabled()) {
+    const dbUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: { organization: { select: { subscriptionStatus: true } } },
+    });
+    if (dbUser && !hasAccess(dbUser.organization.subscriptionStatus)) redirect("/billing");
+  }
 
   const grants = await loadStoreAccessGrants(user.id);
   const stores =

@@ -6,7 +6,7 @@ export function redact(text: string) {
   return text
     .replace(/\b(access_token|token|secret|password|api_?key|key)=[^&\s"']+/gi, "$1=[redacted]")
     .replace(/Bearer\s+[A-Za-z0-9._~+/=-]+/g, "Bearer [redacted]")
-    .replace(/\b(shp[a-z]{2}_|EAA|sk-ant-|sk-|eyJ)[A-Za-z0-9._-]{12,}/g, "[redacted]")
+    .replace(/\b(shp[a-z]{2}_|EAA|sk-ant-|sk-|[sr]k_(?:live|test)_|whsec_|eyJ)[A-Za-z0-9._-]{12,}/g, "[redacted]")
     .replace(/postgres(?:ql)?:\/\/[^\s"']+/g, "[redacted-db-url]");
 }
 

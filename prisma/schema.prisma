@@ -218,6 +218,12 @@ model Organization {
   name      String
   createdAt DateTime @default(now())
 
+  // Billing, mirrored from Stripe by /api/billing/webhook. subscriptionStatus is Stripe's own
+  // status string ("active", "trialing", "past_due", ...) or "comped" for free workspaces.
+  stripeCustomerId   String?   @unique
+  subscriptionStatus String?
+  currentPeriodEnd   DateTime?
+
   users       User[]
   roles       Role[]
   stores      Store[]

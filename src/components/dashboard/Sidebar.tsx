@@ -13,6 +13,7 @@ import {
   Plug,
   TriangleAlert,
   Users2,
+  CreditCard,
 } from "lucide-react";
 import StoreSwitcher from "@/components/dashboard/StoreSwitcher";
 
@@ -27,6 +28,7 @@ const LINKS = [
   { href: "/dashboard/integrations", label: "Integrations", icon: Plug },
   { href: "/dashboard/exceptions", label: "Exceptions", icon: TriangleAlert },
   { href: "/dashboard/team", label: "Team", icon: Users2 },
+  { href: "/billing", label: "Billing", icon: CreditCard },
 ];
 
 type StoreOption = { id: string; name: string; status: string };
