@@ -324,6 +324,11 @@ model Store {
   paymentFeeFixed      Decimal   @default(0.30) @db.Decimal(8, 2)
   connectedAt          DateTime?
   createdAt            DateTime  @default(now())
+  // Incremental-sync watermarks: the Shopify updatedAt of the last record synced, per resource.
+  // null = never synced, so the next sync fetches everything. See src/lib/shopify/sync.ts.
+  customersSyncedAt    DateTime?
+  productsSyncedAt     DateTime?
+  ordersSyncedAt       DateTime?
 
   organization Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   access       UserStoreAccess[]
@@ -655,6 +660,7 @@ model ProductVariant {
   storeId    String
   productId  String
   shopifyGid String
+  inventoryItemGid String? // lets an inventory_levels/update webhook find its variant directly
   sku        String?
   title      String?
   price      Decimal? @db.Decimal(12, 2)
@@ -672,6 +678,7 @@ model ProductVariant {
 
   @@unique([storeId, shopifyGid])
   @@index([productId])
+  @@index([storeId, inventoryItemGid])
 }
 
 model Customer {

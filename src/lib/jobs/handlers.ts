@@ -1,16 +1,24 @@
 import type { PgBoss, Job } from "pg-boss";
 import { prisma } from "@/lib/db";
 import { syncStore } from "@/lib/shopify/sync";
-import { QUEUES, type SyncStoreJobData } from "@/lib/jobs/boss";
+import { QUEUES, enqueueSyncStore, type SyncStoreJobData } from "@/lib/jobs/boss";
 
-export async function handleSyncStore([job]: Job<SyncStoreJobData>[]) {
+export async function handleSyncStore([job]: Job<SyncStoreJobData>[], deadline = Infinity) {
   const { storeId } = job.data;
   const startedAt = new Date();
+  let complete: boolean;
   try {
-    await syncStore(storeId);
+    complete = await syncStore(storeId, deadline);
   } catch (err) {
     await prisma.store.update({ where: { id: storeId }, data: { status: "error" } });
     throw err;
+  }
+
+  // Out of time: progress is saved in the watermarks, so queue a follow-up that continues from there.
+  // Webhooks stay "received" until a sync actually finishes.
+  if (!complete) {
+    await enqueueSyncStore({ storeId });
+    return;
   }
 
   // A successful sync recovers a store an earlier failure flagged (never one that lost its token).
@@ -26,5 +34,6 @@ export async function handleSyncStore([job]: Job<SyncStoreJobData>[]) {
 }
 
 export async function registerWorkers(boss: PgBoss) {
-  await boss.work(QUEUES.syncStore, handleSyncStore);
+  // The long-running worker has no function timeout, so no deadline.
+  await boss.work<SyncStoreJobData>(QUEUES.syncStore, (jobs) => handleSyncStore(jobs));
 }

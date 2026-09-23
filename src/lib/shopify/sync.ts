@@ -5,11 +5,12 @@ import { shopifyGraphQL } from "@/lib/shopify/client";
 type PageInfo = { hasNextPage: boolean; endCursor: string | null };
 
 const PRODUCTS_QUERY = /* GraphQL */ `
-  query Products($cursor: String) {
-    products(first: 15, after: $cursor) {
+  query Products($cursor: String, $query: String) {
+    products(first: 15, after: $cursor, sortKey: UPDATED_AT, query: $query) {
       pageInfo { hasNextPage endCursor }
       nodes {
         id
+        updatedAt
         title
         status
         featuredMedia { preview { image { url } } }
@@ -20,6 +21,7 @@ const PRODUCTS_QUERY = /* GraphQL */ `
             title
             price
             inventoryItem {
+              id
               inventoryLevels(first: 5) {
                 nodes {
                   location { id }
@@ -35,20 +37,21 @@ const PRODUCTS_QUERY = /* GraphQL */ `
 `;
 
 const CUSTOMERS_QUERY = /* GraphQL */ `
-  query Customers($cursor: String) {
-    customers(first: 50, after: $cursor) {
+  query Customers($cursor: String, $query: String) {
+    customers(first: 50, after: $cursor, sortKey: UPDATED_AT, query: $query) {
       pageInfo { hasNextPage endCursor }
-      nodes { id email displayName }
+      nodes { id updatedAt email displayName }
     }
   }
 `;
 
 const ORDERS_QUERY = /* GraphQL */ `
-  query Orders($cursor: String) {
-    orders(first: 50, after: $cursor) {
+  query Orders($cursor: String, $query: String) {
+    orders(first: 50, after: $cursor, sortKey: UPDATED_AT, query: $query) {
       pageInfo { hasNextPage endCursor }
       nodes {
         id
+        updatedAt
         name
         createdAt
         displayFinancialStatus
@@ -93,6 +96,7 @@ type ProductsResponse = {
     pageInfo: PageInfo;
     nodes: Array<{
       id: string;
+      updatedAt: string;
       title: string;
       status: string;
       featuredMedia: { preview: { image: { url: string } | null } | null } | null;
@@ -103,6 +107,7 @@ type ProductsResponse = {
           title: string | null;
           price: string;
           inventoryItem: {
+            id: string;
             inventoryLevels: {
               nodes: Array<{
                 location: { id: string };
@@ -119,7 +124,7 @@ type ProductsResponse = {
 type CustomersResponse = {
   customers: {
     pageInfo: PageInfo;
-    nodes: Array<{ id: string; email: string | null; displayName: string | null }>;
+    nodes: Array<{ id: string; updatedAt: string; email: string | null; displayName: string | null }>;
   };
 };
 
@@ -128,6 +133,7 @@ type OrdersResponse = {
     pageInfo: PageInfo;
     nodes: Array<{
       id: string;
+      updatedAt: string;
       name: string;
       createdAt: string;
       displayFinancialStatus: string | null;
@@ -166,19 +172,59 @@ type OrdersResponse = {
   };
 };
 
-async function getStoreCredentials(storeId: string) {
-  const store = await prisma.store.findUniqueOrThrow({ where: { id: storeId } });
-  if (!store.accessTokenEncrypted) {
-    throw new Error(`Store ${storeId} has no access token — connect it first`);
-  }
-  return { shop: store.shopDomain, accessToken: decryptSecret(store.accessTokenEncrypted) };
+const WATERMARK = {
+  customers: "customersSyncedAt",
+  products: "productsSyncedAt",
+  orders: "ordersSyncedAt",
+} as const;
+type Resource = keyof typeof WATERMARK;
+
+/**
+ * Shopify search filter for "changed since the watermark". Inclusive (>=) so records sharing the
+ * watermark's exact timestamp are re-read rather than skipped; re-saving them is a harmless upsert.
+ */
+export function updatedSinceQuery(since: Date | null): string | null {
+  return since ? `updated_at:>='${since.toISOString()}'` : null;
 }
 
-async function syncCustomers(storeId: string, shop: string, accessToken: string) {
+type Ctx = { storeId: string; shop: string; accessToken: string; deadline: number };
+
+/**
+ * Pages through one resource oldest-change-first, saving each record, and moves the resource's
+ * watermark forward after every page. So a sync cut short (deadline, timeout, crash) resumes from
+ * where it got to, and the next sync only fetches what changed since. Returns false if it stopped
+ * early because the deadline passed.
+ */
+async function syncChanged<N extends { updatedAt: string }>(
+  ctx: Ctx,
+  resource: Resource,
+  since: Date | null,
+  fetchPage: (vars: { cursor: string | null; query: string | null }) => Promise<{ nodes: N[]; pageInfo: PageInfo }>,
+  save: (node: N) => Promise<void>
+): Promise<boolean> {
+  const query = updatedSinceQuery(since);
   let cursor: string | null = null;
   do {
-    const data: CustomersResponse = await shopifyGraphQL(shop, accessToken, CUSTOMERS_QUERY, { cursor });
-    for (const c of data.customers.nodes) {
+    if (Date.now() > ctx.deadline) return false;
+    const page: { nodes: N[]; pageInfo: PageInfo } = await fetchPage({ cursor, query });
+    for (const node of page.nodes) await save(node);
+    const last = page.nodes.at(-1);
+    if (last) {
+      await prisma.store.update({ where: { id: ctx.storeId }, data: { [WATERMARK[resource]]: new Date(last.updatedAt) } });
+    }
+    cursor = page.pageInfo.hasNextPage ? page.pageInfo.endCursor : null;
+  } while (cursor);
+  return true;
+}
+
+async function syncCustomers(ctx: Ctx, since: Date | null) {
+  const { storeId, shop, accessToken } = ctx;
+  return syncChanged(
+    ctx,
+    "customers",
+    since,
+    async (vars) => (await shopifyGraphQL<CustomersResponse>(shop, accessToken, CUSTOMERS_QUERY, vars)).customers,
+    async (c) => {
       await prisma.customer.upsert({
         where: { storeId_shopifyGid: { storeId, shopifyGid: c.id } },
         create: {
@@ -191,15 +237,17 @@ async function syncCustomers(storeId: string, shop: string, accessToken: string)
         update: { email: c.email, name: c.displayName, raw: c as object },
       });
     }
-    cursor = data.customers.pageInfo.hasNextPage ? data.customers.pageInfo.endCursor : null;
-  } while (cursor);
+  );
 }
 
-async function syncProducts(storeId: string, shop: string, accessToken: string) {
-  let cursor: string | null = null;
-  do {
-    const data: ProductsResponse = await shopifyGraphQL(shop, accessToken, PRODUCTS_QUERY, { cursor });
-    for (const p of data.products.nodes) {
+async function syncProducts(ctx: Ctx, since: Date | null) {
+  const { storeId, shop, accessToken } = ctx;
+  return syncChanged(
+    ctx,
+    "products",
+    since,
+    async (vars) => (await shopifyGraphQL<ProductsResponse>(shop, accessToken, PRODUCTS_QUERY, vars)).products,
+    async (p) => {
       const product = await prisma.product.upsert({
         where: { storeId_shopifyGid: { storeId, shopifyGid: p.id } },
         create: { storeId, shopifyGid: p.id, title: p.title, status: p.status, raw: p as object },
@@ -213,12 +261,13 @@ async function syncProducts(storeId: string, shop: string, accessToken: string) 
             storeId,
             productId: product.id,
             shopifyGid: v.id,
+            inventoryItemGid: v.inventoryItem.id,
             sku: v.sku,
             title: v.title,
             price: v.price,
             raw: v as object,
           },
-          update: { sku: v.sku, title: v.title, price: v.price, raw: v as object },
+          update: { inventoryItemGid: v.inventoryItem.id, sku: v.sku, title: v.title, price: v.price, raw: v as object },
         });
 
         for (const level of v.inventoryItem.inventoryLevels.nodes) {
@@ -231,19 +280,21 @@ async function syncProducts(storeId: string, shop: string, accessToken: string) 
         }
       }
     }
-    cursor = data.products.pageInfo.hasNextPage ? data.products.pageInfo.endCursor : null;
-  } while (cursor);
+  );
 }
 
-async function syncOrders(storeId: string, shop: string, accessToken: string) {
+async function syncOrders(ctx: Ctx, since: Date | null) {
+  const { storeId, shop, accessToken } = ctx;
   // Line items reference our ProductVariant.id, not Shopify's gid; products sync first, so this is complete.
   const variants = await prisma.productVariant.findMany({ where: { storeId }, select: { id: true, shopifyGid: true } });
   const variantIdByGid = new Map(variants.map((v) => [v.shopifyGid, v.id]));
 
-  let cursor: string | null = null;
-  do {
-    const data: OrdersResponse = await shopifyGraphQL(shop, accessToken, ORDERS_QUERY, { cursor });
-    for (const o of data.orders.nodes) {
+  return syncChanged(
+    ctx,
+    "orders",
+    since,
+    async (vars) => (await shopifyGraphQL<OrdersResponse>(shop, accessToken, ORDERS_QUERY, vars)).orders,
+    async (o) => {
       const customer = o.customer
         ? await prisma.customer.findUnique({
             where: { storeId_shopifyGid: { storeId, shopifyGid: o.customer.id } },
@@ -361,14 +412,48 @@ async function syncOrders(storeId: string, shop: string, accessToken: string) {
         });
       }
     }
-    cursor = data.orders.pageInfo.hasNextPage ? data.orders.pageInfo.endCursor : null;
-  } while (cursor);
+  );
 }
 
-/** Full sync: customers first (orders reference them), then products+inventory, then orders. */
-export async function syncStore(storeId: string): Promise<void> {
-  const { shop, accessToken } = await getStoreCredentials(storeId);
-  await syncCustomers(storeId, shop, accessToken);
-  await syncProducts(storeId, shop, accessToken);
-  await syncOrders(storeId, shop, accessToken);
+/**
+ * Incremental sync: only what changed since each resource's watermark (everything on the first
+ * run). Customers first (orders reference them), then products+inventory, then orders. Returns
+ * false if it ran out of time before finishing; the progress made so far is kept, and calling it
+ * again continues from there.
+ */
+export async function syncStore(storeId: string, deadline = Infinity): Promise<boolean> {
+  const store = await prisma.store.findUniqueOrThrow({ where: { id: storeId } });
+  if (!store.accessTokenEncrypted) throw new Error(`Store ${storeId} has no access token — connect it first`);
+  const ctx: Ctx = { storeId, shop: store.shopDomain, accessToken: decryptSecret(store.accessTokenEncrypted), deadline };
+
+  return (
+    (await syncCustomers(ctx, store.customersSyncedAt)) &&
+    (await syncProducts(ctx, store.productsSyncedAt)) &&
+    (await syncOrders(ctx, store.ordersSyncedAt))
+  );
+}
+
+/**
+ * inventory_levels/update carries the new stock level itself, so apply it directly: one write
+ * instead of a sync. (Product updatedAt doesn't change on stock moves, so an incremental product
+ * sync wouldn't catch them.) Returns false if the variant isn't known yet; a product sync will.
+ */
+export async function applyInventoryWebhook(
+  storeId: string,
+  payload: { inventory_item_id?: number | string; location_id?: number | string; available?: number | null }
+): Promise<boolean> {
+  if (payload.inventory_item_id == null || payload.location_id == null) return false;
+  const variant = await prisma.productVariant.findFirst({
+    where: { storeId, inventoryItemGid: `gid://shopify/InventoryItem/${payload.inventory_item_id}` },
+    select: { id: true },
+  });
+  if (!variant) return false;
+  const locationGid = `gid://shopify/Location/${payload.location_id}`;
+  const available = payload.available ?? 0;
+  await prisma.inventoryLevel.upsert({
+    where: { variantId_locationGid: { variantId: variant.id, locationGid } },
+    create: { storeId, variantId: variant.id, locationGid, available },
+    update: { available },
+  });
+  return true;
 }

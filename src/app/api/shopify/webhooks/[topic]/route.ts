@@ -5,6 +5,7 @@ import { verifyWebhookHmac } from "@/lib/shopify/hmac";
 import { webhookSecrets } from "@/lib/shopify/client";
 import { isDuplicateWebhookError } from "@/lib/shopify/webhook-idempotency";
 import { enqueueSyncStore } from "@/lib/jobs/boss";
+import { applyInventoryWebhook } from "@/lib/shopify/sync";
 import { reportError } from "@/lib/alerts";
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ topic: string }> }) {
@@ -49,6 +50,24 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       data: { status: "processed", processedAt: new Date() },
     });
     return new Response("OK", { status: 200 });
+  }
+
+  // Stock moves carry their new level in the payload: apply it directly instead of syncing.
+  if (topic === "inventory_levels/update") {
+    let applied = false;
+    try {
+      applied = await applyInventoryWebhook(store.id, JSON.parse(rawBody));
+    } catch (err) {
+      await reportError(err, { where: "inventory webhook", storeId: store.id });
+    }
+    if (applied) {
+      await prisma.webhookEvent.update({
+        where: { id: webhookEvent.id },
+        data: { status: "processed", processedAt: new Date() },
+      });
+      return new Response("OK", { status: 200 });
+    }
+    // Unknown variant (or a bad payload): fall through to a sync, which will pick it up.
   }
 
   // Every other topic means "something changed": request a sync of the store. Bursts collapse into
