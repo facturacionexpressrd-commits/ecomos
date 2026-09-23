@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
-import { contributionProfit, contributionMargin } from "@/lib/finance/formulas";
+import { variantEconomics, totalEconomics } from "@/lib/finance/variant-economics";
 import type { SupplierLink } from "@prisma/client";
 import CostEntryForm from "@/components/products/CostEntryForm";
 import CjLinkForm from "@/components/products/CjLinkForm";
@@ -40,7 +40,6 @@ export default async function ProductDetailPage({
       variants: {
         include: {
           inventoryLevels: { select: { available: true } },
-          costAllocations: { select: { amount: true, costType: true } },
           supplierLinks: { where: { supplier: "cj" } },
         },
       },
@@ -51,47 +50,62 @@ export default async function ProductDetailPage({
     return <div className="glass mx-auto mt-16 max-w-md p-8 text-center text-sm text-lo">Product not found.</div>;
   }
 
-  // Fetch refunds per variant upfront (needed for economics calculation)
-  const variantRefunds: Record<string, number> = {};
-  for (const variant of product.variants) {
-    const result = await prisma.refundLine.aggregate({
-      where: { lineItem: { variantId: variant.id } },
-      _sum: { subtotal: true },
-    });
-    variantRefunds[variant.id] = Number(result._sum.subtotal ?? 0);
-  }
-
-  const store = await prisma.store.findUniqueOrThrow({ where: { id: storeId } });
+  // Each variant's real sales, from its own order lines: two grouped queries for the whole product.
+  const variantIds = product.variants.map((v) => v.id);
+  const [store, lineTotals, refundLines] = await Promise.all([
+    prisma.store.findUniqueOrThrow({ where: { id: storeId } }),
+    prisma.orderLineItem.groupBy({
+      by: ["variantId"],
+      where: { storeId, variantId: { in: variantIds } },
+      _sum: { quantity: true, netAmount: true },
+    }),
+    prisma.refundLine.findMany({
+      where: { lineItem: { storeId, variantId: { in: variantIds } } },
+      select: { subtotal: true, lineItem: { select: { variantId: true } } },
+    }),
+  ]);
   const cjConnected = !!(await prisma.supplierConnection.findUnique({
     where: { organizationId_supplier: { organizationId: store.organizationId, supplier: "cj" } },
     select: { id: true },
   }));
   const canManageProducts = hasCapability(grants, storeId, CAPABILITIES.productsManage);
-  const PAYMENT_FEES_PCT = Number(store.paymentFeePercent);
-  const PAYMENT_FEES_FIXED = Number(store.paymentFeeFixed);
+  const feePercent = Number(store.paymentFeePercent);
 
-  // Get total revenue for the store
-  const totalRevenue = await prisma.order.aggregate({
-    where: { storeId },
-    _sum: { totalPrice: true },
-  });
-
-  const storeRevenue = totalRevenue._sum.totalPrice?.toNumber() ?? 0;
-  const uniqueCustomers = await prisma.customer.count({ where: { storeId } });
+  const refundsByVariant = new Map<string, number>();
+  for (const r of refundLines) {
+    const id = r.lineItem?.variantId;
+    if (id) refundsByVariant.set(id, (refundsByVariant.get(id) ?? 0) + Number(r.subtotal));
+  }
+  const economics = new Map(
+    product.variants.map((v) => {
+      const sold = lineTotals.find((t) => t.variantId === v.id)?._sum;
+      return [
+        v.id,
+        variantEconomics(
+          {
+            unitsSold: sold?.quantity ?? 0,
+            revenue: Number(sold?.netAmount ?? 0),
+            refunds: refundsByVariant.get(v.id) ?? 0,
+          },
+          v.cost == null ? null : Number(v.cost),
+          feePercent
+        ),
+      ];
+    })
+  );
+  const total = totalEconomics([...economics.values()]);
+  const money = (n: number) => `$${n.toFixed(2)}`;
 
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader eyebrow={store.name} title={product.title} />
 
-      {/* Store-level summary first, so the headline numbers are on screen without scrolling. */}
+      {/* This product's own totals first, so the headline numbers are on screen without scrolling. */}
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatTile label="Store revenue" value={`$${storeRevenue.toFixed(2)}`} />
-        <StatTile label="Customers" value={uniqueCustomers.toLocaleString()} />
-        <StatTile
-          label="Revenue / customer"
-          value={`$${uniqueCustomers > 0 ? (storeRevenue / uniqueCustomers).toFixed(2) : "0.00"}`}
-        />
-        <StatTile label="Payment fee" value={`${PAYMENT_FEES_PCT}% + $${PAYMENT_FEES_FIXED}`} />
+        <StatTile label="Revenue" value={money(total.revenue)} />
+        <StatTile label="Units sold" value={total.unitsSold.toLocaleString()} />
+        <StatTile label="Profit" value={total.profit === null ? "Cost needed" : money(total.profit)} />
+        <StatTile label="Margin" value={total.margin === null ? "—" : `${total.margin.toFixed(1)}%`} />
       </div>
 
       <section className="mb-6">
@@ -99,15 +113,7 @@ export default async function ProductDetailPage({
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {product.variants.map((variant) => {
             const inventory = variant.inventoryLevels.reduce((sum, inv) => sum + inv.available, 0);
-            const totalCogs = variant.costAllocations.reduce((sum, alloc) => sum + Number(alloc.amount), 0);
-
-            // For MVP: assume this variant is 1/n of store revenue
-            const variantShare = product.variants.length > 0 ? storeRevenue / product.variants.length : 0;
-            const refunded = variantRefunds[variant.id] ?? 0;
-
-            // Calculate economics
-            const profit = contributionProfit(variantShare, refunded, PAYMENT_FEES_PCT, totalCogs);
-            const margin = contributionMargin(variantShare, refunded, PAYMENT_FEES_PCT, totalCogs);
+            const e = economics.get(variant.id)!;
 
             return (
               <div key={variant.id} className="glass rise-in p-5">
@@ -115,13 +121,17 @@ export default async function ProductDetailPage({
                 <p className="mb-4 text-xs text-faint">SKU: {variant.sku || "—"}</p>
 
                 <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
-                  <Figure label="Profit" value={`$${profit.toFixed(2)}`} tone={profit >= 0 ? "text-teal" : "text-coral"} />
-                  <Figure label="Margin" value={`${margin.toFixed(1)}%`} />
-                  <Figure label="Price" value={`$${Number(variant.price ?? 0).toFixed(2)}`} />
+                  <Figure label="Revenue" value={money(e.revenue)} />
+                  <Figure label="Units sold" value={e.unitsSold.toLocaleString()} />
                   <Figure
-                    label="Cost"
-                    value={variant.cost != null ? `$${Number(variant.cost).toFixed(2)}` : "not entered"}
+                    label="Profit"
+                    value={e.profit === null ? "enter cost" : money(e.profit)}
+                    tone={e.profit === null ? "text-faint" : e.profit >= 0 ? "text-teal" : "text-coral"}
                   />
+                  <Figure label="Margin" value={e.margin === null ? "—" : `${e.margin.toFixed(1)}%`} />
+                  {e.refunds > 0 && <Figure label="Refunds" value={money(e.refunds)} tone="text-coral" />}
+                  <Figure label="Price" value={money(Number(variant.price ?? 0))} />
+                  <Figure label="Unit cost" value={variant.cost != null ? money(Number(variant.cost)) : "not entered"} />
                   <Figure label="Stock" value={`${inventory} units`} />
                 </div>
 
@@ -147,19 +157,20 @@ export default async function ProductDetailPage({
         <p className="mb-3 text-sm font-medium text-hi">How these numbers are calculated</p>
         <ul className="space-y-2 text-sm text-lo">
           <li>
-            <span className="text-hi">Profit</span> = revenue − refunds − payment fees − cost. Only known costs are
-            counted: labor, rent, platform fees and taxes are not.
+            <span className="text-hi">Revenue</span> is what customers paid for each variant after discounts, from
+            every synced order, all time.
           </li>
           <li>
-            <span className="text-hi">Cost</span> is what you enter per variant, such as your landed or wholesale price.
+            <span className="text-hi">Profit</span> = revenue − refunds − payment fees − unit cost × units sold. Only
+            known costs are counted: labor, rent, platform fees and taxes are not.
           </li>
           <li>
-            <span className="text-hi">Payment fee</span> is this store&apos;s estimated rate shown above, not
-            Shopify&apos;s actual per-order fees.
+            <span className="text-hi">Unit cost</span> is what you enter, or CJ&apos;s price + shipping when the
+            variant is linked to CJ. Without one, profit shows as unknown instead of assuming free goods.
           </li>
           <li>
-            <span className="text-hi">Revenue per variant</span> is currently the store&apos;s revenue split evenly
-            across variants, not each variant&apos;s real sales.
+            <span className="text-hi">Payment fees</span> use this store&apos;s estimated rate ({feePercent}%) on
+            revenue before refunds, not Shopify&apos;s actual per-order fees.
           </li>
         </ul>
       </section>
