@@ -2,6 +2,7 @@ import { after, NextRequest } from "next/server";
 import { drainQueues } from "@/lib/jobs/drain";
 import { prisma } from "@/lib/db";
 import { verifyWebhookHmac } from "@/lib/shopify/hmac";
+import { webhookSecrets } from "@/lib/shopify/client";
 import { isDuplicateWebhookError } from "@/lib/shopify/webhook-idempotency";
 import { enqueueSyncStore } from "@/lib/jobs/boss";
 import { reportError } from "@/lib/alerts";
@@ -11,7 +12,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const rawBody = await request.text();
 
   const hmacHeader = request.headers.get("x-shopify-hmac-sha256");
-  if (!verifyWebhookHmac(rawBody, hmacHeader, process.env.SHOPIFY_WEBHOOK_SECRET!)) {
+  if (!webhookSecrets().some((secret) => verifyWebhookHmac(rawBody, hmacHeader, secret))) {
     return new Response("Invalid HMAC", { status: 401 });
   }
 

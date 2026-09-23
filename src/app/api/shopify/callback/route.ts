@@ -3,7 +3,7 @@ import { drainQueues } from "@/lib/jobs/drain";
 import { prisma } from "@/lib/db";
 import { encryptSecret } from "@/lib/crypto";
 import { verifyOAuthHmac } from "@/lib/shopify/hmac";
-import { exchangeCodeForToken, verifyState } from "@/lib/shopify/client";
+import { appForShop, exchangeCodeForToken, verifyState } from "@/lib/shopify/client";
 import { enqueueSyncStore } from "@/lib/jobs/boss";
 import { registerWebhooks } from "@/lib/shopify/webhooks";
 import { OWNER_CAPABILITIES } from "@/lib/auth/capabilities";
@@ -19,7 +19,8 @@ export async function GET(request: NextRequest) {
     return new Response("Missing shop/code/state", { status: 400 });
   }
 
-  if (!verifyOAuthHmac(params, process.env.SHOPIFY_API_SECRET!)) {
+  // Signed with the secret of whichever app this shop installs through (see appForShop).
+  if (!verifyOAuthHmac(params, appForShop(shop).apiSecret)) {
     return new Response("Invalid HMAC", { status: 401 });
   }
 

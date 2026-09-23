@@ -9,6 +9,35 @@ function env(name: string): string {
   return value;
 }
 
+export type ShopifyAppCredentials = { apiKey: string; apiSecret: string; webhookSecret: string };
+
+/** Shops listed in SHOPIFY_ALT_SHOPS (comma-separated myshopify domains), normalised. */
+export function altShops(raw = process.env.SHOPIFY_ALT_SHOPS): string[] {
+  return (raw ?? "")
+    .split(",")
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+/**
+ * Which Shopify app a shop installs through. Most shops use the main (public) app; shops listed in
+ * SHOPIFY_ALT_SHOPS use a second, custom-distribution app, which Shopify locks to specific stores.
+ * Keeping it separate leaves the main app free for public distribution.
+ */
+export function appForShop(shop: string): ShopifyAppCredentials {
+  if (altShops().includes(shop.toLowerCase())) {
+    const apiSecret = env("SHOPIFY_ALT_API_SECRET");
+    // A custom app signs its webhooks with its own client secret.
+    return { apiKey: env("SHOPIFY_ALT_API_KEY"), apiSecret, webhookSecret: apiSecret };
+  }
+  return { apiKey: env("SHOPIFY_API_KEY"), apiSecret: env("SHOPIFY_API_SECRET"), webhookSecret: env("SHOPIFY_WEBHOOK_SECRET") };
+}
+
+/** Every secret that may sign an incoming webhook: a delivery is genuine if any of our apps signed it. */
+export function webhookSecrets(): string[] {
+  return [process.env.SHOPIFY_WEBHOOK_SECRET, process.env.SHOPIFY_ALT_API_SECRET].filter((s): s is string => !!s);
+}
+
 /** Signed OAuth state: ties the callback to the install request (CSRF) and carries the org + inviting user. */
 export function signState(organizationId: string, userId: string): string {
   const nonce = randomBytes(16).toString("hex");
@@ -36,7 +65,7 @@ export function verifyState(state: string): { organizationId: string; userId: st
 
 export function buildAuthorizeUrl(shop: string, state: string): string {
   const url = new URL(`https://${shop}/admin/oauth/authorize`);
-  url.searchParams.set("client_id", env("SHOPIFY_API_KEY"));
+  url.searchParams.set("client_id", appForShop(shop).apiKey);
   url.searchParams.set("scope", env("SHOPIFY_SCOPES"));
   url.searchParams.set("redirect_uri", `${env("SHOPIFY_APP_URL")}/api/shopify/callback`);
   url.searchParams.set("state", state);
@@ -47,14 +76,11 @@ export async function exchangeCodeForToken(
   shop: string,
   code: string
 ): Promise<{ accessToken: string; scope: string }> {
+  const app = appForShop(shop);
   const res = await fetch(`https://${shop}/admin/oauth/access_token`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      client_id: env("SHOPIFY_API_KEY"),
-      client_secret: env("SHOPIFY_API_SECRET"),
-      code,
-    }),
+    body: JSON.stringify({ client_id: app.apiKey, client_secret: app.apiSecret, code }),
   });
 
   if (!res.ok) {
