@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import { PageHeader, EmptyState, StatusPill } from "@/components/dashboard/ui/PageHeader";
+import ProductThumb from "@/components/products/ProductThumb";
 
 export default async function ProductsPage({
   searchParams,
@@ -58,7 +59,11 @@ export default async function ProductsPage({
                 return (
                   <tr key={p.id} className="border-b border-line last:border-0 hover:bg-white/3">
                     <td className="px-5 py-3">
-                      <Link href={`/dashboard/products/${p.id}?store=${storeId}`} className="font-medium text-hi hover:text-gold-hi">
+                      <Link
+                        href={`/dashboard/products/${p.id}?store=${storeId}`}
+                        className="flex items-center gap-3 font-medium text-hi hover:text-gold-hi"
+                      >
+                        <ProductThumb raw={p.raw} />
                         {p.title}
                       </Link>
                     </td>

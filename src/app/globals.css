@@ -48,35 +48,54 @@
   --font-mono: var(--font-mono);
 }
 
-/* The cinematic backdrop: a real misty-mountain photo, darkened and color-graded toward the
-   teal/gold palette with layered scrims — never the bare photo — so text keeps 4.5:1+ contrast
-   anywhere on the page. Fixed so it stays put behind the glass panels while content scrolls.
-   Photo: Slava Auchynnikau (@auchynnikau) on Unsplash, used under the Unsplash License. */
+/* Deep dusk ground. The photography lives in each page's banner (HeroBanner / src/lib/scenery.ts);
+   the body only carries a faint teal/gold glow so the banner fades into it seamlessly. */
 body {
   color: var(--text-hi);
   font-family: var(--font-body);
   background-color: var(--ink);
   background-image:
-    radial-gradient(ellipse 70% 55% at 18% -8%, rgba(87, 214, 196, 0.22), transparent 60%),
-    radial-gradient(ellipse 60% 50% at 100% 8%, rgba(231, 177, 88, 0.18), transparent 60%),
-    radial-gradient(ellipse 90% 70% at 50% 105%, rgba(5, 8, 15, 0.96), transparent 55%),
-    linear-gradient(180deg, rgba(5, 8, 15, 0.88) 0%, rgba(8, 13, 23, 0.82) 45%, rgba(6, 10, 18, 0.94) 100%),
-    url("https://images.unsplash.com/photo-1744309328133-bb0f88e1cca1?auto=format,compress&fit=crop&w=2400&q=60");
-  background-size: cover;
-  background-position: center 40%;
-  background-repeat: no-repeat;
+    radial-gradient(ellipse 70% 45% at 20% -5%, rgba(87, 214, 196, 0.12), transparent 60%),
+    radial-gradient(ellipse 60% 40% at 95% 0%, rgba(231, 177, 88, 0.1), transparent 60%),
+    linear-gradient(180deg, #0a1220 0%, #070c16 55%, #05080f 100%);
   background-attachment: fixed;
 }
 
-/* Frosted glass panel — the one visual unit every dashboard surface is built from. */
-.glass {
-  position: relative;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02));
-  border: 1px solid var(--line);
-  border-radius: 1rem;
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.04) inset, 0 20px 40px -20px rgba(0, 0, 0, 0.6);
+/* Frosted glass panel — the one visual unit every dashboard surface is built from. Tinted navy
+   rather than white so text stays readable where a panel sits over a bright part of a photo.
+   In the components layer so utilities win: unlayered, its position:relative silently beat
+   `fixed`, and the desktop sidebar sat in the page flow pushing every page's content down. */
+@layer components {
+  .glass {
+    position: relative;
+    background: linear-gradient(180deg, rgba(16, 26, 46, 0.62), rgba(10, 18, 32, 0.55));
+    border: 1px solid var(--line);
+    border-radius: 1rem;
+    backdrop-filter: blur(22px) saturate(140%);
+    -webkit-backdrop-filter: blur(22px) saturate(140%);
+    box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.05) inset, 0 24px 48px -24px rgba(0, 0, 0, 0.7);
+  }
+}
+
+/* Slow settle-in for page banners, like a camera finishing a push-in. */
+@keyframes hero-in {
+  from {
+    opacity: 0;
+    transform: scale(1.06);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+.hero-in {
+  animation: hero-in 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-in,
+  .rise-in {
+    animation: none;
+  }
 }
 
 .glass-hover {

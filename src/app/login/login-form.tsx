@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { safePath } from "@/lib/redirect";
 
+const field =
+  "rounded-lg border border-line-hi bg-white/5 px-3 py-2.5 text-sm text-hi placeholder:text-faint focus:border-gold/50 focus:outline-none";
+
 export default function LoginForm({ linkExpired }: { linkExpired: boolean }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -53,43 +56,53 @@ export default function LoginForm({ linkExpired }: { linkExpired: boolean }) {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-4 px-4">
-      <h1 className="text-xl font-semibold">EcomOS</h1>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <input
-          type="email"
-          required
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="rounded border px-3 py-2"
-        />
-        <input
-          type="password"
-          required
-          minLength={8}
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="rounded border px-3 py-2"
-        />
-        {error && <p className="text-sm text-coral">{error}</p>}
-        {notice && <p className="text-sm text-teal">{notice}</p>}
+    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
+      <div className="glass rise-in flex flex-col gap-4 p-7">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-gold to-coral text-sm font-bold text-ink">
+            E
+          </span>
+          <span className="font-[family-name:var(--font-display)] text-2xl text-hi italic">EcomOS</span>
+        </div>
+        <p className="text-sm text-lo">{mode === "sign-in" ? "Sign in to your command center." : "Create your account."}</p>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <input
+            type="email"
+            required
+            placeholder="Email"
+            autoComplete="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={field}
+          />
+          <input
+            type="password"
+            required
+            minLength={8}
+            placeholder="Password"
+            autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={field}
+          />
+          {error && <p className="text-sm text-coral">{error}</p>}
+          {notice && <p className="text-sm text-teal">{notice}</p>}
+          <button
+            type="submit"
+            disabled={loading}
+            className="rounded-lg bg-gradient-to-b from-gold-hi to-gold px-3 py-2.5 text-sm font-medium text-ink hover:opacity-90 disabled:opacity-50"
+          >
+            {mode === "sign-in" ? "Sign in" : "Create account"}
+          </button>
+        </form>
         <button
-          type="submit"
-          disabled={loading}
-          className="rounded bg-gold px-3 py-2 text-ink disabled:opacity-50"
+          type="button"
+          className="text-sm text-lo hover:text-hi"
+          onClick={() => setMode(mode === "sign-in" ? "sign-up" : "sign-in")}
         >
-          {mode === "sign-in" ? "Sign in" : "Create account"}
+          {mode === "sign-in" ? "Need an account? Sign up" : "Already have an account? Sign in"}
         </button>
-      </form>
-      <button
-        type="button"
-        className="text-sm text-lo underline"
-        onClick={() => setMode(mode === "sign-in" ? "sign-up" : "sign-in")}
-      >
-        {mode === "sign-in" ? "Need an account? Sign up" : "Already have an account? Sign in"}
-      </button>
+      </div>
     </main>
   );
 }

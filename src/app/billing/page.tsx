@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasOrgCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import { billingEnabled, hasAccess, stripe, syncSubscription } from "@/lib/billing";
 import { PageHeader, StatusPill } from "@/components/dashboard/ui/PageHeader";
+import HeroBanner from "@/components/dashboard/HeroBanner";
 
 const ERRORS: Record<string, string> = {
   forbidden: "Only a workspace owner can change billing.",
@@ -45,7 +46,10 @@ export default async function BillingPage({
   const active = hasAccess(org.subscriptionStatus);
 
   return (
-    <main className="relative z-10 mx-auto max-w-2xl px-4 pt-6 pb-16">
+    <main className="relative z-10 mx-auto max-w-3xl px-3 pt-3 pb-16">
+      <div className="relative">
+      <HeroBanner />
+      <div className="relative px-4 pt-28 sm:px-8">
       <PageHeader eyebrow={org.name} title="Billing" subtitle="Your EcomOS subscription." />
 
       {error && ERRORS[error] && <p className="glass mb-6 p-4 text-sm text-coral">{ERRORS[error]}</p>}
@@ -101,6 +105,8 @@ export default async function BillingPage({
           ← Back to dashboard
         </Link>
       )}
+      </div>
+      </div>
     </main>
   );
 }

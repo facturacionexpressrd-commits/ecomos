@@ -12,6 +12,7 @@ const PRODUCTS_QUERY = /* GraphQL */ `
         id
         title
         status
+        featuredMedia { preview { image { url } } }
         variants(first: 30) {
           nodes {
             id
@@ -94,6 +95,7 @@ type ProductsResponse = {
       id: string;
       title: string;
       status: string;
+      featuredMedia: { preview: { image: { url: string } | null } | null } | null;
       variants: {
         nodes: Array<{
           id: string;
