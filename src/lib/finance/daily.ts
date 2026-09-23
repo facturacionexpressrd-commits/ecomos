@@ -10,10 +10,10 @@ export interface DayInput {
 const cents = (n: number) => Math.round(n * 100) / 100;
 
 /**
- * A line with no cost entry is excluded from cogs, not counted as $0 — folding
- * it into cogs would silently overstate contributionProfit for every store
- * that hasn't finished entering COGS. unknownCostUnits says how many units
- * that gap covers, so the number stays honest about what it doesn't know.
+ * A line with no cost entry contributes nothing to cogs (the total is the same as counting it at
+ * $0), but it's tracked separately instead of silently looking like a real $0 cost: while COGS
+ * entry is incomplete, contributionProfit is overstated, and unknownCostLineItems/Units say by how
+ * much of the day's volume, so the number stays honest about what it doesn't know.
  */
 export function buildDailyMetric({ orders, lines, feePercent, feeFixed }: DayInput) {
   const net = orders.reduce((s, o) => s + o.totalPrice, 0);
