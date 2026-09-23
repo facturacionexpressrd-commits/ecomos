@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/db";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import CampaignWizard from "@/components/campaigns/CampaignWizard";
+import { ACTIVE_META } from "@/lib/meta/status";
 
 export const metadata = {
   title: "Create Campaign | EcomOS",
@@ -39,9 +40,7 @@ export default async function NewCampaignPage({
   }
 
   // Verify Meta account is connected
-  const metaAccount = await prisma.metaAccount.findFirst({
-    where: { storeId },
-  });
+  const metaAccount = await prisma.metaAccount.findFirst({ where: { storeId, ...ACTIVE_META } });
 
   if (!metaAccount) {
     return (

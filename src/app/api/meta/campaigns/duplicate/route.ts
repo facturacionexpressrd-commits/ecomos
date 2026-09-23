@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { MetaClient, decryptToken } from "@/lib/meta/client";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import { reportError } from "@/lib/alerts";
+import { ACTIVE_META } from "@/lib/meta/status";
 
 /**
  * POST /api/meta/campaigns/duplicate
@@ -48,9 +49,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Get Meta account
-    const metaAccount = await prisma.metaAccount.findFirst({
-      where: { storeId },
-    });
+    const metaAccount = await prisma.metaAccount.findFirst({ where: { storeId, ...ACTIVE_META } });
 
     if (!metaAccount) {
       return NextResponse.json({ error: "Meta account not connected" }, { status: 400 });

@@ -6,15 +6,16 @@ import { loadStoreAccessGrants, hasCapability, hasOrgCapability, CAPABILITIES } 
 import ConnectMetaButton from "@/components/meta/ConnectMetaButton";
 import { PageHeader, StatusPill } from "@/components/dashboard/ui/PageHeader";
 import { ShoppingBag, Megaphone, Truck } from "lucide-react";
+import { ACTIVE_META } from "@/lib/meta/status";
 
 const SOON = ["Google Ads", "TikTok Ads", "Pinterest Ads", "Email (Klaviyo)"];
 
 export default async function IntegrationsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ store?: string; cj?: string; cj_error?: string }>;
+  searchParams: Promise<{ store?: string; cj?: string; cj_error?: string; meta?: string }>;
 }) {
-  const { store: requestedStoreId, cj: cjNotice, cj_error: cjError } = await searchParams;
+  const { store: requestedStoreId, cj: cjNotice, cj_error: cjError, meta: metaNotice } = await searchParams;
 
   const supabase = await createClient();
   const {
@@ -32,7 +33,7 @@ export default async function IntegrationsPage({
 
   const store = await prisma.store.findUniqueOrThrow({ where: { id: storeId } });
   const [metaAccount, cjConnection, cjLinkCount] = await Promise.all([
-    prisma.metaAccount.findFirst({ where: { storeId } }),
+    prisma.metaAccount.findFirst({ where: { storeId, ...ACTIVE_META } }),
     prisma.supplierConnection.findUnique({
       where: { organizationId_supplier: { organizationId: store.organizationId, supplier: "cj" } },
       select: { connectedAt: true },
@@ -40,6 +41,7 @@ export default async function IntegrationsPage({
     prisma.supplierLink.count({ where: { storeId, supplier: "cj" } }),
   ]);
   const canManageOrg = hasOrgCapability(grants, CAPABILITIES.orgManageUsers);
+  const canManageCampaigns = hasCapability(grants, storeId, CAPABILITIES.campaignsManage);
   const shopifyConnected = store.status === "connected" && !!store.accessTokenEncrypted;
 
   return (
@@ -101,16 +103,23 @@ export default async function IntegrationsPage({
               >
                 View campaigns
               </Link>
-              <button
-                disabled
-                className="flex-1 cursor-not-allowed rounded-lg border border-line-hi px-4 py-2.5 text-sm font-medium text-faint"
-              >
-                Disconnect (coming soon)
-              </button>
+              {canManageCampaigns && (
+                <form method="POST" action="/api/meta/auth/disconnect" className="flex-1">
+                  <input type="hidden" name="storeId" value={storeId} />
+                  <button className="w-full rounded-lg border border-line-hi px-4 py-2.5 text-sm font-medium text-lo hover:text-coral">
+                    Disconnect
+                  </button>
+                </form>
+              )}
             </div>
           </div>
         ) : (
           <div className="space-y-4">
+            {metaNotice === "disconnected" && (
+              <p className="rounded-lg bg-white/5 p-3 text-sm text-lo">
+                Meta disconnected. Its token was removed; past campaign and spend history is kept.
+              </p>
+            )}
             <p className="text-sm text-lo">Connect your Meta Business account to sync ad campaigns and track ROAS.</p>
             <ConnectMetaButton storeId={storeId} />
           </div>

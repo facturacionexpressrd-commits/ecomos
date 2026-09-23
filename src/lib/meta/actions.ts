@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { MetaClient, decryptToken } from "@/lib/meta/client";
+import { ACTIVE_META } from "@/lib/meta/status";
 
 export class MetaActionError extends Error {
   constructor(
@@ -27,7 +28,7 @@ async function connect(storeId: string, campaignId: string) {
   });
   if (!campaign) throw new MetaActionError("Campaign not found", "not_found");
 
-  const account = await prisma.metaAccount.findFirst({ where: { storeId } });
+  const account = await prisma.metaAccount.findFirst({ where: { storeId, ...ACTIVE_META } });
   if (!account) throw new MetaActionError("Meta account not connected", "not_connected");
 
   const key = process.env.TOKEN_ENCRYPTION_KEY;
