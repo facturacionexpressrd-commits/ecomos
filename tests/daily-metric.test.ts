@@ -53,9 +53,45 @@ describe("buildDailyMetric", () => {
     expect(m.contributionProfit).toBe(-2.9);
   });
 
-  it("treats a missing variant cost as zero and an empty day as zeros", () => {
-    expect(
-      buildDailyMetric({ ...base, orders: [], lines: [{ quantity: 3, unitCost: 0 }] })
-    ).toEqual({ grossRevenue: 0, refunds: 0, fees: 0, cogs: 0, contributionProfit: 0 });
+  it("treats an empty day as zeros", () => {
+    expect(buildDailyMetric({ ...base, orders: [], lines: [] })).toEqual({
+      grossRevenue: 0,
+      refunds: 0,
+      fees: 0,
+      cogs: 0,
+      contributionProfit: 0,
+      unknownCostLineItems: 0,
+      unknownCostUnits: 0,
+    });
+  });
+
+  it("excludes a missing variant cost from cogs instead of treating it as zero", () => {
+    const m = buildDailyMetric({
+      ...base,
+      feePercent: 0,
+      feeFixed: 0,
+      orders: [{ totalPrice: 100, refunded: 0 }],
+      lines: [
+        { quantity: 2, unitCost: 7.5 },
+        { quantity: 3, unitCost: null },
+      ],
+    });
+    expect(m.cogs).toBe(15); // only the known-cost line
+    expect(m.contributionProfit).toBe(85);
+    expect(m.unknownCostLineItems).toBe(1);
+    expect(m.unknownCostUnits).toBe(3);
+  });
+
+  it("counts a genuine $0 cost as known, not unknown", () => {
+    const m = buildDailyMetric({
+      ...base,
+      feePercent: 0,
+      feeFixed: 0,
+      orders: [],
+      lines: [{ quantity: 3, unitCost: 0 }],
+    });
+    expect(m.cogs).toBe(0);
+    expect(m.unknownCostLineItems).toBe(0);
+    expect(m.unknownCostUnits).toBe(0);
   });
 });

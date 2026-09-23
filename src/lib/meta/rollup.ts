@@ -69,7 +69,7 @@ async function rollupDayForStore(storeId: string, date: Date): Promise<void> {
   const totalConversions = spendAgg._sum.conversions ?? 0;
 
   // Recompute from real orders every run so late orders and refunds correct the row.
-  const metric = await computeDailyMetric(storeId, date);
+  const { unknownCostLineItems, unknownCostUnits, ...metric } = await computeDailyMetric(storeId, date);
   const saved = await prisma.dailyFinancialMetric.upsert({
     where: { storeId_date: { storeId, date } },
     create: { storeId, date, ...metric },
@@ -79,13 +79,17 @@ async function rollupDayForStore(storeId: string, date: Date): Promise<void> {
   const contributionRoas =
     totalSpend > 0 ? saved.contributionProfit.toNumber() / totalSpend : 0;
 
-  // DailyFinancialMetric has nowhere to store ad spend yet, so the rollup
-  // currently only ensures the row exists and reports. Persisting
-  // metaSpendTotal/metaRoas needs a schema migration (Phase 2.1) — until then
-  // an update here would write an empty object and cost a round trip.
+  // DailyFinancialMetric has nowhere to store ad spend or the unknown-cost
+  // counters yet, so the rollup only ensures the row exists and logs the
+  // rest. Persisting metaSpendTotal/metaRoas/unknownCostUnits needs a schema
+  // migration (Phase 2.1) — until then an update here would write an empty
+  // object and cost a round trip.
   console.log(
     `[Rollup] ${date.toISOString().split("T")[0]}: spend=$${totalSpend.toFixed(2)}, ` +
-    `conversions=${totalConversions}, contrib_roas=${contributionRoas.toFixed(2)}x`
+    `conversions=${totalConversions}, contrib_roas=${contributionRoas.toFixed(2)}x` +
+    (unknownCostLineItems > 0
+      ? `, WARNING: ${unknownCostLineItems} line item(s) / ${unknownCostUnits} unit(s) had no COGS entry and were excluded from cogs`
+      : "")
   );
 }
 
@@ -118,7 +122,7 @@ async function computeDailyMetric(storeId: string, date: Date) {
       refunded: o.refunds.reduce((sum, r) => sum + r.amount.toNumber(), 0),
     })),
     lines: orders.flatMap((o) =>
-      o.lineItems.map((l) => ({ quantity: l.quantity, unitCost: l.variant?.cost?.toNumber() ?? 0 }))
+      o.lineItems.map((l) => ({ quantity: l.quantity, unitCost: l.variant?.cost?.toNumber() ?? null }))
     ),
   });
 }
