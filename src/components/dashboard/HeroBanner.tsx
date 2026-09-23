@@ -11,8 +11,10 @@ export const unsplashLoader: ImageLoader = ({ src, width, quality }) => `${src}&
 export default function HeroBanner() {
   const src = sceneFor(usePathname());
   return (
+    // Tall, and fully visible for most of its height: the photo carries on behind the first rows of
+    // glass cards and only fades out near its bottom edge.
     <div
-      className="pointer-events-none absolute inset-x-0 top-0 h-80 overflow-hidden rounded-3xl [mask-image:linear-gradient(to_bottom,black_55%,transparent)] lg:h-96"
+      className="pointer-events-none absolute inset-x-0 top-0 h-[30rem] overflow-hidden rounded-3xl [mask-image:linear-gradient(to_bottom,black_78%,transparent)] lg:h-[38rem]"
       aria-hidden
     >
       <Image
@@ -26,9 +28,10 @@ export default function HeroBanner() {
         sizes="(min-width: 1024px) calc(100vw - 7rem), 100vw"
         className="hero-in object-cover"
       />
-      {/* Grade toward the palette and fade into the page, so text over it keeps contrast. */}
-      <div className="absolute inset-0 bg-gradient-to-b from-ink/5 via-ink/25 to-ink/60" />
-      <div className="absolute inset-0 bg-gradient-to-r from-ink/60 via-transparent to-transparent" />
+      {/* A light grade only: a soft shade on the left where the page title sits, and a gentle
+          darkening toward the bottom. Cards read over it through their own frosted glass. */}
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-ink/10 to-ink/40" />
+      <div className="absolute inset-0 bg-gradient-to-r from-ink/60 via-ink/10 to-transparent" />
     </div>
   );
 }

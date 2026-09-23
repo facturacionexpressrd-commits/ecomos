@@ -14,10 +14,11 @@ export function PageHeader({
   return (
     // Compact on purpose: the page's data should start near the top of the screen, not under a banner.
     <header className="mb-5 flex flex-wrap items-center justify-between gap-3">
-      <div>
-        {eyebrow && <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.2em] text-gold">{eyebrow}</p>}
+      {/* Soft shadow instead of a dark overlay keeps the title readable over bright parts of the photo. */}
+      <div className="[text-shadow:0_1px_14px_rgba(5,8,15,0.85),0_0_2px_rgba(5,8,15,0.6)]">
+        {eyebrow && <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.2em] text-gold-hi">{eyebrow}</p>}
         <h1 className="font-[family-name:var(--font-display)] text-2xl font-medium italic text-hi">{title}</h1>
-        {subtitle && <p className="mt-1 max-w-xl text-sm text-lo">{subtitle}</p>}
+        {subtitle && <p className="mt-1 max-w-xl text-sm text-hi/80">{subtitle}</p>}
       </div>
       {action}
     </header>

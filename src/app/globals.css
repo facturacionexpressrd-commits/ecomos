@@ -68,7 +68,7 @@ body {
 @layer components {
   .glass {
     position: relative;
-    background: linear-gradient(180deg, rgba(16, 26, 46, 0.62), rgba(10, 18, 32, 0.55));
+    background: linear-gradient(180deg, rgba(14, 23, 41, 0.72), rgba(10, 18, 32, 0.66));
     border: 1px solid var(--line);
     border-radius: 1rem;
     backdrop-filter: blur(22px) saturate(140%);
