@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { apiRequiresSubscription, billingEnabled, userHasAccess } from "@/lib/billing";
 
 // Refreshes the Supabase auth session cookie on every request, per @supabase/ssr's
 // standard Next.js proxy recipe. Without this, sessions can silently expire mid-visit
@@ -24,7 +25,18 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // The one billing gate for every API route (the dashboard layout gates pages). Only signed-in
+  // callers are checked: unauthenticated routes (webhooks, API-key jobs) do their own auth.
+  if (user && billingEnabled() && apiRequiresSubscription(request.nextUrl.pathname) && !(await userHasAccess(user.id))) {
+    return NextResponse.json(
+      { error: "Your EcomOS subscription isn't active. Update billing to continue.", billingUrl: "/billing" },
+      { status: 402 }
+    );
+  }
 
   return response;
 }

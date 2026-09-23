@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import type Stripe from "stripe";
-import { hasAccess, subscriptionFields } from "../src/lib/billing";
+import { hasAccess, subscriptionFields, apiRequiresSubscription } from "../src/lib/billing";
 import { redact } from "../src/lib/alerts";
 
 describe("hasAccess", () => {
@@ -11,6 +11,42 @@ describe("hasAccess", () => {
     for (const s of ["canceled", "unpaid", "incomplete", "incomplete_expired", "paused", null, undefined]) {
       expect(hasAccess(s)).toBe(false);
     }
+  });
+});
+
+describe("apiRequiresSubscription", () => {
+  it("gates the app's own API routes", () => {
+    for (const p of [
+      "/api/ai/product-copy/generate",
+      "/api/meta/campaigns/budget",
+      "/api/suppliers/cj/orders",
+      "/api/variants/cost",
+      "/api/invitations",
+      "/api/approvals/decide",
+    ]) {
+      expect(apiRequiresSubscription(p)).toBe(true);
+    }
+  });
+  it("leaves paying, incoming Shopify data, jobs, onboarding and deletion open", () => {
+    for (const p of [
+      "/api/billing/checkout",
+      "/api/billing/webhook",
+      "/api/shopify/webhooks/orders-create",
+      "/api/shopify/compliance/shop-redact",
+      "/api/cron/daily",
+      "/api/health",
+      "/api/onboarding",
+      "/api/invitations/accept",
+      "/api/workspace/delete",
+      "/api/meta/auth/callback",
+    ]) {
+      expect(apiRequiresSubscription(p)).toBe(false);
+    }
+  });
+  it("matches whole path segments and ignores non-API pages", () => {
+    expect(apiRequiresSubscription("/api/billingx")).toBe(true);
+    expect(apiRequiresSubscription("/api/healthcheck-evil")).toBe(true);
+    expect(apiRequiresSubscription("/dashboard")).toBe(false);
   });
 });
 

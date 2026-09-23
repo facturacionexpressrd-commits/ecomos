@@ -14,6 +14,34 @@ export function hasAccess(status: string | null | undefined): boolean {
   return status != null && ACCESS_STATUSES.has(status);
 }
 
+// API routes a lapsed workspace can still call: paying (billing), data flowing in from Shopify
+// (webhooks, compliance, connect), jobs, getting started, and deleting its own data.
+const API_EXEMPT = [
+  "/api/billing",
+  "/api/shopify",
+  "/api/cron",
+  "/api/health",
+  "/api/onboarding",
+  "/api/invitations/accept",
+  "/api/workspace/delete",
+  "/api/meta/auth",
+];
+
+/** Whether a request path is an API route that needs an active subscription. */
+export function apiRequiresSubscription(pathname: string): boolean {
+  if (!pathname.startsWith("/api/")) return false;
+  return !API_EXEMPT.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
+/** A signed-in user's workspace can use paid features. Users without a workspace yet (onboarding) pass. */
+export async function userHasAccess(userId: string): Promise<boolean> {
+  const user = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { organization: { select: { subscriptionStatus: true } } },
+  });
+  return !user || hasAccess(user.organization.subscriptionStatus);
+}
+
 let client: Stripe | null = null;
 export function stripe(): Stripe {
   const key = process.env.STRIPE_SECRET_KEY;
