@@ -14,7 +14,8 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx --env-file=.env prisma/seed.ts",
-    "db:seed:test": "tsx --env-file=.env prisma/seed-test-data.ts"
+    "db:seed:test": "tsx --env-file=.env prisma/seed-test-data.ts",
+    "db:check": "node --env-file=.env scripts/db-check.mjs"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.0",
