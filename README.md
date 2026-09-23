@@ -5,8 +5,8 @@ Multi-store e-commerce operations platform. Phases complete:
 - **Phase 0:** org/user/role/store model, invitation-based auth, capability RBAC
 - **Phase 1:** Shopify core — OAuth connect, product/order/customer/inventory sync, webhooks
 - **Phase 1.5:** Finance layer — order line items (revenue facts), refunds, payment ledger, per-store fee config
-- **Phase 2:** Supplier integration — canonical products, supplier offers, supplier comparison screen, auto-routing
-- **Phase 3:** Order fulfillment — Shopify order → supplier order routing, Order Hub, exception tracking, tracking sync
+- **Phase 2:** Supplier integration — CJ Dropshipping: per-workspace connection, variant linking with live cost/stock/shipping
+- **Phase 3:** Order fulfillment — send orders to CJ (created unpaid), Order Hub, exception tracking, CJ status/tracking sync
 - **Phase 4:** Meta Ads — campaign sync, daily spend rollup, order attribution, ROAS calculation
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md), [DATABASE.md](./DATABASE.md), and

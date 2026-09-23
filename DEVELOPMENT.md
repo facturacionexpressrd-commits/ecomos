@@ -134,15 +134,17 @@ Product detail page (`/dashboard/products/[id]`):
 
 Cost entry form: manual COGS per variant, POSTed to `/api/variants/cost`
 
-## Order Routing & Fulfillment (Session 12)
+## Supplier Orders & Fulfillment
 
 ### Schema
 
-**OrderRoute:** Assigns each line item to a supplier offer. One route per line
-item, built when an order is routed. Stores the decision reason and who made it.
+**SupplierConnection / SupplierLink:** a workspace's supplier account (e.g. CJ API key,
+encrypted) and, per store, which supplier variant each Shopify variant comes from, with
+that supplier's live cost, shipping and stock. See `src/lib/suppliers/cj-service.ts`.
 
-**SupplierOrder:** Groups line items by supplier. One record per order+supplier
-pair. Aggregates cost, shipping, and estimated margin from routed line items.
+**SupplierOrder:** One order placed with one supplier for a Shopify order (one record per
+order+supplier), created by "Send to CJ" on the Order Hub. Holds cost, shipping, and
+estimated margin, then the supplier's real charged amounts once synced.
 
 **Fulfillment:** Tracks fulfillment status of a SupplierOrder (pending, processing,
 shipped, delivered, failed). Links to Shipment once shipped.
@@ -157,27 +159,13 @@ from the supplier's tracking API. Timestamp per event.
 customs_delay, etc.). Severity (low/medium/high/critical). Recommended action is
 plain text field for now.
 
-### Routing Algorithm
-
-`src/lib/orders/routing.ts`:
-
-**routeOrderLineItems(orderId):**
-1. Fetch order with line items → products → canonical product → supplier offers
-2. For each line item, pick the cheapest available supplier (cost + shipping)
-3. Store route decision in OrderRoute table
-4. Return list of routing decisions
-
-**createSupplierOrdersFromRoutes(orderId):**
-1. Group routes by supplier
-2. For each supplier, aggregate costs and shipping
-3. Estimate margin: Revenue - (SupplierCost + Shipping + PaymentFees)
-4. Create SupplierOrder with aggregated totals
-
 ### API Endpoints
 
-**POST `/api/orders/route`** — Route a single order
+**POST `/api/suppliers/cj/orders`** — Send an order's CJ-linked items to CJ (created unpaid)
 - Request: `{ orderId, storeId }`
-- Response: list of SupplierOrders created, with costs and margins
+
+**POST `/api/suppliers/cj/link`** — Link / refresh / unlink a variant's CJ source
+- Request: `{ storeId, variantId, ref }` or `{ storeId, variantId, unlink: true }`
 
 **PATCH `/api/exceptions/[id]`** — Update exception status
 - Request: `{ storeId, isResolved, recommendedAction }`
