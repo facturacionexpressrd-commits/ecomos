@@ -6,6 +6,10 @@ import ConnectStoreForm from "@/components/dashboard/ConnectStoreForm";
 import { StatTile } from "@/components/dashboard/ui/StatTile";
 import { Sparkline } from "@/components/dashboard/ui/Sparkline";
 import { PageHeader, StatusPill } from "@/components/dashboard/ui/PageHeader";
+import { SetupChecklist } from "@/components/dashboard/SetupChecklist";
+import { setupSteps } from "@/lib/setup";
+import { billingEnabled, hasAccess } from "@/lib/billing";
+import { ACTIVE_META } from "@/lib/meta/status";
 import { TrendingUp, Package, Wallet, Percent } from "lucide-react";
 
 const money = (n: number, currency = "USD") =>
@@ -57,9 +61,23 @@ export default async function DashboardPage({
   const since = new Date();
   since.setDate(since.getDate() - 14);
 
-  const [store, orderCount, inventoryTotal, latestOrder, dailyMetrics, campaignCount, exceptionCount] =
-    await Promise.all([
-      prisma.store.findUniqueOrThrow({ where: { id: storeId } }),
+  const [
+    store,
+    orderCount,
+    inventoryTotal,
+    latestOrder,
+    dailyMetrics,
+    campaignCount,
+    exceptionCount,
+    productCount,
+    variantCount,
+    variantsMissingCost,
+    metaAccount,
+  ] = await Promise.all([
+      prisma.store.findUniqueOrThrow({
+        where: { id: storeId },
+        include: { organization: { select: { subscriptionStatus: true } } },
+      }),
       prisma.order.count({ where: { storeId } }),
       prisma.inventoryLevel.aggregate({ where: { storeId }, _sum: { available: true } }),
       prisma.order.findFirst({ where: { storeId }, select: { currency: true } }),
@@ -69,7 +87,21 @@ export default async function DashboardPage({
       }),
       prisma.metaCampaign.count({ where: { storeId, status: "ACTIVE" } }),
       prisma.fulfillmentException.count({ where: { supplierOrder: { storeId }, isResolved: false } }),
+      prisma.product.count({ where: { storeId } }),
+      prisma.productVariant.count({ where: { storeId } }),
+      prisma.productVariant.count({ where: { storeId, cost: null } }),
+      prisma.metaAccount.findFirst({ where: { storeId, ...ACTIVE_META }, select: { id: true } }),
     ]);
+
+  const steps = setupSteps({
+    storeId,
+    productCount,
+    variantCount,
+    variantsMissingCost,
+    metaConnected: !!metaAccount,
+    billingEnabled: billingEnabled(),
+    subscribed: hasAccess(store.organization.subscriptionStatus),
+  });
 
   const currency = latestOrder?.currency ?? "USD";
   const revenue14d = dailyMetrics.reduce((s, d) => s + d.grossRevenue.toNumber(), 0);
@@ -91,6 +123,8 @@ export default async function DashboardPage({
           </div>
         }
       />
+
+      <SetupChecklist steps={steps} />
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
         <StatTile label="Revenue (14d)" value={money(revenue14d, currency)} icon={<TrendingUp size={16} />} />
