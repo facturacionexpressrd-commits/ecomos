@@ -6,6 +6,8 @@ import { variantEconomics, totalEconomics } from "@/lib/finance/variant-economic
 import type { SupplierLink } from "@prisma/client";
 import CostEntryForm from "@/components/products/CostEntryForm";
 import CjLinkForm from "@/components/products/CjLinkForm";
+import ProductCopyEditor from "@/components/products/ProductCopyEditor";
+import CreativeLibrary from "@/components/creative/CreativeLibrary";
 import { PageHeader } from "@/components/dashboard/ui/PageHeader";
 import { StatTile } from "@/components/dashboard/ui/StatTile";
 
@@ -69,6 +71,13 @@ export default async function ProductDetailPage({
     select: { id: true },
   }));
   const canManageProducts = hasCapability(grants, storeId, CAPABILITIES.productsManage);
+  const canUseAi = hasCapability(grants, storeId, CAPABILITIES.aiGenerate);
+  const [latestCopy, ideas] = canUseAi
+    ? await Promise.all([
+        prisma.productAICopy.findFirst({ where: { storeId, productId }, orderBy: { createdAt: "desc" } }),
+        prisma.creativeIdea.findMany({ where: { storeId, productId }, orderBy: { createdAt: "desc" }, take: 20 }),
+      ])
+    : [null, []];
   const feePercent = Number(store.paymentFeePercent);
 
   const refundsByVariant = new Map<string, number>();
@@ -152,6 +161,49 @@ export default async function ProductDetailPage({
           })}
         </div>
       </section>
+
+      {canUseAi && (
+        <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+          <div className="glass p-5">
+            <p className="mb-3 text-xs font-medium tracking-[0.14em] text-faint uppercase">AI product copy</p>
+            <ProductCopyEditor
+              storeId={storeId}
+              productId={productId}
+              initialCopy={
+                latestCopy
+                  ? {
+                      id: latestCopy.id,
+                      headline: latestCopy.headline,
+                      description: latestCopy.description,
+                      bulletPoints: latestCopy.bulletPoints,
+                      seoKeywords: latestCopy.seoKeywords,
+                      confidence: latestCopy.confidence,
+                      isPublished: latestCopy.isPublished,
+                    }
+                  : undefined
+              }
+            />
+          </div>
+          <div className="glass p-5">
+            <p className="mb-3 text-xs font-medium tracking-[0.14em] text-faint uppercase">Ad creative ideas</p>
+            <CreativeLibrary
+              storeId={storeId}
+              productId={productId}
+              initialIdeas={ideas.map((idea) => ({
+                id: idea.id,
+                headlineText: idea.headlineText,
+                headlineHook: idea.headlineHook,
+                headlineCta: idea.headlineCta,
+                imageConceptText: idea.imageConceptText,
+                videoConceptText: idea.videoConceptText,
+                targetAudience: idea.targetAudience,
+                emotionalApeals: idea.emotionalApeals,
+                createdAt: idea.createdAt.toISOString(),
+              }))}
+            />
+          </div>
+        </section>
+      )}
 
       <section className="glass p-5">
         <p className="mb-3 text-sm font-medium text-hi">How these numbers are calculated</p>

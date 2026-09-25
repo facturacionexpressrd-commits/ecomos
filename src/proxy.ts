@@ -41,6 +41,11 @@ export async function proxy(request: NextRequest) {
   return response;
 }
 
+// Skipped: static files, public legal pages, and machine-called endpoints that authenticate
+// themselves (HMAC, bearer secret, Stripe signature). None has a session to refresh, and each
+// skip saves a Supabase auth round trip.
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|api/shopify/webhooks).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon.ico|api/shopify/webhooks|api/billing/webhook|api/cron|api/health|privacy|terms|data-deletion).*)",
+  ],
 };

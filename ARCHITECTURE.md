@@ -5,11 +5,11 @@
 EcomOS is a unified operations platform for e-commerce businesses. It centralizes product management, order fulfillment, financials, and growth across Shopify stores.
 
 **Tech Stack:**
-- **Frontend:** Next.js 14+ with TypeScript, Tailwind CSS
-- **Backend:** Next.js API routes with tRPC
+- **Frontend:** Next.js 16 (App Router) with TypeScript, Tailwind CSS 4
+- **Backend:** Next.js route handlers (plain REST, no tRPC)
 - **Database:** PostgreSQL (via Supabase) with Prisma ORM
 - **Auth:** Supabase Auth (JWT-based, password + OAuth)
-- **Async Jobs:** Supabase pg_cron for scheduled tasks
+- **Async Jobs:** pg-boss queue, drained after webhooks and by a nightly Vercel Cron
 - **Webhooks:** Shopify Admin API with signature verification
 
 ## Domain Model
@@ -74,10 +74,10 @@ Stubbed in schema but logic deferred:
 
 ## Background Jobs
 
-**Supabase pg_cron Schedule:**
-- Sync Products: daily at 2 AM UTC
-- Sync Orders: every 4 hours
-- Sync Inventory: hourly full reconciliation
+**Schedule (Vercel Cron, `vercel.json`):**
+- `/api/cron/daily` at 06:00 UTC: re-registers webhooks, re-syncs every store, drains the queue,
+  syncs CJ orders/links and Meta spend, then generates approval recommendations
+- Between runs, Shopify webhooks enqueue syncs that are drained immediately (`after()`)
 
 **Error Handling:**
 - Retry on transient errors (3x, exponential backoff)
@@ -86,7 +86,7 @@ Stubbed in schema but logic deferred:
 
 ## API Design
 
-**tRPC Routers:**
+**Route areas (`src/app/api/*`):**
 - `auth` — login, logout, session
 - `store` — connect, list
 - `product` — list, get, search (read-only)

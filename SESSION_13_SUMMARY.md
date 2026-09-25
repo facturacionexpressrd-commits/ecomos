@@ -208,8 +208,8 @@ npm run dev
 
 ## Known Issues
 
-1. **exceptions/page.tsx has pre-existing TypeScript errors** (unrelated to this session)
-2. **Full build skips due to those errors** — But individual components compile fine
+None open. (The exceptions/page.tsx type errors noted at the time have since been fixed; the full
+build and CI typecheck pass.)
 
 ## Performance Notes
 

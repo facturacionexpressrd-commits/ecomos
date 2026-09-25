@@ -68,8 +68,8 @@ The OAuth flow redirects to `/dashboard` once connected. The installing account
 gets full ("Owner") access automatically; invite teammates via `POST /api/invitations`.
 
 **What gets synced:** products, variants, inventory, customers, orders, refunds,
-payment transactions. Sync runs on install, then every 4 hours (orders), hourly
-(inventory), and daily (products) via pg_cron jobs.
+payment transactions. Sync runs on install, then live via Shopify webhooks, with a
+nightly full re-sync (Vercel Cron → `/api/cron/daily`, 06:00 UTC) as a safety net.
 
 **Contribution profit:** automatically calculated per variant from Shopify revenue,
 actual refunds, payment fees, and manual COGS entry. Open any product to see economics.

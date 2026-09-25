@@ -1,8 +1,10 @@
-import Image, { type ImageLoader } from "next/image";
+import Image from "next/image";
 import { Boxes } from "lucide-react";
 
 // Shopify's CDN resizes via ?width=, so thumbnails load small and sharp without Vercel's optimizer.
-const shopifyLoader: ImageLoader = ({ src, width }) => `${src}${src.includes("?") ? "&" : "?"}width=${width}`;
+// Built here as a plain URL: this is a server component, and a `loader` function can't be passed to
+// next/image (a client component), which crashed the products page.
+const resized = (src: string, width: number) => `${src}${src.includes("?") ? "&" : "?"}width=${width}`;
 
 /** Reads the product's main image from the raw Shopify payload stored at sync time. */
 export function productImageUrl(raw: unknown): string | null {
@@ -19,7 +21,7 @@ export default function ProductThumb({ raw, size = 44 }: { raw: unknown; size?: 
       style={{ width: size, height: size }}
     >
       {url ? (
-        <Image src={url} alt="" fill sizes={`${size}px`} loader={shopifyLoader} className="object-cover" />
+        <Image src={resized(url, size * 2)} alt="" fill sizes={`${size}px`} unoptimized className="object-cover" />
       ) : (
         <Boxes size={size * 0.4} className="text-faint" strokeWidth={1.5} />
       )}
