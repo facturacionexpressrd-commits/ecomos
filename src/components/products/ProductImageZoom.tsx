@@ -15,11 +15,11 @@ export default function ProductImageZoom({ url, alt }: { url: string; alt: strin
       <button
         type="button"
         onClick={() => dialog.current?.showModal()}
-        className="group relative block size-40 shrink-0 cursor-zoom-in overflow-hidden rounded-xl border border-line bg-white/5"
+        className="group relative block aspect-square w-full shrink-0 cursor-zoom-in sm:w-72 lg:w-96 overflow-hidden rounded-xl border border-line bg-white/5"
         aria-label={`Enlarge image of ${alt}`}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={resized(url, 320)} alt={alt} className="size-full object-cover transition-transform group-hover:scale-105" />
+        <img src={resized(url, 800)} alt={alt} className="size-full object-cover transition-transform group-hover:scale-105" />
       </button>
 
       <dialog

@@ -115,7 +115,7 @@ export default async function ProductDetailPage({
       {/* This product's own totals first, so the headline numbers are on screen without scrolling. */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row">
         {imageUrl && <ProductImageZoom url={imageUrl} alt={product.title} />}
-        <div className="grid flex-1 grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className={`grid flex-1 content-start gap-4 grid-cols-2 ${imageUrl ? "" : "lg:grid-cols-4"}`}>
           <StatTile label="Revenue" value={money(total.revenue)} />
           <StatTile label="Units sold" value={total.unitsSold.toLocaleString()} />
           <StatTile label="Profit" value={total.profit === null ? "Cost needed" : money(total.profit)} />
