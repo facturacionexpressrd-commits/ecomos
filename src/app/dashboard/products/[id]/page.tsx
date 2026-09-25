@@ -8,6 +8,8 @@ import CostEntryForm from "@/components/products/CostEntryForm";
 import CjLinkForm from "@/components/products/CjLinkForm";
 import ProductCopyEditor from "@/components/products/ProductCopyEditor";
 import CreativeLibrary from "@/components/creative/CreativeLibrary";
+import ProductImageZoom from "@/components/products/ProductImageZoom";
+import { productImageUrl } from "@/components/products/ProductThumb";
 import { PageHeader } from "@/components/dashboard/ui/PageHeader";
 import { StatTile } from "@/components/dashboard/ui/StatTile";
 
@@ -104,17 +106,21 @@ export default async function ProductDetailPage({
   );
   const total = totalEconomics([...economics.values()]);
   const money = (n: number) => `$${n.toFixed(2)}`;
+  const imageUrl = productImageUrl(product.raw);
 
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader eyebrow={store.name} title={product.title} />
 
       {/* This product's own totals first, so the headline numbers are on screen without scrolling. */}
-      <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatTile label="Revenue" value={money(total.revenue)} />
-        <StatTile label="Units sold" value={total.unitsSold.toLocaleString()} />
-        <StatTile label="Profit" value={total.profit === null ? "Cost needed" : money(total.profit)} />
-        <StatTile label="Margin" value={total.margin === null ? "—" : `${total.margin.toFixed(1)}%`} />
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row">
+        {imageUrl && <ProductImageZoom url={imageUrl} alt={product.title} />}
+        <div className="grid flex-1 grid-cols-2 gap-4 lg:grid-cols-4">
+          <StatTile label="Revenue" value={money(total.revenue)} />
+          <StatTile label="Units sold" value={total.unitsSold.toLocaleString()} />
+          <StatTile label="Profit" value={total.profit === null ? "Cost needed" : money(total.profit)} />
+          <StatTile label="Margin" value={total.margin === null ? "—" : `${total.margin.toFixed(1)}%`} />
+        </div>
       </div>
 
       <section className="mb-6">
