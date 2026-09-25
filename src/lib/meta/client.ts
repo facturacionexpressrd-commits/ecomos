@@ -64,7 +64,7 @@ export class MetaClient {
     const params = new URLSearchParams({
       client_id: this.config.appId,
       redirect_uri: this.config.redirectUri,
-      scope: "ads_read,ads_manage", // Read + manage campaigns, spend, results, create/edit campaigns
+      scope: "ads_read,ads_management", // Read + manage campaigns, spend, results, create/edit campaigns
       response_type: "code",
       state,
     });
@@ -203,7 +203,7 @@ export class MetaClient {
 
   /**
    * Create a new campaign in Meta Ads Manager
-   * Requires ads_manage scope
+   * Requires ads_management scope
    */
   async createCampaign(
     adAccountId: string,
@@ -243,7 +243,7 @@ export class MetaClient {
 
   /**
    * Create an ad set within a campaign
-   * Requires ads_manage scope
+   * Requires ads_management scope
    */
   async createAdSet(
     adAccountId: string,
@@ -301,7 +301,7 @@ export class MetaClient {
 
   /**
    * Update a campaign (status, name, budget)
-   * Requires ads_manage scope
+   * Requires ads_management scope
    */
   async updateCampaign(
     campaignId: string,
@@ -335,7 +335,7 @@ export class MetaClient {
 
   /**
    * Update an ad set (budget, status, timing)
-   * Requires ads_manage scope
+   * Requires ads_management scope
    */
   async updateAdSet(
     adSetId: string,

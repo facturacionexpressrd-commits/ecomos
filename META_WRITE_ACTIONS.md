@@ -165,7 +165,7 @@ All actions log to audit trail.
 - **Store Access:** Enforced at every endpoint (capabilities check)
 - **Token Encryption:** Meta access token stored encrypted (AES-256-GCM)
 - **Audit Logging:** Every action logged with user, timestamp, metadata
-- **Scope:** OAuth now requests `ads_read,ads_manage` (was `ads_read` only)
+- **Scope:** OAuth now requests `ads_read,ads_management` (was `ads_read` only)
 
 ## Out of Scope (Session 14+)
 
@@ -203,7 +203,7 @@ All actions log to audit trail.
   - `updateAdSet()`
 
 **Auth:**
-- `src/app/api/meta/auth/callback/route.ts` — Updated scope to `ads_read,ads_manage`
+- `src/app/api/meta/auth/callback/route.ts` — Updated scope to `ads_read,ads_management`
 
 **Docs:**
 - `INTEGRATIONS.md` — Added Meta Marketing API write endpoints
