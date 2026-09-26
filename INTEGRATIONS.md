@@ -198,7 +198,7 @@ query InventoryLevels($first: Int, $after: String) {
 **Authentication:**
 - OAuth access token in request params or Authorization header
 - Token stored encrypted in `metaAccounts.accessTokenEncrypted`
-- Requires scope: `ads_read,ads_manage` (write actions require `ads_manage`)
+- Requires scope: `ads_read,ads_management` (write actions require `ads_management`)
 
 **Campaign Creation:**
 ```
