@@ -59,7 +59,7 @@ export async function connectAdAccount(input: {
     storeId: input.storeId,
     metaAccountId: input.adAccountId,
     accessTokenEncrypted: encryptToken(input.accessToken, key),
-    scope: "ads_read,ads_manage",
+    scope: "ads_read,ads_management",
     status: "connected" as const,
   };
 

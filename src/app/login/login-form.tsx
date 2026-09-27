@@ -17,22 +17,48 @@ export default function LoginForm({ linkExpired }: { linkExpired: boolean }) {
   );
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Offered after sign-up, or when sign-in fails because the email was never confirmed.
+  const [canResend, setCanResend] = useState(false);
   const router = useRouter();
+
+  // Where the user was headed (e.g. an invitation link) survives login and email confirmation.
+  const nextPath = () => safePath(new URLSearchParams(window.location.search).get("next"));
+  const confirmRedirect = () => `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath())}`;
+
+  async function resendConfirmation() {
+    setError(null);
+    setNotice(null);
+    setLoading(true);
+    const { error: resendError } = await createClient().auth.resend({
+      type: "signup",
+      email,
+      options: { emailRedirectTo: confirmRedirect() },
+    });
+    setLoading(false);
+    if (resendError) return setError(resendError.message);
+    setNotice(`Sent a new confirmation link to ${email}. Check spam too.`);
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
     setNotice(null);
+    setCanResend(false);
     setLoading(true);
 
-    // Where the user was headed (e.g. an invitation link) survives login and email confirmation.
-    const next = safePath(new URLSearchParams(window.location.search).get("next"));
+    const next = nextPath();
     const supabase = createClient();
 
     if (mode === "sign-in") {
       const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
       setLoading(false);
-      if (authError) return setError(authError.message);
+      if (authError) {
+        if (authError.code === "email_not_confirmed") {
+          setCanResend(true);
+          return setError("Confirm your email first. Didn't get the link? Resend it below.");
+        }
+        return setError(authError.message);
+      }
       router.push(next);
       router.refresh();
       return;
@@ -41,7 +67,7 @@ export default function LoginForm({ linkExpired }: { linkExpired: boolean }) {
     const { data, error: authError } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}` },
+      options: { emailRedirectTo: confirmRedirect() },
     });
     setLoading(false);
     if (authError) return setError(authError.message);
@@ -49,6 +75,7 @@ export default function LoginForm({ linkExpired }: { linkExpired: boolean }) {
     // With email confirmation on there is no session yet: say so instead of bouncing back to login.
     if (!data.session) {
       setNotice(`We sent a confirmation link to ${email}. Open it to finish creating your account.`);
+      setCanResend(true);
       return;
     }
     router.push(next);
@@ -87,6 +114,16 @@ export default function LoginForm({ linkExpired }: { linkExpired: boolean }) {
           />
           {error && <p className="text-sm text-coral">{error}</p>}
           {notice && <p className="text-sm text-teal">{notice}</p>}
+          {canResend && (
+            <button
+              type="button"
+              disabled={loading || !email}
+              onClick={resendConfirmation}
+              className="text-left text-sm text-gold-hi underline hover:opacity-80 disabled:opacity-50"
+            >
+              Resend confirmation email
+            </button>
+          )}
           <button
             type="submit"
             disabled={loading}
