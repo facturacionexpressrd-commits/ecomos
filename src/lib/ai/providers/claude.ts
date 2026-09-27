@@ -1,12 +1,15 @@
 import { AIProvider, AIGeneratedContent } from "../types";
 
+/** The one Claude model every AI feature uses. Sonnet: strong writing at a fraction of Opus cost. */
+export const CLAUDE_MODEL = "claude-sonnet-5";
+
 export class ClaudeAIProvider implements AIProvider {
   name = "claude";
   private apiKey: string;
   private model: string;
   private baseUrl: string = "https://api.anthropic.com/v1";
 
-  constructor(apiKey: string, model: string = "claude-opus-5") {
+  constructor(apiKey: string, model: string = CLAUDE_MODEL) {
     this.apiKey = apiKey;
     this.model = model;
   }

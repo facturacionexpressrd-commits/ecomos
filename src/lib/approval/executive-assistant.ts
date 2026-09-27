@@ -1,5 +1,6 @@
 import { ExecutiveAssistantInput } from "./types";
 import { verify, factsFromData, type Fact, type ClaimedAnswer } from "@/lib/ai/verify";
+import { CLAUDE_MODEL } from "@/lib/ai/providers/claude";
 
 export class WithheldExplanationError extends Error {
   constructor(readonly violations: string[]) {
@@ -11,7 +12,7 @@ export class ExecutiveAssistant {
   private apiKey: string;
   private model: string;
 
-  constructor(apiKey: string, model: string = "claude-opus-5") {
+  constructor(apiKey: string, model: string = CLAUDE_MODEL) {
     this.apiKey = apiKey;
     this.model = model;
   }
