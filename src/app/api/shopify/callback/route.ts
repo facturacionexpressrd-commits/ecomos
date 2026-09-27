@@ -1,5 +1,5 @@
 import { after, NextRequest } from "next/server";
-import { drainQueues } from "@/lib/jobs/drain";
+import { drainAndContinue } from "@/lib/jobs/drain";
 import { prisma } from "@/lib/db";
 import { encryptSecret } from "@/lib/crypto";
 import { verifyOAuthHmac } from "@/lib/shopify/hmac";
@@ -80,7 +80,7 @@ export async function GET(request: NextRequest) {
   after(async () => {
     // The nightly cron re-checks these, so a failure here delays live updates rather than losing them.
     await registerWebhooks(shop, accessToken).catch((err) => reportError(err, { where: "[webhooks]" }));
-    await drainQueues().catch((err) => reportError(err, { where: "[drain]" }));
+    await drainAndContinue().catch((err) => reportError(err, { where: "[drain]" }));
   });
 
   return Response.redirect(new URL(`/dashboard?store=${store.id}`, process.env.SHOPIFY_APP_URL));
