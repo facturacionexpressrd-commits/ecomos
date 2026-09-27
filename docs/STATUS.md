@@ -1,6 +1,6 @@
 # EcomOS: status and what's left (2026-09-26)
 
-## Done (in PR #2, checks passing, not merged yet)
+## Done (PR #2 merged 2026-09-27; PR #3 pending)
 - Bigger product image on the product page (click opens it full-size)
 - First-run setup checklist on Overview (store → sync → costs → Meta → plan)
 - Meta OAuth permission fix: `ads_manage` → `ads_management` (connect was being rejected)
@@ -8,7 +8,7 @@
 - `docs/LAUNCH_SUBMISSIONS.md`: Shopify public app + Meta App Review material
 
 ## Owner to do
-1. [ ] Merge PR #2, close PR #1: https://github.com/facturacionexpressrd-commits/ecomos/pull/2
+1. [x] Merge PR #2 (done); merge PR #3, close PR #1
 2. [ ] Confirm account: Supabase → Authentication → Users → ⋯ → Confirm user
 3. [ ] Vercel env vars (Production): `ANTHROPIC_API_KEY`, `RESEND_API_KEY`, `EMAIL_FROM`,
        `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID`, `STRIPE_WEBHOOK_SECRET`, `ALERT_WEBHOOK_URL`,
