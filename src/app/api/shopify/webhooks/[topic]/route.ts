@@ -1,5 +1,5 @@
 import { after, NextRequest } from "next/server";
-import { drainQueues } from "@/lib/jobs/drain";
+import { drainAndContinue } from "@/lib/jobs/drain";
 import { prisma } from "@/lib/db";
 import { verifyWebhookHmac } from "@/lib/shopify/hmac";
 import { webhookSecrets } from "@/lib/shopify/client";
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   // Every other topic means "something changed": request a sync of the store. Bursts collapse into
   // one trailing sync, and the sync marks this event processed once it has run.
   await enqueueSyncStore({ storeId: store.id });
-  after(() => drainQueues().catch((err) => reportError(err, { where: "[drain]" })));
+  after(() => drainAndContinue().catch((err) => reportError(err, { where: "[drain]" })));
 
   return new Response("OK", { status: 200 });
 }

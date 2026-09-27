@@ -22,7 +22,7 @@
 
 ## Backlog
 8. [ ] Meta: campaign deletion, creative upload (budget + ad sets already exist)
-9. [ ] Always-on worker (Vercel drains 5 sync jobs per call; big stores need more)
+9. [x] Sync keeps going until done: drains chain through `/api/cron/drain` (PR #3)
 
 ## Links
 - Preview: https://ecomos-git-setup-checklist-facturacionexpressrd-7513s-projects.vercel.app

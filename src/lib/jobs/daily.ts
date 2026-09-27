@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { decryptSecret } from "@/lib/crypto";
 import { enqueueSyncStore } from "@/lib/jobs/boss";
-import { drainQueues } from "@/lib/jobs/drain";
+import { drainAndContinue } from "@/lib/jobs/drain";
 import { registerWebhooks } from "@/lib/shopify/webhooks";
 import { syncAllMetaAccounts } from "@/lib/meta/sync";
 import { generateApprovalRecommendations } from "@/lib/approval/recommender";
@@ -35,7 +35,7 @@ export async function runDaily() {
     shopify.push({ shop: store.shopDomain, webhooks, sync: sync.ok });
   }
 
-  const drain = await attempt(drainQueues);
+  const drain = await attempt(drainAndContinue);
   // After the Shopify drain, so newly synced orders' CJ status is pulled in the same run.
   const cjOrders = await attempt(syncCjOrders);
   const cjLinks = await attempt(refreshAllCjLinks);
