@@ -168,6 +168,7 @@ export default function CampaignsTable({ storeId }: CampaignsTableProps) {
                       storeId={storeId}
                       campaignId={campaign.id}
                       metaCampaignId={campaign.metaCampaignId}
+                      campaignName={campaign.name}
                       status={campaign.status}
                       onActionCompleted={handleCampaignActionCompleted}
                     />

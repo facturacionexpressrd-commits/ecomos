@@ -42,6 +42,14 @@ async function connect(storeId: string, campaignId: string) {
   return { campaign, client, token: decryptToken(account.accessTokenEncrypted, key) };
 }
 
+export async function deleteCampaign(input: { storeId: string; campaignId: string }) {
+  const { campaign, client, token } = await connect(input.storeId, input.campaignId);
+  await client.deleteCampaign(campaign.metaCampaignId, token);
+  // Cascade removes MetaAdSet, MetaCreative, MetaSpendDaily, OrderAttributionMeta.
+  await prisma.metaCampaign.delete({ where: { id: campaign.id } });
+  return { metaCampaignId: campaign.metaCampaignId };
+}
+
 export async function setCampaignStatus(input: {
   storeId: string;
   campaignId: string;

@@ -6,6 +6,7 @@ interface CampaignActionMenuProps {
   storeId: string;
   campaignId: string;
   metaCampaignId: string;
+  campaignName?: string;
   status: string;
   onActionCompleted: () => void;
 }
@@ -14,6 +15,7 @@ export default function CampaignActionMenu({
   storeId,
   campaignId,
   metaCampaignId,
+  campaignName,
   status,
   onActionCompleted,
 }: CampaignActionMenuProps) {
@@ -23,6 +25,13 @@ export default function CampaignActionMenu({
 
   const handleAction = async (action: string) => {
     try {
+      if (action === "delete") {
+        const label = campaignName ? `"${campaignName}"` : "this campaign";
+        if (!window.confirm(`Delete ${label}? This removes it from Meta and EcomOS. Cannot be undone.`)) {
+          return;
+        }
+      }
+
       setLoading(true);
       setError("");
 
@@ -33,7 +42,9 @@ export default function CampaignActionMenu({
             ? "/api/meta/campaigns/activate"
             : action === "duplicate"
               ? "/api/meta/campaigns/duplicate"
-              : null;
+              : action === "delete"
+                ? "/api/meta/campaigns/delete"
+                : null;
 
       if (!endpoint) throw new Error("Unknown action");
 
@@ -98,6 +109,13 @@ export default function CampaignActionMenu({
             disabled={loading}
           >
             📋 Duplicate
+          </button>
+          <button
+            onClick={() => handleAction("delete")}
+            className="block w-full rounded-md px-3 py-2 text-left text-sm text-coral hover:bg-white/8 disabled:opacity-50"
+            disabled={loading}
+          >
+            🗑 Delete
           </button>
         </div>
       )}
