@@ -8,10 +8,10 @@ import { safePath } from "@/lib/redirect";
 const field =
   "rounded-lg border border-line-hi bg-white/5 px-3 py-2.5 text-sm text-hi placeholder:text-faint focus:border-gold/50 focus:outline-none";
 
-export default function LoginForm({ linkExpired }: { linkExpired: boolean }) {
+export default function LoginForm({ linkExpired, startSignUp }: { linkExpired: boolean; startSignUp?: boolean }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
+  const [mode, setMode] = useState<"sign-in" | "sign-up">(startSignUp ? "sign-up" : "sign-in");
   const [error, setError] = useState<string | null>(
     linkExpired ? "That confirmation link is invalid or has expired. Sign in, or create the account again for a new link." : null
   );
