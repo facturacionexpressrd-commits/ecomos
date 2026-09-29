@@ -93,9 +93,14 @@ export default async function Home() {
                 EcomOS
               </span>
             </span>
-            <Link href="/login" className="text-sm text-hi hover:opacity-80">
-              Sign in
-            </Link>
+            <nav className="flex items-center gap-5">
+              <Link href="/pricing" className="text-sm text-hi hover:opacity-80">
+                Pricing
+              </Link>
+              <Link href="/login" className="text-sm text-hi hover:opacity-80">
+                Sign in
+              </Link>
+            </nav>
           </header>
 
           <section className="relative px-4 pt-24 pb-16 sm:px-8 lg:pt-36">
@@ -111,7 +116,10 @@ export default async function Home() {
               <Link href="/login?mode=sign-up" className={primary}>
                 Create your account <ArrowRight size={16} />
               </Link>
-              <a href="#how" className={secondary}>
+              <Link href="/pricing" className={secondary}>
+                See pricing
+              </Link>
+              <a href="#how" className="rounded-lg px-5 py-3 text-sm text-lo hover:text-hi">
                 How it works
               </a>
             </div>
@@ -161,6 +169,9 @@ export default async function Home() {
 
         <footer className="mt-12 flex flex-wrap gap-5 px-1 text-xs text-faint">
           <span>© {new Date().getFullYear()} EcomOS</span>
+          <Link href="/pricing" className="hover:text-lo">
+            Pricing
+          </Link>
           <Link href="/privacy" className="hover:text-lo">
             Privacy
           </Link>
