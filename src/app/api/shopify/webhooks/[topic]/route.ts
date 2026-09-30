@@ -52,6 +52,26 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return new Response("OK", { status: 200 });
   }
 
+  // A product delete in Shopify: drop the mirror row directly. Cascades to variants,
+  // supplier links, inventory, AI copy and creative ideas. Order line items keep their
+  // rows with variantId set to null so historical revenue math stays intact.
+  if (topic === "products/delete") {
+    try {
+      const payload = JSON.parse(rawBody) as { id?: number | string };
+      if (payload.id != null) {
+        const shopifyGid = `gid://shopify/Product/${payload.id}`;
+        await prisma.product.deleteMany({ where: { storeId: store.id, shopifyGid } });
+      }
+    } catch (err) {
+      await reportError(err, { where: "products/delete webhook", storeId: store.id });
+    }
+    await prisma.webhookEvent.update({
+      where: { id: webhookEvent.id },
+      data: { status: "processed", processedAt: new Date() },
+    });
+    return new Response("OK", { status: 200 });
+  }
+
   // Stock moves carry their new level in the payload: apply it directly instead of syncing.
   if (topic === "inventory_levels/update") {
     let applied = false;

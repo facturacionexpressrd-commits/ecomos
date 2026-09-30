@@ -9,6 +9,7 @@ import CjLinkForm from "@/components/products/CjLinkForm";
 import ProductCopyEditor from "@/components/products/ProductCopyEditor";
 import CreativeLibrary from "@/components/creative/CreativeLibrary";
 import ProductImageZoom from "@/components/products/ProductImageZoom";
+import DeleteProductButton from "@/components/products/DeleteProductButton";
 import { productImageUrl } from "@/components/products/ProductThumb";
 import { PageHeader } from "@/components/dashboard/ui/PageHeader";
 import { StatTile } from "@/components/dashboard/ui/StatTile";
@@ -110,7 +111,15 @@ export default async function ProductDetailPage({
 
   return (
     <div className="mx-auto max-w-6xl">
-      <PageHeader eyebrow={store.name} title={product.title} />
+      <PageHeader
+        eyebrow={store.name}
+        title={product.title}
+        action={
+          canManageProducts ? (
+            <DeleteProductButton storeId={storeId} productId={product.id} productTitle={product.title} />
+          ) : undefined
+        }
+      />
 
       {/* This product's own totals first, so the headline numbers are on screen without scrolling. */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row">
