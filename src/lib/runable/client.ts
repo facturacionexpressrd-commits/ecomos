@@ -6,7 +6,7 @@
  * and execution tracking
  */
 
-import { createHmac, timingSafeEqual } from 'crypto';
+import { createHmac } from 'crypto';
 
 import { RunableApiError, RunableAgentResponse, CreateRunableAgentRequest } from '@/lib/types/runable';
 
@@ -81,9 +81,9 @@ class RunableClient {
   verifyWebhookSignature(payload: string, signature: string, secret: string): boolean {
     const hash = createHmac('sha256', secret)
       .update(payload)
-      .digest('hex');
+      .digest('base64');
 
-    return timingSafeEqual(hash, signature);
+    return hash === signature;
   }
 
   /**
