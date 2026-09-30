@@ -4,15 +4,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import HeroBanner from "@/components/dashboard/HeroBanner";
 import Backdrop from "@/components/Backdrop";
-import {
-  Wallet,
-  Truck,
-  Megaphone,
-  Sparkles,
-  Store,
-  ShieldCheck,
-  ArrowRight,
-} from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "EcomOS: real profit for Shopify stores",
@@ -24,40 +16,6 @@ const primary =
   "inline-flex items-center gap-2 rounded-lg bg-gradient-to-b from-gold-hi to-gold px-5 py-3 text-sm font-medium text-ink transition-opacity hover:opacity-90";
 const secondary =
   "rounded-lg border border-line-hi px-5 py-3 text-sm text-hi hover:bg-white/5";
-
-// Only what the product does today: each line maps to a shipped feature.
-const FEATURES = [
-  {
-    icon: Wallet,
-    title: "Profit per variant, not just revenue",
-    body: "Revenue after discounts, minus refunds, payment fees and your unit cost, from every synced order. Unknown costs show as unknown, never as free.",
-  },
-  {
-    icon: Megaphone,
-    title: "Meta Ads next to your sales",
-    body: "Daily spend and ROAS beside Shopify revenue. Create, pause, activate and duplicate campaigns, and new ones always start paused.",
-  },
-  {
-    icon: Truck,
-    title: "CJ Dropshipping built in",
-    body: "Link variants to CJ for live supplier cost, stock and shipping, then send orders to CJ and track exceptions in one place.",
-  },
-  {
-    icon: Sparkles,
-    title: "AI copy and ad ideas",
-    body: "Product descriptions, bullet points and ad concepts written from your own catalog, ready to review and publish.",
-  },
-  {
-    icon: Store,
-    title: "Every store, one login",
-    body: "Switch between Shopify stores and invite your team with roles, so people only see and change what they should.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Your data stays yours",
-    body: "Read-only Shopify access, encrypted tokens, and one click to delete your whole workspace.",
-  },
-];
 
 const STEPS = [
   [
@@ -118,15 +76,6 @@ export default async function Home() {
           </section>
         </div>
 
-        <section className="grid grid-cols-1 gap-4 px-1 sm:grid-cols-2 lg:grid-cols-3">
-          {FEATURES.map(({ icon: Icon, title, body }) => (
-            <div key={title} className="glass rise-in p-6">
-              <Icon size={20} className="mb-4 text-gold-hi" />
-              <p className="mb-2 font-medium text-hi">{title}</p>
-              <p className="text-sm text-lo">{body}</p>
-            </div>
-          ))}
-        </section>
 
         <section id="how" className="mt-16 px-1">
           <p className="mb-6 text-xs font-medium tracking-[0.14em] text-faint uppercase">

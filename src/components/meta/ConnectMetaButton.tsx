@@ -52,7 +52,14 @@ export default function ConnectMetaButton({ storeId }: ConnectMetaButtonProps) {
       }
       // Redirect is handled by fetch (will redirect to Meta)
     } catch (err) {
-      setFetchError(err instanceof Error ? err.message : "Unknown error");
+      const message = err instanceof Error ? err.message : "Unknown error";
+      if (message.includes("Failed to fetch")) {
+        setFetchError(
+          "Connection failed. This often means Meta app credentials are missing. Contact support if this persists."
+        );
+      } else {
+        setFetchError(message);
+      }
       setLoading(false);
     }
   };
@@ -67,7 +74,18 @@ export default function ConnectMetaButton({ storeId }: ConnectMetaButtonProps) {
         {loading ? "Connecting..." : success ? "Connected!" : "Connect Meta Account"}
       </button>
 
-      {error && <p className="text-sm text-coral">Error: {error}</p>}
+      {error && (
+        <div className="rounded bg-coral/10 p-3 space-y-2">
+          <p className="text-sm text-coral font-medium">Error: {error}</p>
+          <button
+            onClick={handleConnect}
+            disabled={loading}
+            className="text-xs text-coral hover:underline font-medium"
+          >
+            Try again
+          </button>
+        </div>
+      )}
       {success && (
         <p className="text-sm text-teal">✓ Meta account connected! Redirecting...</p>
       )}
