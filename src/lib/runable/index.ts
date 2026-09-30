@@ -4,6 +4,8 @@
 
 export { runableClient } from './client';
 export { encrypt, decrypt, generateEncryptionKey, testEncryption } from './encryption';
+export * from './db';
+export * from './validation';
 export type {
   AgentType,
   AgentStatus,
