@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireActiveBusiness } from '@/lib/auth/session';
+import { requireActiveBusiness } from '@/lib/auth/capabilities';
 import { createAgent, listAgents } from '@/lib/runable/db';
 import {
   validateCreateAgentRequest,

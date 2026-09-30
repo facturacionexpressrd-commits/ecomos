@@ -7,7 +7,7 @@
 import { getAgentWithDecryptedKey, updateExecution, createActionLog } from './db';
 import { executeCampaignManagerWorkflow } from './workflows/campaign-manager';
 import { runableClient } from './client';
-import type { AgentType, CampaignManagerOutput } from '@/lib/types/runable';
+import type { AgentType } from '@/lib/types/runable';
 
 export interface AgentExecutionContext {
   storeId: string;

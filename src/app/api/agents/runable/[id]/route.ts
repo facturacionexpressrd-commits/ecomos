@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireActiveBusiness } from '@/lib/auth/session';
+import { requireActiveBusiness } from '@/lib/auth/capabilities';
 import {
   getAgentById,
   updateAgent,
@@ -28,9 +28,11 @@ import {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+
     // 1. Verify auth
     const business = await requireActiveBusiness();
     if (!business.storeId) {
@@ -41,7 +43,7 @@ export async function GET(
     }
 
     // 2. Fetch agent
-    const agent = await getAgentById(params.id, business.storeId);
+    const agent = await getAgentById(id, business.storeId);
     if (!agent) {
       return NextResponse.json(
         { error: { code: 'NOT_FOUND', message: 'Agent not found' } },
@@ -98,9 +100,11 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+
     // 1. Verify auth
     const business = await requireActiveBusiness();
     if (!business.storeId) {
@@ -111,7 +115,7 @@ export async function PATCH(
     }
 
     // 2. Verify agent exists and belongs to user's store
-    const agent = await getAgentById(params.id, business.storeId);
+    const agent = await getAgentById(id, business.storeId);
     if (!agent) {
       return NextResponse.json(
         { error: { code: 'NOT_FOUND', message: 'Agent not found' } },
@@ -153,9 +157,11 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
+
     // 1. Verify auth
     const business = await requireActiveBusiness();
     if (!business.storeId) {
@@ -166,7 +172,7 @@ export async function DELETE(
     }
 
     // 2. Verify agent exists and belongs to user's store
-    const agent = await getAgentById(params.id, business.storeId);
+    const agent = await getAgentById(id, business.storeId);
     if (!agent) {
       return NextResponse.json(
         { error: { code: 'NOT_FOUND', message: 'Agent not found' } },
@@ -175,7 +181,7 @@ export async function DELETE(
     }
 
     // 3. Delete agent
-    await deleteAgent(params.id, business.storeId);
+    await deleteAgent(id, business.storeId);
 
     // 4. Return success
     return NextResponse.json({

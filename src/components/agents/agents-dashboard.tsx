@@ -215,11 +215,11 @@ function AgentsList({ agents }: { agents: Agent[] }) {
 
 function MetricsView({ agents }: { agents: Agent[] }) {
   const totalExecutions = agents.reduce((sum, a) => sum + (a.metrics?.totalExecutions || 0), 0);
-  const totalSuccessful = agents.reduce(
-    (sum, a) => sum + (a.metrics?.successfulExecutions || 0),
-    0
-  );
-  const totalFailed = agents.reduce((sum, a) => sum + (a.metrics?.failedExecutions || 0), 0);
+  const avgSuccessRate = agents.length > 0
+    ? Math.round(agents.reduce((sum, a) => sum + (a.metrics?.successRate || 0), 0) / agents.length)
+    : 0;
+  const totalSuccessful = Math.round((totalExecutions * avgSuccessRate) / 100);
+  const totalFailed = totalExecutions - totalSuccessful;
 
   return (
     <div className="space-y-6">

@@ -9,7 +9,7 @@
  * - Generating optimization recommendations
  */
 
-import { prisma } from '@/lib/supabase/server';
+import { prisma } from '@/lib/db';
 import { runableClient } from '../client';
 import { createExecution, createActionLog } from '../db';
 import type { RunableAgentConfig, RunableActionResult } from '@/lib/types/runable';

@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/supabase/server';
+import { prisma } from '@/lib/db';
 import { verifyShopifyWebhook } from '@/lib/shopify/webhooks';
 import { handleWebhookTrigger } from '@/lib/runable/executor';
 

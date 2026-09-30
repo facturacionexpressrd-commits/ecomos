@@ -5,7 +5,7 @@
  * Uses Prisma client for type-safe queries
  */
 
-import { prisma } from '@/lib/supabase/server';
+import { prisma } from '@/lib/db';
 import { encrypt, decrypt } from './encryption';
 import type {
   RunableAgentConfig,
@@ -291,14 +291,14 @@ export async function getAgentMetrics(storeId: string, agentId: string) {
   ]);
 
   const totalExecutions = executions.length;
-  const successfulExecutions = executions.filter(e => e.status === 'completed').length;
-  const failedExecutions = executions.filter(e => e.status === 'failed').length;
+  const successfulExecutions = executions.filter((e: typeof executions[number]) => e.status === 'completed').length;
+  const failedExecutions = executions.filter((e: typeof executions[number]) => e.status === 'failed').length;
   const successRate = totalExecutions > 0
     ? (successfulExecutions / totalExecutions) * 100
     : 0;
 
-  const successfulActions = actions.filter(a => a.status === 'success').length;
-  const failedActions = actions.filter(a => a.status === 'failed').length;
+  const successfulActions = actions.filter((a: typeof actions[number]) => a.status === 'success').length;
+  const failedActions = actions.filter((a: typeof actions[number]) => a.status === 'failed').length;
 
   return {
     executions: {
