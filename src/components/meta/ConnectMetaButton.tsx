@@ -16,6 +16,8 @@ const CALLBACK_ERRORS: Record<string, string> = {
   selection_expired: "The account selection expired. Please connect again.",
   invalid_selection: "That ad account isn't available to this login",
   callback_failed: "OAuth callback failed",
+  not_configured: "Meta integration isn't configured yet. Ask an admin to set META_APP_ID / META_APP_SECRET.",
+  start_failed: "Couldn't start the Meta authorization flow. Try again in a moment.",
 };
 
 export default function ConnectMetaButton({ storeId }: ConnectMetaButtonProps) {
@@ -39,29 +41,13 @@ export default function ConnectMetaButton({ storeId }: ConnectMetaButtonProps) {
     return () => clearTimeout(timer);
   }, [success, router]);
 
-  const handleConnect = async () => {
+  const handleConnect = () => {
+    // Full-page nav, not fetch: /api/meta/auth/start returns a 302 to facebook.com,
+    // and fetch would follow that cross-origin redirect silently while the user's tab
+    // stays on this page. Assigning window.location makes the browser actually leave.
     setLoading(true);
     setFetchError("");
-
-    try {
-      // Start OAuth flow
-      const response = await fetch(`/api/meta/auth/start?storeId=${storeId}`);
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to start authentication");
-      }
-      // Redirect is handled by fetch (will redirect to Meta)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Unknown error";
-      if (message.includes("Failed to fetch")) {
-        setFetchError(
-          "Connection failed. This often means Meta app credentials are missing. Contact support if this persists."
-        );
-      } else {
-        setFetchError(message);
-      }
-      setLoading(false);
-    }
+    window.location.href = `/api/meta/auth/start?storeId=${encodeURIComponent(storeId)}`;
   };
 
   return (

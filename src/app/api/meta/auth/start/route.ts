@@ -14,33 +14,38 @@ import { reportError } from "@/lib/alerts";
  * - storeId: which store to connect Meta to
  */
 export async function GET(req: NextRequest) {
+  // Called by full-page navigation (see ConnectMetaButton), so every failure has to be a redirect
+  // to /dashboard with a meta_auth_error param — raw JSON in the browser is a dead end for users.
+  const back = (err: string) =>
+    NextResponse.redirect(new URL(`/dashboard?meta_auth_error=${encodeURIComponent(err)}`, req.url));
+
   try {
     const { searchParams } = new URL(req.url);
     const storeId = searchParams.get("storeId");
 
-    if (!storeId) {
-      return NextResponse.json({ error: "storeId required" }, { status: 400 });
-    }
+    if (!storeId) return back("missing_store");
 
-    // Verify user auth and store access
     const supabase = await createClient();
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+    if (!user) return NextResponse.redirect(new URL(`/login?next=/dashboard`, req.url));
 
     const grants = await loadStoreAccessGrants(user.id);
     if (!hasCapability(grants, storeId, CAPABILITIES.campaignsManage)) {
-      return NextResponse.json({ error: "No access to this store" }, { status: 403 });
+      return back("no_store_access");
     }
 
-    // Create Meta client and get auth URL
+    // Env-var guard: without META_APP_ID the auth URL builds with an empty client_id and Meta
+    // just shows "invalid client". Fail fast and tell the user something diagnosable.
+    if (!process.env.META_APP_ID || !process.env.META_APP_SECRET) {
+      return back("not_configured");
+    }
+
     const metaClient = new MetaClient({
-      appId: process.env.META_APP_ID || "",
-      appSecret: process.env.META_APP_SECRET || "",
+      appId: process.env.META_APP_ID,
+      appSecret: process.env.META_APP_SECRET,
       redirectUri: `${process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000"}/api/meta/auth/callback`,
     });
 
@@ -63,9 +68,8 @@ export async function GET(req: NextRequest) {
     return response;
   } catch (error) {
     await reportError(error, { where: "Error starting Meta auth" });
-    return NextResponse.json(
-      { error: "Failed to start Meta authentication" },
-      { status: 500 }
+    return NextResponse.redirect(
+      new URL(`/dashboard?meta_auth_error=start_failed`, req.url),
     );
   }
 }

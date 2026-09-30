@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db";
 import { CAPABILITIES, OWNER_CAPABILITIES } from "@/lib/auth/capabilities";
+import { sendEmail } from "@/lib/email";
+import { welcomeEmail } from "@/lib/email/templates";
 
 // A second role so invites have somewhere to land besides full ownership: read-only across the
 // board plus AI tools, none of the capabilities that spend money or change access.
@@ -27,6 +29,9 @@ export async function createWorkspace(input: { userId: string; email: string; na
       });
       return org.id;
     });
+    // Fire-and-forget welcome; sendEmail already never throws, so at worst we log the failure.
+    const { subject, html } = welcomeEmail({ workspaceName: input.name });
+    void sendEmail({ to: input.email, subject, html });
     return { created: true, organizationId };
   } catch (err) {
     // Two concurrent submits: the loser hits the unique user id, so return the winner's workspace.

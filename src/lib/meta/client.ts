@@ -334,6 +334,27 @@ export class MetaClient {
   }
 
   /**
+   * Delete a campaign. Meta archives on DELETE; the id stops appearing in
+   * normal listings but historical insights remain queryable by id.
+   * Requires ads_management scope.
+   */
+  async deleteCampaign(
+    campaignId: string,
+    accessToken: string
+  ): Promise<{ success: boolean }> {
+    const response = await fetch(
+      `${META_GRAPH_API_BASE}/${campaignId}?access_token=${encodeURIComponent(accessToken)}`,
+      { method: "DELETE" }
+    );
+
+    if (!response.ok) {
+      throw new Error(`Failed to delete Meta campaign: ${await response.text()}`);
+    }
+
+    return { success: true };
+  }
+
+  /**
    * Update an ad set (budget, status, timing)
    * Requires ads_management scope
    */
