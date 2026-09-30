@@ -18,8 +18,7 @@ import {
 } from '@/lib/runable/db';
 import {
   validateUpdateAgentRequest,
-  createErrorResponse,
-  ValidationError
+  createErrorResponse
 } from '@/lib/runable/validation';
 
 // ============================================================================

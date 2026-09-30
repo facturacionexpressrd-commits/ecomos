@@ -10,8 +10,7 @@ import { requireActiveBusiness } from '@/lib/auth/capabilities';
 import { createAgent, listAgents } from '@/lib/runable/db';
 import {
   validateCreateAgentRequest,
-  createErrorResponse,
-  ValidationError
+  createErrorResponse
 } from '@/lib/runable/validation';
 import { runableClient } from '@/lib/runable/client';
 

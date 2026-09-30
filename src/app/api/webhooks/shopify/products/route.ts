@@ -50,7 +50,6 @@ export async function POST(request: NextRequest) {
     });
 
     // Find store by shop domain
-    const shop = request.headers.get('x-shopify-shop-api-call-limit') || '';
     const domain = payload?.shop?.myshopify_domain || '';
 
     const store = await prisma.store.findUnique({

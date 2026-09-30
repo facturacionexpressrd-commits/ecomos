@@ -47,6 +47,7 @@ export default function ConnectMetaButton({ storeId }: ConnectMetaButtonProps) {
     // stays on this page. Assigning window.location makes the browser actually leave.
     setLoading(true);
     setFetchError("");
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.href = `/api/meta/auth/start?storeId=${encodeURIComponent(storeId)}`;
   };
 

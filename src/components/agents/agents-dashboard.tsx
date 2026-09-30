@@ -7,7 +7,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { AgentSummary, ExecutionHistory, AgentMetrics } from '@/lib/types/runable';
+import type { AgentSummary } from '@/lib/types/runable';
 
 interface Agent extends AgentSummary {
   id: string;
