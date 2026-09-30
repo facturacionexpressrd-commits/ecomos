@@ -6,6 +6,8 @@ export { runableClient } from './client';
 export { encrypt, decrypt, generateEncryptionKey, testEncryption } from './encryption';
 export * from './db';
 export * from './validation';
+export * from './executor';
+export * from './workflows/campaign-manager';
 export type {
   AgentType,
   AgentStatus,
