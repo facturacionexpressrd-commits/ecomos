@@ -288,6 +288,8 @@ model Store {
 
   productAICopy      ProductAICopy[]
 
+  runableAgents      RunableAgent[]
+
   @@index([organizationId])
 }
 
@@ -929,4 +931,70 @@ model MetaCreative {
 
   @@index([metaAdSetId])
   @@index([status])
+}
+
+// ---------- Runable AI Agent Integration ----------
+
+// Runable AI agent configuration and status
+model RunableAgent {
+  id                String   @id @default(cuid())
+  storeId           String
+  agentId           String   // Runable AI agent ID
+  agentName         String
+  agentType         String   // 'campaign_manager', 'product_copy', 'performance_optimizer'
+  status            String   @default("active") // active, paused, archived
+  config            Json // Runable AI workflow configuration
+  runableApiKeyEncrypted String // Encrypted Runable API key for this store
+  webhook_secret    String?  // Optional webhook secret for verification
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  store       Store                        @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  executions  RunableAgentExecution[]
+  actions     RunableAgentActionLog[]
+
+  @@unique([storeId, agentId])
+  @@index([storeId, status])
+  @@index([agentType])
+}
+
+// Track each execution of a Runable AI agent
+model RunableAgentExecution {
+  id             String   @id @default(cuid())
+  agentId        String
+  executionId    String   // Runable execution ID
+  status         String   @default("pending") // pending, running, completed, failed
+  inputData      Json?  // Input data sent to Runable
+  outputData     Json?  // Output received from Runable
+  errorMessage   String?
+  metaActionsCount Int @default(0) // Number of Meta Ads actions taken
+  startedAt      DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime @default(now())
+
+  agent   RunableAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@unique([agentId, executionId])
+  @@index([agentId, status])
+  @@index([agentId, createdAt])
+}
+
+// Immutable log of all actions taken by Runable AI agents
+model RunableAgentActionLog {
+  id             String   @id @default(cuid())
+  agentId        String
+  actionType     String   // 'campaign_created', 'budget_updated', 'campaign_paused', etc.
+  targetId       String?  // Meta campaign ID or Shopify product ID
+  actionData     Json
+  status         String   @default("success") // success, failed, pending_approval
+  errorMessage   String?
+  approvedBy     String?  // User ID if manual approval was needed
+  approvedAt     DateTime?
+  createdAt      DateTime @default(now())
+
+  agent RunableAgent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId, createdAt])
+  @@index([agentId, actionType])
+  @@index([targetId])
 }
