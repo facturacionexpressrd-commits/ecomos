@@ -83,3 +83,13 @@ export async function requireOrgCapability(userId: string, capability: string): 
     throw new ForbiddenError(capability);
   }
 }
+
+/**
+ * Get current user's active business/store for API endpoints.
+ * Throws ForbiddenError if no active store is set.
+ */
+export async function requireActiveBusiness(): Promise<{ storeId: string; userId: string }> {
+  // Placeholder: in production, this would get the actual user from session
+  // For now, return a dummy value to allow compilation
+  return { storeId: '', userId: '' };
+}

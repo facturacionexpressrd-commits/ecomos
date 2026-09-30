@@ -47,6 +47,7 @@ export default function ConnectMetaButton({ storeId }: ConnectMetaButtonProps) {
     // stays on this page. Assigning window.location makes the browser actually leave.
     setLoading(true);
     setFetchError("");
+    // eslint-disable-next-line @next/next/no-location-assign-relative-destination
     window.location.href = `/api/meta/auth/start?storeId=${encodeURIComponent(storeId)}`;
   };
 
@@ -60,7 +61,18 @@ export default function ConnectMetaButton({ storeId }: ConnectMetaButtonProps) {
         {loading ? "Connecting..." : success ? "Connected!" : "Connect Meta Account"}
       </button>
 
-      {error && <p className="text-sm text-coral">Error: {error}</p>}
+      {error && (
+        <div className="rounded bg-coral/10 p-3 space-y-2">
+          <p className="text-sm text-coral font-medium">Error: {error}</p>
+          <button
+            onClick={handleConnect}
+            disabled={loading}
+            className="text-xs text-coral hover:underline font-medium"
+          >
+            Try again
+          </button>
+        </div>
+      )}
       {success && (
         <p className="text-sm text-teal">✓ Meta account connected! Redirecting...</p>
       )}

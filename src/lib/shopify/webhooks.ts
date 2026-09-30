@@ -1,4 +1,17 @@
 import { shopifyGraphQL } from "@/lib/shopify/client";
+import { createHmac } from "crypto";
+
+// Verify Shopify webhook signature using HMAC-SHA256
+export function verifyShopifyWebhook(body: string, signature: string): boolean {
+  const secret = process.env.SHOPIFY_API_SECRET;
+  if (!secret) return false;
+
+  const computed = createHmac("sha256", secret)
+    .update(body, "utf8")
+    .digest("base64");
+
+  return computed === signature;
+}
 
 // Anything that changes what a sync would pull. Compliance topics (customers/redact, shop/redact,
 // customers/data_request) can't be registered through the API; they live in the app's config.

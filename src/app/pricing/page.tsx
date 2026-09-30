@@ -1,6 +1,5 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
 import { Check, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { billingEnabled, stripe } from "@/lib/billing";
