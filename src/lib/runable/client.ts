@@ -6,6 +6,8 @@
  * and execution tracking
  */
 
+import { createHmac, timingSafeEqual } from 'crypto';
+
 import { RunableApiError, RunableAgentResponse, CreateRunableAgentRequest } from '@/lib/types/runable';
 
 const RUNABLE_API_URL = process.env.RUNABLE_API_URL || 'https://api.runable.ai';
@@ -77,13 +79,11 @@ class RunableClient {
    * Verify webhook signature
    */
   verifyWebhookSignature(payload: string, signature: string, secret: string): boolean {
-    const crypto = require('crypto');
-    const hash = crypto
-      .createHmac('sha256', secret)
+    const hash = createHmac('sha256', secret)
       .update(payload)
       .digest('hex');
 
-    return crypto.timingSafeEqual(hash, signature);
+    return timingSafeEqual(hash, signature);
   }
 
   /**
