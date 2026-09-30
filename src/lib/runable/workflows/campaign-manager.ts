@@ -190,7 +190,7 @@ async function createCampaignForProduct(
 
     // Create campaign in Meta Ads
     const metaCampaign = await createMetaCampaign({
-      metaAccountId: metaAccount.metaBusinessAccountId,
+      metaAccountId: metaAccount.metaAccountId,
       name: campaignName,
       objective: 'OUTCOME_SALES',
       budget: config.daily_budget,
@@ -284,9 +284,9 @@ async function monitorAndOptimizeCampaigns(
           roas: metrics.roas,
           recommendedBudget:
             action === 'increase_budget'
-              ? campaign.dailyBudgetCents * 1.5
+              ? (campaign.dailyBudget as number) * 1.5
               : action === 'decrease_budget'
-                ? campaign.dailyBudgetCents * 0.8
+                ? (campaign.dailyBudget as number) * 0.8
                 : undefined
         });
       }

@@ -53,9 +53,9 @@ export async function GET(
 
     // 3. Fetch related data
     const [executions, actions, metrics] = await Promise.all([
-      getExecutionHistory(params.id, 10),
-      getAgentActions(params.id, 10),
-      getAgentMetrics(business.storeId, params.id)
+      getExecutionHistory(id, 10),
+      getAgentActions(id, 10),
+      getAgentMetrics(business.storeId, id)
     ]);
 
     // 4. Return agent with history
@@ -128,7 +128,7 @@ export async function PATCH(
     const validated = validateUpdateAgentRequest(body);
 
     // 4. Update in database
-    const updated = await updateAgent(params.id, business.storeId, validated);
+    const updated = await updateAgent(id, business.storeId, validated);
 
     // 5. Return updated agent
     return NextResponse.json({

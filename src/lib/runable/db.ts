@@ -38,7 +38,7 @@ export async function createAgent(
       agentName,
       agentType,
       status: 'active',
-      config,
+      config: config as any,
       runableApiKeyEncrypted: encryptedKey
     }
   });
@@ -111,7 +111,9 @@ export async function updateAgent(
   const agent = await prisma.runableAgent.update({
     where: { id },
     data: {
-      ...updates,
+      ...(updates.agentName && { agentName: updates.agentName }),
+      ...(updates.status && { status: updates.status }),
+      ...(updates.config && { config: updates.config as any }),
       updatedAt: new Date()
     }
   });
@@ -169,6 +171,7 @@ export async function createExecution(
 }
 
 export async function updateExecution(
+  agentId: string,
   executionId: string,
   updates: {
     status?: ExecutionStatus;
@@ -179,19 +182,24 @@ export async function updateExecution(
     completedAt?: Date;
   }
 ): Promise<RunableAgentExecutionRecord> {
-  const execution = await prisma.runableAgentExecution.update({
-    where: { executionId },
+  const execution = await prisma.runableAgentExecution.updateMany({
+    where: { executionId, agentId },
     data: updates
   });
 
-  return execution as RunableAgentExecutionRecord;
+  const updated = await prisma.runableAgentExecution.findFirst({
+    where: { executionId, agentId }
+  });
+
+  return updated as RunableAgentExecutionRecord;
 }
 
 export async function getExecution(
+  agentId: string,
   executionId: string
 ): Promise<RunableAgentExecutionRecord | null> {
-  const execution = await prisma.runableAgentExecution.findUnique({
-    where: { executionId }
+  const execution = await prisma.runableAgentExecution.findFirst({
+    where: { executionId, agentId }
   });
 
   return execution as RunableAgentExecutionRecord | null;
