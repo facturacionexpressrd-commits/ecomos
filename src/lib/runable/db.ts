@@ -171,7 +171,6 @@ export async function createExecution(
 }
 
 export async function updateExecution(
-  agentId: string,
   executionId: string,
   updates: {
     status?: ExecutionStatus;
@@ -183,23 +182,22 @@ export async function updateExecution(
   }
 ): Promise<RunableAgentExecutionRecord> {
   const execution = await prisma.runableAgentExecution.updateMany({
-    where: { executionId, agentId },
+    where: { executionId },
     data: updates
   });
 
   const updated = await prisma.runableAgentExecution.findFirst({
-    where: { executionId, agentId }
+    where: { executionId }
   });
 
   return updated as RunableAgentExecutionRecord;
 }
 
 export async function getExecution(
-  agentId: string,
   executionId: string
 ): Promise<RunableAgentExecutionRecord | null> {
   const execution = await prisma.runableAgentExecution.findFirst({
-    where: { executionId, agentId }
+    where: { executionId }
   });
 
   return execution as RunableAgentExecutionRecord | null;

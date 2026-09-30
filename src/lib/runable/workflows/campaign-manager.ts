@@ -277,6 +277,10 @@ async function monitorAndOptimizeCampaigns(
         const result = await executeOptimization(campaign.metaCampaignId, action);
         actions.push(result);
 
+        const dailyBudgetNum = typeof campaign.dailyBudget === 'number'
+          ? campaign.dailyBudget
+          : campaign.dailyBudget?.toNumber?.() || 0;
+
         optimizations.push({
           campaignId: campaign.id,
           action,
@@ -284,9 +288,9 @@ async function monitorAndOptimizeCampaigns(
           roas: metrics.roas,
           recommendedBudget:
             action === 'increase_budget'
-              ? (campaign.dailyBudget as number) * 1.5
+              ? dailyBudgetNum * 1.5
               : action === 'decrease_budget'
-                ? (campaign.dailyBudget as number) * 0.8
+                ? dailyBudgetNum * 0.8
                 : undefined
         });
       }
