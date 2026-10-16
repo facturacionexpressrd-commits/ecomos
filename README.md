@@ -1,5 +1,7 @@
 # EcomOS
 
+> Current, evidence-based completion and launch-readiness snapshot: [CURRENT_STATUS_2026-10-15.md](./CURRENT_STATUS_2026-10-15.md). Older dated completion reports are historical and are not live verification.
+
 Multi-store e-commerce operations platform. Phases complete:
 
 - **Phase 0:** org/user/role/store model, invitation-based auth, capability RBAC
