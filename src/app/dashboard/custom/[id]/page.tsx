@@ -2,7 +2,8 @@
 import { useState } from "react";
 
 export default function CustomDashboardPage() {
-  const [widgets, setWidgets] = useState([
+  // Lista fija por ahora: el editor de widgets todavía no existe, así que no hay setter.
+  const [widgets] = useState([
     { id: 1, type: "revenue", title: "Revenue" },
     { id: 2, type: "profit", title: "Profit" },
     { id: 3, type: "products", title: "Top Products" },
