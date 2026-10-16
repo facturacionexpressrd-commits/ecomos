@@ -7,6 +7,7 @@ import ConnectMetaButton from "@/components/meta/ConnectMetaButton";
 import { PageHeader, StatusPill } from "@/components/dashboard/ui/PageHeader";
 import { ShoppingBag, Megaphone, Truck } from "lucide-react";
 import { ACTIVE_META } from "@/lib/meta/status";
+import { getLocale, getT } from "@/lib/i18n/server";
 
 const SOON = ["Google Ads", "TikTok Ads", "Pinterest Ads", "Email (Klaviyo)"];
 
@@ -16,6 +17,9 @@ export default async function IntegrationsPage({
   searchParams: Promise<{ store?: string; cj?: string; cj_error?: string; meta?: string }>;
 }) {
   const { store: requestedStoreId, cj: cjNotice, cj_error: cjError, meta: metaNotice } = await searchParams;
+
+  const t = await getT();
+  const locale = await getLocale();
 
   const supabase = await createClient();
   const {
@@ -28,7 +32,9 @@ export default async function IntegrationsPage({
 
   const storeId = requestedStoreId && grants.some((g) => g.storeId === requestedStoreId) ? requestedStoreId : grants[0].storeId;
   if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
-    return <div className="glass mx-auto mt-16 max-w-md p-8 text-center text-sm text-lo">No access to this store.</div>;
+    return (
+      <div className="glass mx-auto mt-16 max-w-md p-8 text-center text-sm text-lo">{t("common.noAccessStore")}</div>
+    );
   }
 
   const store = await prisma.store.findUniqueOrThrow({ where: { id: storeId } });
@@ -46,7 +52,11 @@ export default async function IntegrationsPage({
 
   return (
     <div className="mx-auto max-w-4xl">
-      <PageHeader eyebrow="Connections" title="Integrations" subtitle="Connect external platforms to EcomOS." />
+      <PageHeader
+        eyebrow={t("integrations.eyebrow")}
+        title={t("integrations.title")}
+        subtitle={t("integrations.subtitle")}
+      />
 
       <section className="glass rise-in mb-6 p-6">
         <div className="flex items-start justify-between gap-4">
@@ -58,7 +68,9 @@ export default async function IntegrationsPage({
               <h2 className="text-lg font-medium text-hi">Shopify</h2>
               <p className="mt-0.5 font-mono text-xs text-lo">{store.shopDomain}</p>
               {store.connectedAt && (
-                <p className="mt-2 text-xs text-faint">Connected {store.connectedAt.toLocaleDateString()}</p>
+                <p className="mt-2 text-xs text-faint">
+                  {t("integrations.connectedOn", { date: store.connectedAt.toLocaleDateString(locale) })}
+                </p>
               )}
             </div>
           </div>
@@ -73,7 +85,7 @@ export default async function IntegrationsPage({
           </div>
           <div>
             <h2 className="text-lg font-medium text-hi">Meta Ads</h2>
-            <p className="text-sm text-lo">Track ad campaigns and calculate ROAS</p>
+            <p className="text-sm text-lo">{t("integrations.meta.tagline")}</p>
           </div>
         </div>
 
@@ -81,17 +93,19 @@ export default async function IntegrationsPage({
           <div className="space-y-4">
             <div className="grid grid-cols-1 gap-3 rounded-lg bg-white/5 p-4 text-sm sm:grid-cols-3">
               <div>
-                <p className="text-xs text-faint">Business ID</p>
+                <p className="text-xs text-faint">{t("integrations.meta.businessId")}</p>
                 <p className="mt-0.5 font-mono text-hi">{metaAccount.metaBusinessId}</p>
               </div>
               <div>
-                <p className="text-xs text-faint">Status</p>
+                <p className="text-xs text-faint">{t("integrations.meta.status")}</p>
                 <p className="mt-0.5"><StatusPill status={metaAccount.status} /></p>
               </div>
               <div>
-                <p className="text-xs text-faint">{metaAccount.lastSyncedAt ? "Last synced" : "Connected"}</p>
+                <p className="text-xs text-faint">
+                  {metaAccount.lastSyncedAt ? t("integrations.meta.lastSynced") : t("integrations.meta.connected")}
+                </p>
                 <p className="mt-0.5 text-hi">
-                  {(metaAccount.lastSyncedAt ?? metaAccount.createdAt).toLocaleDateString()}
+                  {(metaAccount.lastSyncedAt ?? metaAccount.createdAt).toLocaleDateString(locale)}
                 </p>
               </div>
             </div>
@@ -101,13 +115,13 @@ export default async function IntegrationsPage({
                 href="/dashboard/meta/campaigns"
                 className="flex-1 rounded-lg bg-gradient-to-b from-gold-hi to-gold px-4 py-2.5 text-center text-sm font-medium text-ink transition-opacity hover:opacity-90"
               >
-                View campaigns
+                {t("integrations.meta.viewCampaigns")}
               </Link>
               {canManageCampaigns && (
                 <form method="POST" action="/api/meta/auth/disconnect" className="flex-1">
                   <input type="hidden" name="storeId" value={storeId} />
                   <button className="w-full rounded-lg border border-line-hi px-4 py-2.5 text-sm font-medium text-lo hover:text-coral">
-                    Disconnect
+                    {t("integrations.disconnect")}
                   </button>
                 </form>
               )}
@@ -117,10 +131,10 @@ export default async function IntegrationsPage({
           <div className="space-y-4">
             {metaNotice === "disconnected" && (
               <p className="rounded-lg bg-white/5 p-3 text-sm text-lo">
-                Meta disconnected. Its token was removed; past campaign and spend history is kept.
+                {t("integrations.meta.disconnected")}
               </p>
             )}
-            <p className="text-sm text-lo">Connect your Meta Business account to sync ad campaigns and track ROAS.</p>
+            <p className="text-sm text-lo">{t("integrations.meta.connectPrompt")}</p>
             <ConnectMetaButton storeId={storeId} />
           </div>
         )}
@@ -134,36 +148,40 @@ export default async function IntegrationsPage({
             </div>
             <div>
               <h2 className="text-lg font-medium text-hi">CJ Dropshipping</h2>
-              <p className="text-sm text-lo">Real supplier costs, stock and shipping, and send orders to CJ.</p>
+              <p className="text-sm text-lo">{t("integrations.cj.tagline")}</p>
             </div>
           </div>
-          <StatusPill status={cjConnection ? "connected" : "not connected"} />
+          <StatusPill status={cjConnection ? t("integrations.meta.connected") : t("integrations.notConnected")} />
         </div>
 
         {cjError && <p className="mb-4 rounded-lg bg-coral/15 p-3 text-sm text-coral">{cjError}</p>}
         {cjNotice === "connected" && (
           <p className="mb-4 rounded-lg bg-teal/15 p-3 text-sm text-teal">
-            CJ connected. Link products to CJ from each product&apos;s page.
+            {t("integrations.cj.connectedNotice")}
           </p>
         )}
 
         {cjConnection ? (
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-sm text-lo">
-              Connected {cjConnection.connectedAt.toLocaleDateString()} · {cjLinkCount} variant
-              {cjLinkCount === 1 ? "" : "s"} linked in this store
+              {t("integrations.cj.linked", {
+                date: cjConnection.connectedAt.toLocaleDateString(locale),
+                count: cjLinkCount,
+              })}
             </p>
             {canManageOrg && (
               <form method="POST" action="/api/suppliers/cj/connect">
                 <input type="hidden" name="action" value="disconnect" />
-                <button className="rounded-lg border border-line-hi px-4 py-2 text-sm text-lo hover:text-hi">Disconnect</button>
+                <button className="rounded-lg border border-line-hi px-4 py-2 text-sm text-lo hover:text-hi">
+                  {t("integrations.disconnect")}
+                </button>
               </form>
             )}
           </div>
         ) : canManageOrg ? (
           <form method="POST" action="/api/suppliers/cj/connect" className="space-y-3">
             <label className="block text-sm text-lo">
-              CJ API key
+              {t("integrations.cj.apiKey")}
               <input
                 name="apiKey"
                 type="password"
@@ -174,25 +192,24 @@ export default async function IntegrationsPage({
               />
             </label>
             <p className="text-xs text-faint">
-              In your CJ account: personal center → API → Add API, with type &ldquo;API Key&rdquo;. Stored encrypted and
-              only used for this workspace.
+              {t("integrations.cj.apiKeyHelp")}
             </p>
             <button className="rounded-lg bg-gradient-to-b from-gold-hi to-gold px-4 py-2.5 text-sm font-medium text-ink hover:opacity-90">
-              Connect CJ
+              {t("integrations.cj.connect")}
             </button>
           </form>
         ) : (
-          <p className="text-sm text-lo">Ask a workspace owner to connect CJ.</p>
+          <p className="text-sm text-lo">{t("integrations.cj.askOwner")}</p>
         )}
       </section>
 
       <section className="mt-6">
-        <p className="mb-3 text-xs font-medium tracking-[0.14em] text-faint uppercase">Coming soon</p>
+        <p className="mb-3 text-xs font-medium tracking-[0.14em] text-faint uppercase">{t("integrations.comingSoon")}</p>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {SOON.map((name) => (
             <div key={name} className="glass flex items-center justify-between p-4 opacity-50">
               <p className="text-sm font-medium text-hi">{name}</p>
-              <span className="text-xs text-faint">Phase 3+</span>
+              <span className="text-xs text-faint">{t("integrations.phase")}</span>
             </div>
           ))}
         </div>

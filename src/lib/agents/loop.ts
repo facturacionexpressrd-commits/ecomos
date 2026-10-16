@@ -1,4 +1,5 @@
 import { CLAUDE_MODEL } from "@/lib/ai/providers/claude";
+import { DEFAULT_LOCALE, REPLY_LANGUAGE, makeT, type Locale } from "@/lib/i18n";
 import { AGENT_GUARDRAILS, AGENT_SKILLS } from "./permissions";
 import {
   ToolInputError,
@@ -72,19 +73,27 @@ export function sanitizeHistory(raw: unknown): ChatMessage[] {
   return messages;
 }
 
-export function buildSystemPrompt(input: { storeName: string; tools: AgentTool[] }): string {
+export function buildSystemPrompt(input: {
+  storeName: string;
+  tools: AgentTool[];
+  /** Idioma de la interfaz: el agente responde en el mismo. */
+  locale?: Locale;
+}): string {
+  const locale = input.locale ?? DEFAULT_LOCALE;
+  const t = makeT(locale);
   const available = AGENT_SKILLS.filter((skill) => skill.available)
-    .map((skill) => `- ${skill.name}: ${skill.description}`)
+    .map((skill) => `- ${t(skill.nameKey)}: ${t(skill.descriptionKey)}`)
     .join("\n");
   const unavailable = AGENT_SKILLS.filter((skill) => !skill.available)
-    .map((skill) => `- ${skill.name} (${skill.defaultPermission}): ${skill.description}`)
+    .map((skill) => `- ${t(skill.nameKey)} (${skill.defaultPermission}): ${t(skill.descriptionKey)}`)
     .join("\n");
   const toolNames = input.tools.map((tool) => tool.name).join(", ") || "ninguna";
 
   return [
     "Eres EcomOS Operator, el agente de operaciones de EcomOS. Habilidad activa: Product Scout.",
     `Trabajas únicamente sobre la tienda "${input.storeName}" que el usuario tiene seleccionada y autorizada.`,
-    "Responde siempre en español, en el tono directo de un operador de ecommerce.",
+    `Responde SIEMPRE en ${REPLY_LANGUAGE[locale]}, en el tono directo de un operador de ecommerce, ` +
+      "sin importar el idioma de los datos que devuelvan las herramientas.",
     "",
     "Tus únicas fuentes de datos son estas herramientas de EcomOS: " + toolNames + ".",
     "No tienes acceso a internet, marketplaces, catálogos de proveedores ni a la API de Shopify o Meta en vivo.",
@@ -169,10 +178,15 @@ export async function runAgentTurn(input: {
   tools: AgentTool[];
   history: ChatMessage[];
   message: string;
+  locale?: Locale;
   fetchImpl?: typeof fetch;
 }): Promise<AgentTurnResult> {
   const fetchImpl = input.fetchImpl ?? fetch;
-  const system = buildSystemPrompt({ storeName: input.storeName, tools: input.tools });
+  const system = buildSystemPrompt({
+    storeName: input.storeName,
+    tools: input.tools,
+    locale: input.locale,
+  });
   // Resolución por la lista permitida, no por el registro global: si una herramienta no está
   // aquí, el usuario no tiene la capacidad y no debe poder ejecutarla de ninguna forma.
   const allowed = new Map(input.tools.map((tool) => [tool.name, tool]));
@@ -242,7 +256,11 @@ export async function runAgentTurn(input: {
         const parsed = tool.parseInput(use.input);
         const run = await tool.run(input.ctx, parsed);
         activity.push({ tool: tool.name, status: "ok" });
-        if (!sources.some((s) => s.label === run.source.label && s.window === run.source.window)) {
+        if (
+          !sources.some(
+            (s) => s.labelKey === run.source.labelKey && s.windowDays === run.source.windowDays
+          )
+        ) {
           sources.push(run.source);
         }
         results.push({

@@ -14,23 +14,27 @@ import {
   ClipboardCheck,
   Bot,
 } from "lucide-react";
+import type { MessageKey } from "@/lib/i18n";
 
-/** One list for the desktop rail and the mobile bar, so the two can't drift apart again. */
-export const NAV_LINKS = [
-  { href: "/dashboard", label: "Overview", icon: LayoutDashboard },
-  { href: "/dashboard/stores", label: "Stores", icon: StoreIcon },
-  { href: "/dashboard/orders", label: "Orders", icon: Package },
-  { href: "/dashboard/products", label: "Products", icon: Boxes },
-  { href: "/dashboard/meta/campaigns", label: "Campaigns", icon: Megaphone },
-  { href: "/dashboard/research", label: "Research", icon: Telescope },
-  { href: "/dashboard/agents", label: "Agente IA", icon: Bot },
-  { href: "/dashboard/customers", label: "Customers", icon: Users },
-  { href: "/dashboard/analytics", label: "Analytics", icon: LineChart },
-  { href: "/dashboard/integrations", label: "Integrations", icon: Plug },
-  { href: "/dashboard/exceptions", label: "Exceptions", icon: TriangleAlert },
-  { href: "/dashboard/approvals", label: "Approvals", icon: ClipboardCheck },
-  { href: "/dashboard/team", label: "Team", icon: Users2 },
-  { href: "/billing", label: "Billing", icon: CreditCard },
+/**
+ * Una sola lista para el riel de escritorio y la barra móvil, para que no se separen otra vez.
+ * `labelKey` en lugar de texto fijo: la etiqueta se traduce donde se renderiza.
+ */
+export const NAV_LINKS: { href: string; labelKey: MessageKey; icon: typeof LayoutDashboard }[] = [
+  { href: "/dashboard", labelKey: "nav.overview", icon: LayoutDashboard },
+  { href: "/dashboard/stores", labelKey: "nav.stores", icon: StoreIcon },
+  { href: "/dashboard/orders", labelKey: "nav.orders", icon: Package },
+  { href: "/dashboard/products", labelKey: "nav.products", icon: Boxes },
+  { href: "/dashboard/meta/campaigns", labelKey: "nav.campaigns", icon: Megaphone },
+  { href: "/dashboard/research", labelKey: "nav.research", icon: Telescope },
+  { href: "/dashboard/agents", labelKey: "nav.agents", icon: Bot },
+  { href: "/dashboard/customers", labelKey: "nav.customers", icon: Users },
+  { href: "/dashboard/analytics", labelKey: "nav.analytics", icon: LineChart },
+  { href: "/dashboard/integrations", labelKey: "nav.integrations", icon: Plug },
+  { href: "/dashboard/exceptions", labelKey: "nav.exceptions", icon: TriangleAlert },
+  { href: "/dashboard/approvals", labelKey: "nav.approvals", icon: ClipboardCheck },
+  { href: "/dashboard/team", labelKey: "nav.team", icon: Users2 },
+  { href: "/billing", labelKey: "nav.billing", icon: CreditCard },
 ];
 
 export const isActive = (pathname: string, href: string) =>

@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/lib/i18n/client";
 
 export default function SendToCjButton({ storeId, orderId, linkedItems }: { storeId: string; orderId: string; linkedItems: number }) {
+  const t = useT();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -20,10 +22,10 @@ export default function SendToCjButton({ storeId, orderId, linkedItems }: { stor
         body: JSON.stringify({ storeId, orderId }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "Failed");
+      if (!res.ok) throw new Error(data.error ?? t("cj.failed"));
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed");
+      setError(err instanceof Error ? err.message : t("cj.failed"));
       setBusy(false);
     }
   }
@@ -35,7 +37,7 @@ export default function SendToCjButton({ storeId, orderId, linkedItems }: { stor
         disabled={busy}
         className="rounded-lg bg-gold px-3 py-1.5 text-sm font-medium text-ink hover:bg-gold-hi disabled:opacity-50"
       >
-        {busy ? "Sending…" : "Send to CJ"}
+        {busy ? t("cj.sending") : t("cj.send")}
       </button>
       {error && <p className="max-w-xs text-right text-xs text-coral">{error}</p>}
     </div>

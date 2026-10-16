@@ -3,24 +3,27 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NAV_LINKS, isActive } from "@/components/dashboard/nav";
+import { useT } from "@/lib/i18n/client";
 
 /** Slim icon rail; each label appears as a tooltip on hover/focus so nothing is icon-only guesswork. */
 export default function Sidebar() {
   const pathname = usePathname();
+  const t = useT();
 
   return (
     <aside className="glass fixed inset-y-4 left-4 z-30 hidden w-16 flex-col items-center py-4 lg:flex">
       <Link
         href="/dashboard"
-        aria-label="EcomOS home"
+        aria-label={t("nav.home")}
         className="mb-6 flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-gold to-coral text-sm font-bold text-ink"
       >
         E
       </Link>
 
       <nav className="flex flex-1 flex-col items-center gap-1.5">
-        {NAV_LINKS.map(({ href, label, icon: Icon }) => {
+        {NAV_LINKS.map(({ href, labelKey, icon: Icon }) => {
           const active = isActive(pathname, href);
+          const label = t(labelKey);
           return (
             <Link
               key={href}

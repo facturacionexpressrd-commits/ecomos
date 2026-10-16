@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale, useT } from "@/lib/i18n/client";
 
 interface Exception {
   id: string;
@@ -22,6 +23,8 @@ interface ExceptionListProps {
 }
 
 export default function ExceptionList({ exceptions, storeId }: ExceptionListProps) {
+  const t = useT();
+  const locale = useLocale();
   const [editing, setEditing] = useState<string | null>(null);
   const [action, setAction] = useState<string>("");
   const [loading, setLoading] = useState(false);
@@ -39,7 +42,7 @@ export default function ExceptionList({ exceptions, storeId }: ExceptionListProp
         }),
       });
 
-      if (!res.ok) throw new Error("Failed to update");
+      if (!res.ok) throw new Error(t("exceptionList.updateFailed"));
       setEditing(null);
       setAction("");
       window.location.reload();
@@ -64,7 +67,7 @@ export default function ExceptionList({ exceptions, storeId }: ExceptionListProp
           <div className="mb-4 flex items-start justify-between">
             <div>
               <div className="mb-2 flex items-center gap-2">
-                <p className="font-semibold">Order #{exc.orderShopifyGid?.slice(-8)}</p>
+                <p className="font-semibold">{t("exceptionList.order", { number: exc.orderShopifyGid?.slice(-8) ?? "" })}</p>
                 <span className="text-sm text-lo">{exc.supplier}</span>
               </div>
               <p className="text-sm text-lo">{exc.type}</p>
@@ -74,7 +77,7 @@ export default function ExceptionList({ exceptions, storeId }: ExceptionListProp
                 {exc.severity}
               </span>
               <span className={`rounded px-3 py-1 text-xs font-semibold ${exc.isResolved ? "bg-teal/15 text-teal" : "bg-white/5 text-lo"}`}>
-                {exc.isResolved ? "Resolved" : "Open"}
+                {exc.isResolved ? t("exceptionList.resolved") : t("exceptionList.open")}
               </span>
             </div>
           </div>
@@ -86,7 +89,7 @@ export default function ExceptionList({ exceptions, storeId }: ExceptionListProp
               <textarea
                 value={action}
                 onChange={(e) => setAction(e.target.value)}
-                placeholder="Enter recommended action..."
+                placeholder={t("exceptionList.actionPlaceholder")}
                 className="w-full rounded border border-line-hi px-3 py-2 text-sm focus:border-gold/50 focus:outline-none"
                 rows={3}
               />
@@ -96,7 +99,7 @@ export default function ExceptionList({ exceptions, storeId }: ExceptionListProp
                   disabled={loading}
                   className="rounded bg-teal px-3 py-1 text-sm font-medium text-ink hover:opacity-90 disabled:opacity-50"
                 >
-                  Resolve
+                  {t("exceptionList.resolve")}
                 </button>
                 <button
                   onClick={() => {
@@ -105,7 +108,7 @@ export default function ExceptionList({ exceptions, storeId }: ExceptionListProp
                   }}
                   className="rounded bg-white/10 px-3 py-1 text-sm font-medium text-lo hover:bg-white/15"
                 >
-                  Cancel
+                  {t("common.cancel")}
                 </button>
               </div>
             </div>
@@ -113,7 +116,7 @@ export default function ExceptionList({ exceptions, storeId }: ExceptionListProp
             <div className="space-y-3">
               {exc.recommendedAction && (
                 <div className="rounded-md bg-gold/10 p-3">
-                  <p className="text-xs font-semibold text-gold-hi">Recommended Action</p>
+                  <p className="text-xs font-semibold text-gold-hi">{t("exceptionList.recommendedAction")}</p>
                   <p className="text-sm text-gold-hi">{exc.recommendedAction}</p>
                 </div>
               )}
@@ -126,13 +129,15 @@ export default function ExceptionList({ exceptions, storeId }: ExceptionListProp
                   }}
                   className="text-sm text-gold-hi hover:underline"
                 >
-                  Add action & resolve
+                  {t("exceptionList.addAndResolve")}
                 </button>
               )}
             </div>
           )}
 
-          <p className="mt-3 text-xs text-faint">Opened {new Date(exc.createdAt).toLocaleString()}</p>
+          <p className="mt-3 text-xs text-faint">
+            {t("exceptionList.openedAt", { date: new Date(exc.createdAt).toLocaleString(locale) })}
+          </p>
         </div>
       ))}
     </div>

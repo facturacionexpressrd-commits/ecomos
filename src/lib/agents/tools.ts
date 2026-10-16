@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { OpportunityScorer } from "@/lib/research/scoring";
 import { ACTIVE_META } from "@/lib/meta/status";
 import { CAPABILITIES, hasCapability, type StoreAccessGrant } from "@/lib/auth/capabilities";
+import type { MessageKey } from "@/lib/i18n";
 
 /** Contexto que el endpoint arma después de autenticar y verificar acceso a la tienda. */
 export type ToolContext = {
@@ -9,8 +10,11 @@ export type ToolContext = {
   grants: StoreAccessGrant[];
 };
 
-/** Etiqueta de fuente que la UI muestra debajo de cada respuesta. */
-export type ToolSource = { label: string; window?: string };
+/**
+ * Fuente que la UI muestra debajo de cada respuesta. Lleva clave, no texto: la etiqueta
+ * se traduce al idioma activo en el cliente.
+ */
+export type ToolSource = { labelKey: MessageKey; windowDays?: number };
 
 export type ToolRun = {
   /** Datos mínimos que se envían a Claude. Nunca filas completas de la base. */
@@ -182,7 +186,7 @@ const buscarOportunidades: AgentTool = {
             ? "No hay oportunidades guardadas que cumplan estos criterios. El usuario debe agregarlas en el área de Investigación."
             : "Puntaje calculado por OpportunityScorer de EcomOS sobre datos guardados en la lista de Investigación.",
       },
-      source: { label: "Investigación guardada" },
+      source: { labelKey: "source.research" },
     };
   },
 };
@@ -261,7 +265,7 @@ const resumenTienda: AgentTool = {
           "Las comisiones son una estimación (porcentaje configurado en la tienda), no cobros reales de Shopify. " +
           "Si faltan días con métricas, los totales son parciales.",
       },
-      source: { label: "Métricas de tienda", window: windowLabel(dias) },
+      source: { labelKey: "source.storeMetrics", windowDays: dias },
     };
   },
 };
@@ -342,7 +346,7 @@ const listarProductos: AgentTool = {
           "Catálogo sincronizado desde Shopify. El costo es entrada manual por variante; sin costo no se " +
           "puede calcular margen real.",
       },
-      source: { label: "Catálogo de productos" },
+      source: { labelKey: "source.catalog" },
     };
   },
 };
@@ -420,7 +424,7 @@ const listarOrdenes: AgentTool = {
         })),
         nota: "Sin datos del cliente por diseño. El total de Shopify ya viene neto de reembolsos.",
       },
-      source: { label: "Órdenes", window: windowLabel(dias) },
+      source: { labelKey: "source.orders", windowDays: dias },
     };
   },
 };
@@ -489,7 +493,7 @@ const problemasFulfillment: AgentTool = {
         nota:
           "Incidencias registradas por el flujo de fulfillment de EcomOS, no por el transportista en vivo.",
       },
-      source: { label: "Incidencias de fulfillment" },
+      source: { labelKey: "source.fulfillment" },
     };
   },
 };
@@ -552,7 +556,7 @@ const campanasMeta: AgentTool = {
         nota:
           "Métricas según la última sincronización con Meta, no en tiempo real. EcomOS no calcula ROAS aquí.",
       },
-      source: { label: "Campañas Meta" },
+      source: { labelKey: "source.metaCampaigns" },
     };
   },
 };
@@ -629,7 +633,7 @@ const estadoIntegraciones: AgentTool = {
         nota:
           "Runable (orquestación externa de campañas) es una integración aparte y no está conectada a este agente.",
       },
-      source: { label: "Estado de integraciones" },
+      source: { labelKey: "source.integrations" },
     };
   },
 };

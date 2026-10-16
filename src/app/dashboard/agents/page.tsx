@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/dashboard/ui/PageHeader";
 import AgentChat from "@/components/agents/AgentChat";
 import AgentPlayground from "@/components/agents/AgentPlayground";
 import { AGENT_SKILLS } from "@/lib/agents/permissions";
+import { getT } from "@/lib/i18n/server";
 
 export default async function AgentsPage({
   searchParams,
@@ -13,6 +14,7 @@ export default async function AgentsPage({
   searchParams: Promise<{ store?: string }>;
 }) {
   const { store: requestedStoreId } = await searchParams;
+  const t = await getT();
   const supabase = await createClient();
   const {
     data: { user },
@@ -31,7 +33,7 @@ export default async function AgentsPage({
   if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
     return (
       <div className="glass mx-auto mt-16 max-w-md p-8 text-center text-sm text-lo">
-        No tienes acceso a esta tienda.
+        {t("common.noAccessStore")}
       </div>
     );
   }
@@ -40,11 +42,12 @@ export default async function AgentsPage({
     where: { id: storeId },
     select: { name: true },
   });
-  const storeName = store?.name ?? "tu tienda";
+  const storeName = store?.name ?? t("agents.yourStore");
 
+  // Se pasan las claves: el componente de cliente las traduce al idioma activo.
   const unavailableSkills = AGENT_SKILLS.filter((skill) => !skill.available).map((skill) => ({
-    name: skill.name,
-    description: skill.description,
+    nameKey: skill.nameKey,
+    descriptionKey: skill.descriptionKey,
     permission: skill.defaultPermission,
   }));
 
@@ -52,15 +55,13 @@ export default async function AgentsPage({
     <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader
         eyebrow="EcomOS Operator"
-        title="Habla con tu agente"
-        subtitle={`Consulta y analiza los datos de ${storeName} en lenguaje natural con Product Scout.`}
+        title={t("agents.title")}
+        subtitle={t("agents.subtitle", { store: storeName })}
       />
       <AgentChat storeId={storeId} storeName={storeName} unavailableSkills={unavailableSkills} />
 
       <div>
-        <h2 className="mb-3 px-1 text-sm font-medium text-hi">
-          Ranking directo de oportunidades guardadas
-        </h2>
+        <h2 className="mb-3 px-1 text-sm font-medium text-hi">{t("agents.rankingHeading")}</h2>
         <AgentPlayground storeId={storeId} />
       </div>
     </div>

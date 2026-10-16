@@ -47,7 +47,7 @@ const makeTool = (overrides: Partial<AgentTool> = {}): AgentTool => ({
   requiredCapability: CAPABILITIES.storeRead,
   inputSchema: { type: "object", properties: {}, additionalProperties: false },
   parseInput: () => ({}),
-  run: async () => ({ data: { ok: true }, source: { label: "Métricas de tienda", window: "últimos 30 días" } }),
+  run: async () => ({ data: { ok: true }, source: { labelKey: "source.storeMetrics", windowDays: 30 } }),
   ...overrides,
 });
 
@@ -149,7 +149,7 @@ describe("runAgentTurn", () => {
       { tool: "herramienta_prueba", status: "ok" },
     ]);
     // Dos ejecuciones de la misma fuente se muestran como una sola etiqueta.
-    expect(result.sources).toEqual([{ label: "Métricas de tienda", window: "últimos 30 días" }]);
+    expect(result.sources).toEqual([{ labelKey: "source.storeMetrics", windowDays: 30 }]);
   });
 
   it("refuses a tool the user is not allowed to use, without running it", async () => {
@@ -158,7 +158,7 @@ describe("runAgentTurn", () => {
       name: "herramienta_prohibida",
       run: async () => {
         ran = true;
-        return { data: {}, source: { label: "x" } };
+        return { data: {}, source: { labelKey: "source.catalog" } };
       },
     });
     const { impl, bodies } = fakeFetch([
@@ -293,7 +293,7 @@ describe("runAgentTurn", () => {
 
   it("truncates an oversized tool result before sending it to the model", async () => {
     const chatty = makeTool({
-      run: async () => ({ data: { texto: "y".repeat(50_000) }, source: { label: "Órdenes" } }),
+      run: async () => ({ data: { texto: "y".repeat(50_000) }, source: { labelKey: "source.orders" } }),
     });
     const { impl, bodies } = fakeFetch([toolReply("herramienta_prueba"), textReply("ok")]);
     await runAgentTurn({

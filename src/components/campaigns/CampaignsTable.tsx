@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import CampaignActionMenu from "./CampaignActionMenu";
 import { StatTile } from "@/components/dashboard/ui/StatTile";
+import { useT } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n";
 import { StatusPill, EmptyState } from "@/components/dashboard/ui/PageHeader";
 import { Layers, DollarSign, TrendingUp, Gauge, Info } from "lucide-react";
 
@@ -33,9 +35,13 @@ interface CampaignsTableProps {
 type SortField = "spend" | "roas" | "profitability" | "profit";
 
 export default function CampaignsTable({ storeId }: CampaignsTableProps) {
+  const t = useT();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  // Se guarda la clave del error, no el texto: así el efecto no depende de `t`
+  // y el mensaje se traduce al idioma activo en el render.
+  const [errorKey, setErrorKey] = useState<MessageKey | null>(null);
+  const [errorText, setErrorText] = useState("");
   const [sortBy, setSortBy] = useState<SortField>("spend");
   const [meta, setMeta] = useState({
     total: 0,
@@ -55,16 +61,20 @@ export default function CampaignsTable({ storeId }: CampaignsTableProps) {
         const res = await fetch(
           `/api/campaigns/list?storeId=${encodeURIComponent(storeId)}&sortBy=${encodeURIComponent(sortBy)}`
         );
-        if (!res.ok) throw new Error("Failed to fetch campaigns");
+        if (!res.ok) throw new Error("");
 
         const data = await res.json();
         if (cancelled) return;
 
         setCampaigns(data.campaigns);
         setMeta(data.meta);
-        setError("");
+        setErrorKey(null);
+        setErrorText("");
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Unknown error");
+        if (cancelled) return;
+        const message = err instanceof Error ? err.message : "";
+        setErrorKey(message ? null : "campaignsTable.unknownError");
+        setErrorText(message);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -82,7 +92,7 @@ export default function CampaignsTable({ storeId }: CampaignsTableProps) {
         const res = await fetch(
           `/api/campaigns/list?storeId=${encodeURIComponent(storeId)}&sortBy=${encodeURIComponent(sortBy)}`
         );
-        if (!res.ok) throw new Error("Failed to fetch campaigns");
+        if (!res.ok) throw new Error(t("campaignsTable.fetchFailed"));
         const data = await res.json();
         setCampaigns(data.campaigns);
         setMeta(data.meta);
@@ -93,8 +103,15 @@ export default function CampaignsTable({ storeId }: CampaignsTableProps) {
     load();
   };
 
-  if (loading) return <div className="glass p-6 text-sm text-lo">Loading campaigns…</div>;
-  if (error) return <div className="glass p-6 text-sm text-coral">Error: {error}</div>;
+  if (loading) return <div className="glass p-6 text-sm text-lo">{t("campaignsTable.loading")}</div>;
+  if (errorKey || errorText)
+    return (
+      <div className="glass p-6 text-sm text-coral">
+        {t("campaignsTable.error", {
+          message: errorText || t(errorKey ?? "campaignsTable.unknownError"),
+        })}
+      </div>
+    );
 
   return (
     <div className="space-y-6">
@@ -103,51 +120,51 @@ export default function CampaignsTable({ storeId }: CampaignsTableProps) {
           href={`/dashboard/meta/campaigns/new?storeId=${encodeURIComponent(storeId)}`}
           className="inline-flex items-center rounded-lg bg-gradient-to-b from-gold-hi to-gold px-4 py-2 text-sm font-medium text-ink transition-opacity hover:opacity-90"
         >
-          + Create campaign
+          {t("campaignsTable.create")}
         </Link>
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
-        <StatTile label="Total campaigns" value={meta.total.toString()} icon={<Layers size={16} />} />
-        <StatTile label="Total ad spend" value={`$${meta.totalSpend.toFixed(2)}`} icon={<DollarSign size={16} />} />
-        <StatTile label="Est. revenue" value={`$${meta.totalRevenue.toFixed(2)}`} icon={<TrendingUp size={16} />} />
+        <StatTile label={t("campaignsTable.total")} value={meta.total.toString()} icon={<Layers size={16} />} />
+        <StatTile label={t("campaignsTable.totalSpend")} value={`$${meta.totalSpend.toFixed(2)}`} icon={<DollarSign size={16} />} />
+        <StatTile label={t("campaignsTable.estRevenue")} value={`$${meta.totalRevenue.toFixed(2)}`} icon={<TrendingUp size={16} />} />
         <StatTile
-          label="Avg contribution ROAS"
+          label={t("campaignsTable.avgRoas")}
           value={`${meta.avgContributionRoas.toFixed(2)}x`}
           icon={<Gauge size={16} />}
         />
       </div>
 
       {campaigns.length === 0 ? (
-        <EmptyState title="No campaigns yet">Connect a Meta account to sync campaigns.</EmptyState>
+        <EmptyState title={t("campaignsTable.empty.title")}>{t("campaignsTable.empty.body")}</EmptyState>
       ) : (
         <div className="glass overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left text-xs tracking-wide text-faint uppercase">
-                <th className="px-4 py-3 font-medium">Campaign</th>
-                <th className="px-4 py-3 font-medium">Status</th>
-                <th className="px-4 py-3 font-medium">Actions</th>
+                <th className="px-4 py-3 font-medium">{t("campaignsTable.colCampaign")}</th>
+                <th className="px-4 py-3 font-medium">{t("campaignsTable.colStatus")}</th>
+                <th className="px-4 py-3 font-medium">{t("campaignsTable.colActions")}</th>
                 <th
                   className="cursor-pointer px-4 py-3 font-medium hover:text-hi"
                   onClick={() => setSortBy("spend")}
                 >
-                  Spend {sortBy === "spend" ? "↓" : ""}
+                  {t("campaignsTable.colSpend")} {sortBy === "spend" ? "↓" : ""}
                 </th>
-                <th className="px-4 py-3 text-right font-medium">Impressions</th>
-                <th className="px-4 py-3 text-right font-medium">Conversions</th>
+                <th className="px-4 py-3 text-right font-medium">{t("campaignsTable.colImpressions")}</th>
+                <th className="px-4 py-3 text-right font-medium">{t("campaignsTable.colConversions")}</th>
                 <th className="px-4 py-3 text-right font-medium">CPA</th>
                 <th
                   className="cursor-pointer px-4 py-3 text-right font-medium hover:text-hi"
                   onClick={() => setSortBy("roas")}
                 >
-                  Contrib ROAS {sortBy === "roas" ? "↓" : ""}
+                  {t("campaignsTable.colRoas")} {sortBy === "roas" ? "↓" : ""}
                 </th>
                 <th
                   className="cursor-pointer px-4 py-3 text-right font-medium hover:text-hi"
                   onClick={() => setSortBy("profitability")}
                 >
-                  Profitability {sortBy === "profitability" ? "↓" : ""}
+                  {t("campaignsTable.colProfitability")} {sortBy === "profitability" ? "↓" : ""}
                 </th>
               </tr>
             </thead>
@@ -181,13 +198,15 @@ export default function CampaignsTable({ storeId }: CampaignsTableProps) {
                     <span className={`font-mono font-medium ${campaign.contributionRoas >= 1 ? "text-teal" : "text-coral"}`}>
                       {campaign.contributionRoas.toFixed(2)}x
                     </span>
-                    <p className="text-xs text-faint">Profit: ${campaign.estimatedProfit.toFixed(0)}</p>
+                    <p className="text-xs text-faint">{t("campaignsTable.profit", { value: campaign.estimatedProfit.toFixed(0) })}</p>
                   </td>
                   <td className="px-4 py-3 text-right">
                     <span className={`font-mono font-medium ${campaign.profitability > 0 ? "text-teal" : "text-coral"}`}>
-                      ${campaign.profitability.toFixed(2)}/$ spent
+                      {t("campaignsTable.perSpent", { value: campaign.profitability.toFixed(2) })}
                     </span>
-                    <p className="text-xs text-faint">{campaign.profitability > 0 ? "Profitable" : "Loss"}</p>
+                    <p className="text-xs text-faint">
+                      {campaign.profitability > 0 ? t("campaignsTable.profitable") : t("campaignsTable.loss")}
+                    </p>
                   </td>
                 </tr>
               ))}
@@ -200,16 +219,20 @@ export default function CampaignsTable({ storeId }: CampaignsTableProps) {
         <Info size={16} className="mt-0.5 shrink-0 text-gold-hi" />
         <ul className="space-y-1">
           <li>
-            <strong className="text-hi">Contribution ROAS:</strong> (Estimated revenue × contribution margin%) / ad spend. Accounts for COGS & fees.
+            <strong className="text-hi">{t("campaignsTable.note.roasLabel")}</strong>{" "}
+            {t("campaignsTable.note.roas")}
           </li>
           <li>
-            <strong className="text-hi">Profitability:</strong> Profit per $1 spent. Positive = profitable campaign.
+            <strong className="text-hi">{t("campaignsTable.note.profitLabel")}</strong>{" "}
+            {t("campaignsTable.note.profit")}
           </li>
           <li>
-            <strong className="text-hi">CPA:</strong> Cost per action (order). Compare to max sustainable CPA to evaluate efficiency.
+            <strong className="text-hi">{t("campaignsTable.note.cpaLabel")}</strong>{" "}
+            {t("campaignsTable.note.cpa")}
           </li>
           <li>
-            <strong className="text-hi">Revenue attribution:</strong> MVP estimates based on store average; use UTM tracking for accurate per-campaign revenue.
+            <strong className="text-hi">{t("campaignsTable.note.attributionLabel")}</strong>{" "}
+            {t("campaignsTable.note.attribution")}
           </li>
         </ul>
       </div>

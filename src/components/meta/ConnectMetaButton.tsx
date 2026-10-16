@@ -2,25 +2,28 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useT } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n";
 
 interface ConnectMetaButtonProps {
   storeId: string;
 }
 
-const CALLBACK_ERRORS: Record<string, string> = {
-  missing_code: "Authorization code missing",
-  missing_store: "Store ID missing",
-  state_mismatch: "Authorization could not be verified. Please try again.",
-  no_store_access: "No access to this store",
-  no_ad_accounts: "No Meta ad accounts were found for this login",
-  selection_expired: "The account selection expired. Please connect again.",
-  invalid_selection: "That ad account isn't available to this login",
-  callback_failed: "OAuth callback failed",
-  not_configured: "Meta integration isn't configured yet. Ask an admin to set META_APP_ID / META_APP_SECRET.",
-  start_failed: "Couldn't start the Meta authorization flow. Try again in a moment.",
+const CALLBACK_ERRORS: Record<string, MessageKey> = {
+  missing_code: "meta.err.missing_code",
+  missing_store: "meta.err.missing_store",
+  state_mismatch: "meta.err.state_mismatch",
+  no_store_access: "meta.err.no_store_access",
+  no_ad_accounts: "meta.err.no_ad_accounts",
+  selection_expired: "meta.err.selection_expired",
+  invalid_selection: "meta.err.invalid_selection",
+  callback_failed: "meta.err.callback_failed",
+  not_configured: "meta.err.not_configured",
+  start_failed: "meta.err.start_failed",
 };
 
 export default function ConnectMetaButton({ storeId }: ConnectMetaButtonProps) {
+  const t = useT();
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
@@ -30,8 +33,10 @@ export default function ConnectMetaButton({ storeId }: ConnectMetaButtonProps) {
   // mirrored into state by an effect.
   const success = searchParams.get("meta_auth_success") === "true";
   const callbackError = searchParams.get("meta_auth_error");
+  // El mapa guarda claves; un código desconocido se muestra tal cual.
   const error =
-    fetchError || (callbackError ? CALLBACK_ERRORS[callbackError] ?? callbackError : "");
+    fetchError ||
+    (callbackError ? (CALLBACK_ERRORS[callbackError] ? t(CALLBACK_ERRORS[callbackError]) : callbackError) : "");
 
   // The refresh is a real side effect and stays in an effect — cleared on
   // unmount so a navigation mid-countdown can't refresh a gone component.
@@ -58,12 +63,12 @@ export default function ConnectMetaButton({ storeId }: ConnectMetaButtonProps) {
         disabled={loading || success}
         className="w-full rounded bg-gold px-4 py-2 font-medium text-ink hover:bg-gold-hi disabled:opacity-50"
       >
-        {loading ? "Connecting..." : success ? "Connected!" : "Connect Meta Account"}
+        {loading ? t("meta.connecting") : success ? t("meta.connected") : t("meta.connect")}
       </button>
 
       {error && (
         <div className="rounded bg-coral/10 p-3 space-y-2">
-          <p className="text-sm text-coral font-medium">Error: {error}</p>
+          <p className="text-sm text-coral font-medium">{t("meta.errorPrefix", { message: error })}</p>
           <button
             onClick={handleConnect}
             disabled={loading}

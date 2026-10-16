@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/lib/i18n/client";
 
 export default function InviteForm({ storeId, roles }: { storeId: string; roles: { id: string; name: string }[] }) {
+  const t = useT();
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [roleId, setRoleId] = useState(roles.find((r) => r.name !== "Owner")?.id ?? roles[0]?.id ?? "");
@@ -23,12 +25,12 @@ export default function InviteForm({ storeId, roles }: { storeId: string; roles:
         body: JSON.stringify({ email, roleId, storeId }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || "Failed to send invitation");
+      if (!res.ok) throw new Error(data?.error || t("invite.failed"));
       setNotice(data.emailSent ? `Invitation emailed to ${email}.` : `Invitation created, but the email didn't send — share this link: ${data.acceptUrl}`);
       setEmail("");
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to send invitation");
+      setError(err instanceof Error ? err.message : t("invite.failed"));
     } finally {
       setLoading(false);
     }
@@ -37,18 +39,18 @@ export default function InviteForm({ storeId, roles }: { storeId: string; roles:
   return (
     <form onSubmit={submit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
       <label className="flex flex-1 flex-col gap-1 text-xs text-faint">
-        Email
+        {t("field.email")}
         <input
           type="email"
           required
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="teammate@example.com"
+          placeholder={t("invite.emailPlaceholder")}
           className="rounded-lg border border-line-hi bg-white/5 px-3 py-2 text-sm text-hi placeholder:text-faint focus:border-gold/50 focus:outline-none"
         />
       </label>
       <label className="flex flex-col gap-1 text-xs text-faint">
-        Role
+        {t("field.role")}
         <select
           value={roleId}
           onChange={(e) => setRoleId(e.target.value)}
@@ -66,7 +68,7 @@ export default function InviteForm({ storeId, roles }: { storeId: string; roles:
         disabled={loading || !roleId}
         className="shrink-0 rounded-lg bg-gradient-to-b from-gold-hi to-gold px-4 py-2 text-sm font-medium text-ink transition-opacity hover:opacity-90 disabled:opacity-50"
       >
-        {loading ? "Sending…" : "Send invite"}
+        {loading ? t("invite.sending") : t("invite.send")}
       </button>
       {error && <p className="text-xs text-coral sm:basis-full">{error}</p>}
       {notice && <p className="text-xs text-teal sm:basis-full">{notice}</p>}
