@@ -12,6 +12,7 @@ import {
   CreditCard,
   Telescope,
   ClipboardCheck,
+  Bot,
 } from "lucide-react";
 
 /** One list for the desktop rail and the mobile bar, so the two can't drift apart again. */
@@ -22,6 +23,7 @@ export const NAV_LINKS = [
   { href: "/dashboard/products", label: "Products", icon: Boxes },
   { href: "/dashboard/meta/campaigns", label: "Campaigns", icon: Megaphone },
   { href: "/dashboard/research", label: "Research", icon: Telescope },
+  { href: "/dashboard/agents", label: "Agente IA", icon: Bot },
   { href: "/dashboard/customers", label: "Customers", icon: Users },
   { href: "/dashboard/analytics", label: "Analytics", icon: LineChart },
   { href: "/dashboard/integrations", label: "Integrations", icon: Plug },
