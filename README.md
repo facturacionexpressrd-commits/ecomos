@@ -1,6 +1,6 @@
 # EcomOS
 
-> Current, evidence-based completion and launch-readiness snapshot: [CURRENT_STATUS_2026-10-15.md](./CURRENT_STATUS_2026-10-15.md). Older dated completion reports are historical and are not live verification.
+> Current, evidence-based completion and launch-readiness snapshot: [CURRENT_STATUS_2026-10-15.md](./CURRENT_STATUS_2026-10-15.md) and [INTEGRATION_HANDOFF_2026-10-15.md](./INTEGRATION_HANDOFF_2026-10-15.md). Older dated completion reports are historical and are not live verification.
 
 Multi-store e-commerce operations platform. Phases complete:
 
