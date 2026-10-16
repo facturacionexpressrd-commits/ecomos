@@ -5,6 +5,7 @@ import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/c
 import { agentChatQuotaExceeded, AGENT_CHAT_AUDIT_ACTION } from "@/lib/limits";
 import { reportError } from "@/lib/alerts";
 import { toolsForGrants } from "@/lib/agents/tools";
+import { getLocale } from "@/lib/i18n/server";
 import {
   AGENT_LIMITS,
   AnthropicUnavailableError,
@@ -93,6 +94,8 @@ export async function POST(req: NextRequest) {
       tools,
       history: sanitizeHistory(history),
       message: message.trim(),
+      // El agente responde en el idioma que el usuario tiene activo en la interfaz.
+      locale: await getLocale(),
     });
 
     // Una fila por turno: deja rastro de uso y es el contador de la cuota. Sin prompts,

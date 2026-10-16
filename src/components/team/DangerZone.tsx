@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/lib/i18n/client";
 
 export default function DangerZone({ workspaceName }: { workspaceName: string }) {
+  const t = useT();
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [confirmName, setConfirmName] = useState("");
@@ -21,22 +23,18 @@ export default function DangerZone({ workspaceName }: { workspaceName: string })
         body: JSON.stringify({ confirmName }),
       });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data?.error || "Failed to delete workspace");
+      if (!res.ok) throw new Error(data?.error || t("danger.deleteFailed"));
       router.push("/onboarding");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to delete workspace");
+      setError(err instanceof Error ? err.message : t("danger.deleteFailed"));
       setLoading(false);
     }
   }
 
   return (
     <div className="rounded-xl border border-coral/30 bg-coral/5 p-6">
-      <p className="text-sm font-medium text-coral">Danger zone</p>
-      <p className="mt-1 text-sm text-lo">
-        Permanently delete this workspace: every store, product, order, campaign, teammate and audit
-        log. This cannot be undone. Your own login stays intact — you can create a new workspace
-        afterward.
-      </p>
+      <p className="text-sm font-medium text-coral">{t("danger.title")}</p>
+      <p className="mt-1 text-sm text-lo">{t("danger.body")}</p>
 
       {!open ? (
         <button
@@ -44,12 +42,13 @@ export default function DangerZone({ workspaceName }: { workspaceName: string })
           onClick={() => setOpen(true)}
           className="mt-4 rounded-lg border border-coral/40 px-4 py-2 text-sm font-medium text-coral hover:bg-coral/10"
         >
-          Delete workspace
+          {t("danger.deleteWorkspace")}
         </button>
       ) : (
         <form onSubmit={submit} className="mt-4 flex flex-col gap-3">
           <label className="flex flex-col gap-1 text-xs text-lo">
-            Type <strong className="text-hi">{workspaceName}</strong> to confirm
+            {t("danger.confirmPrefix")} <strong className="text-hi">{workspaceName}</strong>{" "}
+            {t("danger.confirmSuffix")}
             <input
               value={confirmName}
               onChange={(e) => setConfirmName(e.target.value)}
@@ -63,7 +62,7 @@ export default function DangerZone({ workspaceName }: { workspaceName: string })
               disabled={loading || confirmName !== workspaceName}
               className="rounded-lg bg-coral px-4 py-2 text-sm font-medium text-ink disabled:opacity-40"
             >
-              {loading ? "Deleting…" : "Permanently delete"}
+              {loading ? t("danger.deleting") : t("danger.deleteForever")}
             </button>
             <button
               type="button"

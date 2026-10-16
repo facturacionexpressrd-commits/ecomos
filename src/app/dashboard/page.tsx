@@ -11,6 +11,7 @@ import { setupSteps } from "@/lib/setup";
 import { billingEnabled, hasAccess } from "@/lib/billing";
 import { ACTIVE_META } from "@/lib/meta/status";
 import { TrendingUp, Package, Wallet, Percent } from "lucide-react";
+import { getLocale, getT } from "@/lib/i18n/server";
 
 const money = (n: number, currency = "USD") =>
   new Intl.NumberFormat("en-US", { style: "currency", currency, maximumFractionDigits: 0 }).format(n);
@@ -21,6 +22,8 @@ export default async function DashboardPage({
   searchParams: Promise<{ store?: string }>;
 }) {
   const { store: requestedStoreId } = await searchParams;
+  const locale = await getLocale();
+  const t = await getT();
 
   const supabase = await createClient();
   const {
@@ -36,15 +39,13 @@ export default async function DashboardPage({
     return (
       <div className="mx-auto mt-6 flex max-w-md flex-col gap-5 text-center">
         <p className="font-[family-name:var(--font-display)] text-3xl font-medium italic text-hi">
-          Build. Sell. Scale.
+          {t("overview.empty.title")}
         </p>
-        <p className="text-sm text-lo">
-          Connect your Shopify store to bring products, orders and inventory into one command center.
-        </p>
+        <p className="text-sm text-lo">{t("overview.empty.body")}</p>
         <div className="glass p-5 text-left">
           <ConnectStoreForm />
         </div>
-        <p className="text-xs text-faint">Waiting on an invitation instead? Open the link you were sent.</p>
+        <p className="text-xs text-faint">{t("overview.empty.invitation")}</p>
       </div>
     );
   }
@@ -53,7 +54,7 @@ export default async function DashboardPage({
   if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
     return (
       <div className="glass mx-auto mt-16 max-w-md p-8 text-center text-sm text-lo">
-        You don&apos;t have access to this store.
+        {t("common.noAccessStore")}
       </div>
     );
   }
@@ -113,12 +114,14 @@ export default async function DashboardPage({
     <div className="mx-auto max-w-6xl">
       <PageHeader
         eyebrow={store.name}
-        title="Overview"
+        title={t("overview.title")}
         action={
           <div className="flex items-center gap-3">
             <StatusPill status={store.status} />
             {store.connectedAt && (
-              <span className="text-xs text-faint">Connected {store.connectedAt.toLocaleDateString()}</span>
+              <span className="text-xs text-faint">
+                {t("overview.connected", { date: store.connectedAt.toLocaleDateString(locale) })}
+              </span>
             )}
           </div>
         }
@@ -127,25 +130,25 @@ export default async function DashboardPage({
       <SetupChecklist steps={steps} />
 
       <div className="mb-6 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatTile label="Revenue (14d)" value={money(revenue14d, currency)} icon={<TrendingUp size={16} />} />
-        <StatTile label="Orders" value={orderCount.toLocaleString()} icon={<Package size={16} />} />
-        <StatTile label="Contribution profit (14d)" value={money(profit14d, currency)} icon={<Wallet size={16} />} />
-        <StatTile label="Margin" value={`${margin.toFixed(1)}%`} icon={<Percent size={16} />} />
+        <StatTile label={t("overview.revenue14d")} value={money(revenue14d, currency)} icon={<TrendingUp size={16} />} />
+        <StatTile label={t("overview.orders")} value={orderCount.toLocaleString()} icon={<Package size={16} />} />
+        <StatTile label={t("overview.profit14d")} value={money(profit14d, currency)} icon={<Wallet size={16} />} />
+        <StatTile label={t("overview.margin")} value={`${margin.toFixed(1)}%`} icon={<Percent size={16} />} />
       </div>
 
       <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <div className="glass rise-in p-6 lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
-            <p className="text-sm font-medium text-hi">Revenue, last 14 days</p>
+            <p className="text-sm font-medium text-hi">{t("overview.revenueChart")}</p>
             <span className="font-mono text-xs text-faint">{currency}</span>
           </div>
           <Sparkline points={trend} />
         </div>
         <div className="glass rise-in flex flex-col gap-4 p-6">
-          <p className="text-sm font-medium text-hi">At a glance</p>
-          <Row label="Inventory on hand" value={(inventoryTotal._sum.available ?? 0).toLocaleString()} />
-          <Row label="Active campaigns" value={campaignCount.toLocaleString()} />
-          <Row label="Open exceptions" value={exceptionCount.toLocaleString()} warn={exceptionCount > 0} />
+          <p className="text-sm font-medium text-hi">{t("overview.glance")}</p>
+          <Row label={t("overview.inventoryOnHand")} value={(inventoryTotal._sum.available ?? 0).toLocaleString()} />
+          <Row label={t("overview.activeCampaigns")} value={campaignCount.toLocaleString()} />
+          <Row label={t("overview.openExceptions")} value={exceptionCount.toLocaleString()} warn={exceptionCount > 0} />
         </div>
       </div>
     </div>

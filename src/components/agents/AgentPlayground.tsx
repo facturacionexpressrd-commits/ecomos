@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useT } from "@/lib/i18n/client";
 import { Bot, Search, ShieldCheck, Telescope } from "lucide-react";
 
 type Opportunity = {
@@ -38,6 +39,7 @@ const money = (amount: number) =>
   }).format(amount);
 
 export default function AgentPlayground({ storeId }: { storeId: string }) {
+  const t = useT();
   const [filters, setFilters] = useState<Filters>(initialFilters);
   const [results, setResults] = useState<Opportunity[]>([]);
   const [searched, setSearched] = useState(false);
@@ -65,13 +67,13 @@ export default function AgentPlayground({ storeId }: { storeId: string }) {
 
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.error || "No se pudieron analizar las oportunidades.");
+        throw new Error(data.error || t("scout.error"));
       }
 
       setResults(data.results ?? []);
       setSearched(true);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "Ocurrió un error al analizar.");
+      setError(cause instanceof Error ? cause.message : t("scout.errorGeneric"));
     } finally {
       setSearching(false);
     }
@@ -91,27 +93,23 @@ export default function AgentPlayground({ storeId }: { storeId: string }) {
             </div>
             <div>
               <div className="flex flex-wrap items-center gap-2">
-                <h2 className="text-base font-semibold text-hi">Product Scout</h2>
+                <h2 className="text-base font-semibold text-hi">{t("scout.title")}</h2>
                 <span className="rounded-full border border-teal/30 bg-teal/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-teal">
-                  Prueba segura
+                  {t("scout.safeBadge")}
                 </span>
               </div>
-              <p className="mt-1 max-w-2xl text-sm leading-6 text-lo">
-                Evalúa oportunidades que ya guardaste en Investigación usando margen, costo,
-                envío, competencia y señales de demanda. Esta prueba no consulta fuentes externas
-                ni modifica tu tienda.
-              </p>
+              <p className="mt-1 max-w-2xl text-sm leading-6 text-lo">{t("scout.intro")}</p>
             </div>
           </div>
           <div className="flex items-center gap-1.5 rounded-full border border-line bg-white/5 px-3 py-1.5 text-xs text-lo">
             <ShieldCheck size={14} className="text-teal" />
-            Solo lectura
+            {t("agent.readOnly")}
           </div>
         </div>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <label className="text-xs font-medium text-lo">
-            Margen mínimo (%)
+            {t("scout.minMargin")}
             <input
               type="number"
               min={0}
@@ -123,7 +121,7 @@ export default function AgentPlayground({ storeId }: { storeId: string }) {
             />
           </label>
           <label className="text-xs font-medium text-lo">
-            Costo máximo (USD)
+            {t("scout.maxCost")}
             <input
               type="number"
               min={0}
@@ -134,7 +132,7 @@ export default function AgentPlayground({ storeId }: { storeId: string }) {
             />
           </label>
           <label className="text-xs font-medium text-lo">
-            Envío máximo (USD)
+            {t("scout.maxShipping")}
             <input
               type="number"
               min={0}
@@ -145,7 +143,7 @@ export default function AgentPlayground({ storeId }: { storeId: string }) {
             />
           </label>
           <label className="text-xs font-medium text-lo">
-            Competencia
+            {t("scout.competition")}
             <select
               value={filters.competitionLevel}
               onChange={(event) =>
@@ -153,10 +151,10 @@ export default function AgentPlayground({ storeId }: { storeId: string }) {
               }
               className="mt-1.5 w-full rounded-xl border border-line-hi bg-ink/60 px-3 py-2.5 text-sm text-hi outline-none focus:border-gold/60"
             >
-              <option value="">Cualquiera</option>
-              <option value="low">Baja</option>
-              <option value="medium">Media</option>
-              <option value="high">Alta</option>
+              <option value="">{t("scout.competitionAny")}</option>
+              <option value="low">{t("scout.competitionLow")}</option>
+              <option value="medium">{t("scout.competitionMedium")}</option>
+              <option value="high">{t("scout.competitionHigh")}</option>
             </select>
           </label>
         </div>
@@ -169,7 +167,7 @@ export default function AgentPlayground({ storeId }: { storeId: string }) {
             className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-ink transition-colors hover:bg-gold-hi disabled:cursor-wait disabled:opacity-60"
           >
             <Search size={15} />
-            {searching ? "Analizando..." : "Analizar oportunidades"}
+            {searching ? t("scout.analyzing") : t("scout.analyze")}
           </button>
           <button
             type="button"
@@ -177,7 +175,7 @@ export default function AgentPlayground({ storeId }: { storeId: string }) {
             disabled={searching}
             className="rounded-xl border border-line-hi px-3 py-2 text-xs text-lo transition-colors hover:border-gold/40 hover:text-hi disabled:opacity-50"
           >
-            Buscar margen de 50%+
+            {t("scout.quickMargin")}
           </button>
           <button
             type="button"
@@ -185,14 +183,14 @@ export default function AgentPlayground({ storeId }: { storeId: string }) {
             disabled={searching}
             className="rounded-xl border border-line-hi px-3 py-2 text-xs text-lo transition-colors hover:border-gold/40 hover:text-hi disabled:opacity-50"
           >
-            Priorizar baja competencia
+            {t("scout.quickCompetition")}
           </button>
           <Link
             href="/dashboard/research"
             className="ml-auto inline-flex items-center gap-1.5 px-2 py-2 text-xs text-gold-hi hover:text-hi"
           >
             <Telescope size={14} />
-            Abrir Investigación
+            {t("scout.openResearch")}
           </Link>
         </div>
 
@@ -205,24 +203,21 @@ export default function AgentPlayground({ storeId }: { storeId: string }) {
 
       <section aria-live="polite" className="space-y-3">
         {searching && (
-          <div className="glass p-5 text-sm text-lo">Product Scout está revisando la lista guardada…</div>
+          <div className="glass p-5 text-sm text-lo">{t("scout.reviewing")}</div>
         )}
 
         {!searching && searched && results.length === 0 && (
           <div className="glass rise-in p-8 text-center">
             <p className="font-[family-name:var(--font-display)] text-xl italic text-hi">
-              No hay oportunidades que coincidan
+              {t("scout.noMatch.title")}
             </p>
-            <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-lo">
-              Product Scout analiza los productos que ya guardaste en Investigación. Ajusta los
-              filtros o agrega oportunidades para probarlo con más datos.
-            </p>
+            <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-lo">{t("scout.noMatch.body")}</p>
             <Link
               href="/dashboard/research"
               className="mt-4 inline-flex items-center gap-2 rounded-xl border border-line-hi px-4 py-2 text-sm text-hi hover:border-gold/50"
             >
               <Telescope size={15} />
-              Ir a Investigación
+              {t("scout.goResearch")}
             </Link>
           </div>
         )}
@@ -230,8 +225,8 @@ export default function AgentPlayground({ storeId }: { storeId: string }) {
         {!searching && results.length > 0 && (
           <>
             <div className="flex items-center justify-between px-1">
-              <h3 className="text-sm font-medium text-hi">Oportunidades para revisar</h3>
-              <span className="text-xs text-faint">{results.length} resultados · solo lectura</span>
+              <h3 className="text-sm font-medium text-hi">{t("scout.resultsHeading")}</h3>
+              <span className="text-xs text-faint">{t("scout.resultsCount", { count: results.length })}</span>
             </div>
             {results.map((item) => (
               <article
@@ -241,10 +236,10 @@ export default function AgentPlayground({ storeId }: { storeId: string }) {
                 <div className="min-w-0">
                   <p className="truncate font-medium text-hi">{item.productTitle}</p>
                   <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-lo">
-                    <span>Costo {money(item.cost)}</span>
-                    <span>Precio estimado {money(item.estimatedRetailPrice)}</span>
-                    <span>Margen {(item.margin * 100).toFixed(0)}%</span>
-                    <span>Envío {money(item.shippingCost)}</span>
+                    <span>{t("scout.cost", { value: money(item.cost) })}</span>
+                    <span>{t("scout.estimatedPrice", { value: money(item.estimatedRetailPrice) })}</span>
+                    <span>{t("scout.marginValue", { value: (item.margin * 100).toFixed(0) })}</span>
+                    <span>{t("scout.shippingValue", { value: money(item.shippingCost) })}</span>
                   </div>
                   {item.reasoning?.length > 0 && (
                     <p className="mt-2 text-xs leading-5 text-faint">{item.reasoning.slice(0, 2).join(" · ")}</p>
@@ -255,10 +250,10 @@ export default function AgentPlayground({ storeId }: { storeId: string }) {
                     <p className="font-mono text-2xl font-semibold text-gold-hi">
                       {item.opportunityScore.toFixed(0)}
                     </p>
-                    <p className="text-[10px] uppercase tracking-wider text-faint">Puntuación</p>
+                    <p className="text-[10px] uppercase tracking-wider text-faint">{t("scout.score")}</p>
                   </div>
                   <span className="rounded-full border border-line-hi px-2.5 py-1 text-xs text-lo">
-                    {Math.round(item.confidence * 100)}% confianza
+                    {t("scout.confidence", { value: Math.round(item.confidence * 100) })}
                   </span>
                 </div>
               </article>
@@ -267,11 +262,7 @@ export default function AgentPlayground({ storeId }: { storeId: string }) {
         )}
       </section>
 
-      <p className="px-1 text-xs leading-5 text-faint">
-        Alcance de este panel: ranking directo de oportunidades ya guardadas, sin pasar por el
-        modelo. Para preguntar en lenguaje natural usa el chat de arriba. Las acciones sobre
-        Shopify/Meta siguen fuera del agente.
-      </p>
+      <p className="px-1 text-xs leading-5 text-faint">{t("scout.scope")}</p>
     </div>
   );
 }

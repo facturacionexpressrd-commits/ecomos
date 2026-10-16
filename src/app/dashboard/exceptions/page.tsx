@@ -6,6 +6,7 @@ import ExceptionList from "@/components/orders/ExceptionList";
 import { PageHeader, EmptyState } from "@/components/dashboard/ui/PageHeader";
 import { StatTile } from "@/components/dashboard/ui/StatTile";
 import { ListChecks, TriangleAlert, Flame, Clock } from "lucide-react";
+import { getT } from "@/lib/i18n/server";
 
 export default async function ExceptionsPage({
   searchParams,
@@ -13,6 +14,7 @@ export default async function ExceptionsPage({
   searchParams: Promise<{ store?: string; status?: string; severity?: string }>;
 }) {
   const { store: requestedStoreId } = await searchParams;
+  const t = await getT();
 
   const supabase = await createClient();
   const {
@@ -25,7 +27,9 @@ export default async function ExceptionsPage({
 
   const storeId = requestedStoreId && grants.some((g) => g.storeId === requestedStoreId) ? requestedStoreId : grants[0].storeId;
   if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
-    return <div className="glass mx-auto mt-16 max-w-md p-8 text-center text-sm text-lo">No access to this store.</div>;
+    return (
+      <div className="glass mx-auto mt-16 max-w-md p-8 text-center text-sm text-lo">{t("common.noAccessStore")}</div>
+    );
   }
 
   const exceptions = await prisma.fulfillmentException.findMany({
@@ -43,17 +47,21 @@ export default async function ExceptionsPage({
 
   return (
     <div className="mx-auto max-w-6xl">
-      <PageHeader eyebrow="Fulfillment" title="Exception Center" subtitle="Manage issues across all supplier orders." />
+      <PageHeader
+        eyebrow={t("exceptions.eyebrow")}
+        title={t("exceptions.title")}
+        subtitle={t("exceptions.subtitle")}
+      />
 
       <div className="mb-8 grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatTile label="Total issues" value={stats.total.toString()} icon={<ListChecks size={16} />} />
-        <StatTile label="Critical" value={stats.critical.toString()} icon={<Flame size={16} />} />
-        <StatTile label="High" value={stats.high.toString()} icon={<TriangleAlert size={16} />} />
-        <StatTile label="Unresolved" value={stats.unresolved.toString()} icon={<Clock size={16} />} />
+        <StatTile label={t("exceptions.total")} value={stats.total.toString()} icon={<ListChecks size={16} />} />
+        <StatTile label={t("exceptions.critical")} value={stats.critical.toString()} icon={<Flame size={16} />} />
+        <StatTile label={t("exceptions.high")} value={stats.high.toString()} icon={<TriangleAlert size={16} />} />
+        <StatTile label={t("exceptions.unresolved")} value={stats.unresolved.toString()} icon={<Clock size={16} />} />
       </div>
 
       {exceptions.length === 0 ? (
-        <EmptyState title="No exceptions">Every supplier order is clean — nothing needs attention. ✨</EmptyState>
+        <EmptyState title={t("exceptions.empty.title")}>{t("exceptions.empty.body")}</EmptyState>
       ) : (
         <ExceptionList
           exceptions={exceptions.map((e) => ({

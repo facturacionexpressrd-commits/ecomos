@@ -4,8 +4,11 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { MetaClient } from "@/lib/meta/client";
 import { listAdAccountChoices, openPending } from "@/lib/meta/connect";
+import { getT } from "@/lib/i18n/server";
 
 export default async function ChooseMetaAccountPage() {
+  const t = await getT();
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -17,7 +20,10 @@ export default async function ChooseMetaAccountPage() {
     return (
       <main className="mx-auto max-w-2xl px-4 py-10">
         <p className="text-sm text-lo">
-          This selection has expired. <Link className="underline" href="/dashboard/integrations">Start the Meta connection again.</Link>
+          {t("metaAccount.expired")}{" "}
+          <Link className="underline" href="/dashboard/integrations">
+            {t("metaAccount.restart")}
+          </Link>
         </p>
       </main>
     );
@@ -32,11 +38,8 @@ export default async function ChooseMetaAccountPage() {
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-10">
-      <h1 className="text-2xl font-semibold">Choose an ad account</h1>
-      <p className="mb-6 mt-1 text-sm text-lo">
-        Your Meta login can reach several ad accounts. EcomOS will create and change campaigns, and set
-        budgets, on the one you pick.
-      </p>
+      <h1 className="text-2xl font-semibold">{t("metaAccount.title")}</h1>
+      <p className="mb-6 mt-1 text-sm text-lo">{t("metaAccount.help")}</p>
       <ul className="space-y-3">
         {choices.map((c) => (
           <li key={c.adAccountId}>
@@ -49,7 +52,7 @@ export default async function ChooseMetaAccountPage() {
               </div>
               <input type="hidden" name="adAccountId" value={c.adAccountId} />
               <button type="submit" className="rounded bg-gold px-4 py-2 text-sm text-ink hover:opacity-90">
-                Use this account
+                {t("metaAccount.use")}
               </button>
             </form>
           </li>

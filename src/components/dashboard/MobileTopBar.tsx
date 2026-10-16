@@ -3,13 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { NAV_LINKS, isActive } from "@/components/dashboard/nav";
+import { useT } from "@/lib/i18n/client";
 
 export default function MobileTopBar() {
   const pathname = usePathname();
+  const t = useT();
 
   return (
     <div className="glass sticky top-3 z-30 mx-3 mt-3 flex items-center gap-1 overflow-x-auto p-2 lg:hidden">
-      {NAV_LINKS.map(({ href, label, icon: Icon }) => {
+      {NAV_LINKS.map(({ href, labelKey, icon: Icon }) => {
         const active = isActive(pathname, href);
         return (
           <Link
@@ -20,7 +22,7 @@ export default function MobileTopBar() {
             }`}
           >
             <Icon size={14} strokeWidth={1.75} className={active ? "text-gold-hi" : "text-faint"} />
-            {label}
+            {t(labelKey)}
           </Link>
         );
       })}

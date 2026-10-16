@@ -6,10 +6,13 @@ import { loadStoreAccessGrants, hasOrgCapability, CAPABILITIES } from "@/lib/aut
 import { billingEnabled, hasAccess, stripe, syncSubscription } from "@/lib/billing";
 import { PageHeader, StatusPill } from "@/components/dashboard/ui/PageHeader";
 import HeroBanner from "@/components/dashboard/HeroBanner";
+import type { MessageKey } from "@/lib/i18n";
+import { getLocale, getT } from "@/lib/i18n/server";
 
-const ERRORS: Record<string, string> = {
-  forbidden: "Only a workspace owner can change billing.",
-  failed: "We couldn't reach the payment provider. Please try again.",
+/** Clave de mensaje por código de error devuelto en la URL. */
+const ERRORS: Record<string, MessageKey> = {
+  forbidden: "billing.error.forbidden",
+  failed: "billing.error.failed",
 };
 
 const button =
@@ -21,6 +24,8 @@ export default async function BillingPage({
   searchParams: Promise<{ checkout?: string; error?: string }>;
 }) {
   const { checkout, error } = await searchParams;
+  const t = await getT();
+  const locale = await getLocale();
 
   const supabase = await createClient();
   const {
@@ -50,48 +55,50 @@ export default async function BillingPage({
       <div className="relative">
       <HeroBanner />
       <div className="relative px-4 pt-28 sm:px-8">
-      <PageHeader eyebrow={org.name} title="Billing" subtitle="Your EcomOS subscription." />
+      <PageHeader eyebrow={org.name} title={t("billing.title")} subtitle={t("billing.subtitle")} />
 
-      {error && ERRORS[error] && <p className="glass mb-6 p-4 text-sm text-coral">{ERRORS[error]}</p>}
+      {error && ERRORS[error] && <p className="glass mb-6 p-4 text-sm text-coral">{t(ERRORS[error])}</p>}
       {checkout === "success" && active && (
-        <p className="glass mb-6 p-4 text-sm text-teal">Payment received. Your subscription is active.</p>
+        <p className="glass mb-6 p-4 text-sm text-teal">{t("billing.paymentReceived")}</p>
       )}
 
       <section className="glass rise-in p-6">
         {!billingEnabled() ? (
-          <p className="text-sm text-lo">Billing isn&apos;t switched on yet. Everything is free for now.</p>
+          <p className="text-sm text-lo">{t("billing.notEnabled")}</p>
         ) : (
           <div className="space-y-5">
             <div className="flex items-center justify-between">
-              <p className="text-sm text-lo">Status</p>
+              <p className="text-sm text-lo">{t("billing.status")}</p>
               {org.subscriptionStatus === "comped" ? (
-                <StatusPill status="free workspace" />
+                <StatusPill status={t("billing.freeWorkspace")} />
               ) : (
-                <StatusPill status={org.subscriptionStatus ?? "not subscribed"} />
+                <StatusPill status={org.subscriptionStatus ?? t("billing.notSubscribed")} />
               )}
             </div>
             {org.currentPeriodEnd && org.subscriptionStatus !== "comped" && (
               <div className="flex items-center justify-between">
-                <p className="text-sm text-lo">{org.subscriptionStatus === "canceled" ? "Ended" : "Renews"}</p>
-                <p className="text-sm text-hi">{org.currentPeriodEnd.toLocaleDateString()}</p>
+                <p className="text-sm text-lo">
+                  {org.subscriptionStatus === "canceled" ? t("billing.ended") : t("billing.renews")}
+                </p>
+                <p className="text-sm text-hi">{org.currentPeriodEnd.toLocaleDateString(locale)}</p>
               </div>
             )}
 
             {!canManage ? (
-              <p className="text-sm text-lo">Ask a workspace owner to manage billing.</p>
+              <p className="text-sm text-lo">{t("billing.askOwner")}</p>
             ) : org.subscriptionStatus === "comped" ? null : active ? (
               <form method="POST" action="/api/billing/portal">
-                <button className={button}>Manage billing</button>
+                <button className={button}>{t("billing.manage")}</button>
               </form>
             ) : (
               <div className="space-y-3">
-                <p className="text-sm text-lo">Subscribe to use your dashboard, stores and campaigns.</p>
+                <p className="text-sm text-lo">{t("billing.subscribePrompt")}</p>
                 <form method="POST" action="/api/billing/checkout">
-                  <button className={button}>Subscribe</button>
+                  <button className={button}>{t("billing.subscribe")}</button>
                 </form>
                 {org.stripeCustomerId && (
                   <form method="POST" action="/api/billing/portal">
-                    <button className="text-sm text-lo underline hover:text-hi">Past invoices</button>
+                    <button className="text-sm text-lo underline hover:text-hi">{t("billing.pastInvoices")}</button>
                   </form>
                 )}
               </div>
@@ -102,7 +109,7 @@ export default async function BillingPage({
 
       {(active || !billingEnabled()) && (
         <Link href="/dashboard" className="mt-6 inline-block text-sm text-lo hover:text-hi">
-          ← Back to dashboard
+          {t("billing.backToDashboard")}
         </Link>
       )}
       </div>

@@ -6,8 +6,11 @@ import { loadStoreAccessGrants } from "@/lib/auth/capabilities";
 import { PageHeader, EmptyState, StatusPill } from "@/components/dashboard/ui/PageHeader";
 import ConnectStoreForm from "@/components/dashboard/ConnectStoreForm";
 import { Package, ShoppingBag } from "lucide-react";
+import { getT } from "@/lib/i18n/server";
 
 export default async function StoresPage() {
+  const t = await getT();
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -33,13 +36,13 @@ export default async function StoresPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <PageHeader
-        eyebrow="Multi-store"
-        title="Your stores"
-        subtitle="Manage and grow every Shopify store in one place."
+        eyebrow={t("stores.eyebrow")}
+        title={t("stores.title")}
+        subtitle={t("stores.subtitle")}
         action={
           <details className="group">
             <summary className="glass-hover glass cursor-pointer list-none px-4 py-2 text-sm font-medium text-hi">
-              + Connect store
+              {t("stores.connectCta")}
             </summary>
             <div className="glass mt-2 w-80 p-4">
               <ConnectStoreForm />
@@ -49,7 +52,7 @@ export default async function StoresPage() {
       />
 
       {stores.length === 0 ? (
-        <EmptyState title="No stores yet">Connect your first Shopify store to get started.</EmptyState>
+        <EmptyState title={t("stores.empty.title")}>{t("stores.empty.body")}</EmptyState>
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {stores.map((store) => (
@@ -66,8 +69,8 @@ export default async function StoresPage() {
                 <StatusPill status={store.status} />
               </div>
               <div className="flex items-center gap-5 border-t border-line pt-4">
-                <Stat icon={<ShoppingBag size={14} />} label="orders" value={store._count.orders} />
-                <Stat icon={<Package size={14} />} label="products" value={store._count.products} />
+                <Stat icon={<ShoppingBag size={14} />} label={t("common.orders")} value={store._count.orders} />
+                <Stat icon={<Package size={14} />} label={t("common.products")} value={store._count.products} />
               </div>
               <p className="font-mono text-2xl font-medium text-hi">
                 {new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(

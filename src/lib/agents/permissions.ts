@@ -1,4 +1,5 @@
 import { CAPABILITIES } from "@/lib/auth/capabilities";
+import type { MessageKey } from "@/lib/i18n";
 
 /**
  * Nivel de permiso de una habilidad del agente. Tomado del preset `ecomos_operator`
@@ -14,9 +15,9 @@ export type PermissionLevel = "auto" | "confirm" | "approval" | "human" | "never
 
 export type AgentSkill = {
   key: string;
-  /** Nombre visible en la UI (español). */
-  name: string;
-  description: string;
+  /** Claves de traducción: el texto visible se resuelve donde se renderiza. */
+  nameKey: MessageKey;
+  descriptionKey: MessageKey;
   defaultPermission: PermissionLevel;
   /** Capacidad de EcomOS que el servidor exige antes de leer datos. */
   requiredCapability: string;
@@ -36,79 +37,72 @@ export type AgentSkill = {
 export const AGENT_SKILLS: AgentSkill[] = [
   {
     key: "product_scout",
-    name: "Product Scout",
-    description:
-      "Busca, puntúa y compara las oportunidades que ya guardaste en Investigación (margen, costo, envío, competencia y señales de demanda).",
+    nameKey: "skill.product_scout.name",
+    descriptionKey: "skill.product_scout.description",
     defaultPermission: "auto",
     requiredCapability: CAPABILITIES.storeRead,
     available: true,
   },
   {
     key: "store_analytics",
-    name: "Analítica de tienda",
-    description:
-      "Resume ingresos, ganancia de contribución, órdenes, catálogo, campañas activas e incidencias abiertas en una ventana de tiempo.",
+    nameKey: "skill.store_analytics.name",
+    descriptionKey: "skill.store_analytics.description",
     defaultPermission: "auto",
     requiredCapability: CAPABILITIES.storeRead,
     available: true,
   },
   {
     key: "catalog_review",
-    name: "Revisión de catálogo",
-    description: "Consulta productos, variantes, precios, costos registrados e inventario disponible.",
+    nameKey: "skill.catalog_review.name",
+    descriptionKey: "skill.catalog_review.description",
     defaultPermission: "auto",
     requiredCapability: CAPABILITIES.storeRead,
     available: true,
   },
   {
     key: "order_operations",
-    name: "Operación de órdenes",
-    description:
-      "Consulta estado y totales de órdenes y problemas de fulfillment, sin datos identificables del cliente.",
+    nameKey: "skill.order_operations.name",
+    descriptionKey: "skill.order_operations.description",
     defaultPermission: "auto",
     requiredCapability: CAPABILITIES.ordersRead,
     available: true,
   },
   {
     key: "marketing_operations",
-    name: "Campañas Meta",
-    description: "Consulta estado, presupuesto y métricas disponibles de las campañas de Meta Ads.",
+    nameKey: "skill.marketing_operations.name",
+    descriptionKey: "skill.marketing_operations.description",
     defaultPermission: "auto",
     requiredCapability: CAPABILITIES.storeRead,
     available: true,
   },
   {
     key: "catalog_management",
-    name: "Cambios de catálogo",
-    description:
-      "Crear, publicar o editar productos y precios. Todavía no está conectada al agente: hazlo desde Productos.",
+    nameKey: "skill.catalog_management.name",
+    descriptionKey: "skill.catalog_management.description",
     defaultPermission: "confirm",
     requiredCapability: CAPABILITIES.productsManage,
     available: false,
   },
   {
     key: "inventory_and_suppliers",
-    name: "Inventario y proveedores",
-    description:
-      "Ajustar inventario o enviar órdenes a proveedores. Todavía no está conectada al agente.",
+    nameKey: "skill.inventory_and_suppliers.name",
+    descriptionKey: "skill.inventory_and_suppliers.description",
     defaultPermission: "approval",
     requiredCapability: CAPABILITIES.productsManage,
     available: false,
   },
   {
     key: "campaign_changes",
-    name: "Cambios de campañas",
-    description:
-      "Pausar campañas o cambiar presupuestos. Todavía no está conectada al agente: usa Campañas y Aprobaciones.",
+    nameKey: "skill.campaign_changes.name",
+    descriptionKey: "skill.campaign_changes.description",
     defaultPermission: "approval",
     requiredCapability: CAPABILITIES.campaignsManage,
     available: false,
   },
   {
     key: "workspace_control",
-    name: "Configuración del workspace",
-    description:
-      "Usuarios, roles, facturación, integraciones y seguridad. El agente nunca los modifica.",
+    nameKey: "skill.workspace_control.name",
+    descriptionKey: "skill.workspace_control.description",
     defaultPermission: "never",
     requiredCapability: CAPABILITIES.orgManageUsers,
     available: false,
