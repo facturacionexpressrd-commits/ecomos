@@ -14,4 +14,4 @@ Do not treat the historical feature inventory or September 30 completion percent
 
 - Fix the unused state setter lint warning.
 - Publish an evidence-based current status and keep earlier reports as historical records.
-- CI passed on the initial PR head; rerun after the integration handoff/documentation update. No local build was run.
+- CI passed on initial PR head (run 38831128424) and after the integration handoff/documentation update (run 38841225887). No local build was run.
