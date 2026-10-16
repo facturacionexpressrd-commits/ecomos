@@ -18,7 +18,7 @@ This evidence-based snapshot supersedes the optimistic completion percentages in
 - Added this status report and linked it from the README.
 - Marked September 30 completion reports as historical, preserving their original contents.
 
-GitHub Actions PR run 38831128424 passed TypeScript checking, lint, and the test step on the initial PR head. Documentation follow-up commits are pending a fresh CI run; no local build was run.
+GitHub Actions runs 38831128424 and 38841225887 passed TypeScript, lint, and tests. The latter includes the integration handoff and documentation follow-up; no local build was run.
 
 ## Completion estimate
 
