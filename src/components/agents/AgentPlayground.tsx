@@ -268,8 +268,9 @@ export default function AgentPlayground({ storeId }: { storeId: string }) {
       </section>
 
       <p className="px-1 text-xs leading-5 text-faint">
-        Alcance de esta prueba: ranking de oportunidades ya guardadas. La conversación con Claude
-        y las acciones sobre Shopify/Meta todavía no están conectadas a este espacio.
+        Alcance de este panel: ranking directo de oportunidades ya guardadas, sin pasar por el
+        modelo. Para preguntar en lenguaje natural usa el chat de arriba. Las acciones sobre
+        Shopify/Meta siguen fuera del agente.
       </p>
     </div>
   );

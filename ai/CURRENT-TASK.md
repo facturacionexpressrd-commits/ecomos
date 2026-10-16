@@ -9,6 +9,21 @@ Support autonomous agent orchestration for Meta Ads campaign management in EcomO
 - State: Published configs immutable during execution; draft configs for staging
 - GitHub: Committed and pushed agent configuration to `facturacionexpressrd-commits/ecomos`
 
+## Update 2026-10-16 (EcomOS Operator conversational agent)
+- `/dashboard/agents` is now a real authenticated chat against `POST /api/agents/chat`, not a preview.
+- Agent loop runs locally on the repo's existing Claude provider (`CLAUDE_MODEL`, raw fetch to Anthropic).
+  Runable stays separate and untouched.
+- 7 read-only, store-scoped tools in `src/lib/agents/tools.ts`; permission registry in
+  `src/lib/agents/permissions.ts` (PermissionLevel union copied from the AISETTINGS `ecomos_operator`
+  preset, not installed — that package is unpublished).
+- Bounded tool-use loop: 5 rounds, 8 tool calls, 1600 output tokens, 6000 chars per tool result.
+- Quota: `agentChatQuotaExceeded` counts `AuditLog` rows with action `agent.chat` (10/min, 200/day per
+  store). Deliberately NOT the `copy`/`ideas` quotas — those count rows a chat turn never writes.
+- No schema change, no migration. Write capabilities are declared `available: false` and labelled
+  unavailable in the UI rather than simulated.
+- Needs `ANTHROPIC_API_KEY` in the Vercel preview environment to answer; without it the endpoint
+  returns 503 with a clear message.
+
 ## Current State (verified 2026-10-01)
 - Deployed: https://ecomos-omega.vercel.app, `/api/health` → 200
 - Agent Dashboard: `/components/agents/agents-dashboard.tsx` ready (awaiting Runable webhook integration)

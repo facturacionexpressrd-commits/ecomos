@@ -3,7 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/db";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import { PageHeader } from "@/components/dashboard/ui/PageHeader";
+import AgentChat from "@/components/agents/AgentChat";
 import AgentPlayground from "@/components/agents/AgentPlayground";
+import { AGENT_SKILLS } from "@/lib/agents/permissions";
 
 export default async function AgentsPage({
   searchParams,
@@ -38,15 +40,29 @@ export default async function AgentsPage({
     where: { id: storeId },
     select: { name: true },
   });
+  const storeName = store?.name ?? "tu tienda";
+
+  const unavailableSkills = AGENT_SKILLS.filter((skill) => !skill.available).map((skill) => ({
+    name: skill.name,
+    description: skill.description,
+    permission: skill.defaultPermission,
+  }));
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader
         eyebrow="EcomOS Operator"
-        title="Prueba tu agente"
-        subtitle={store?.name ? `Explora oportunidades guardadas para ${store.name} con Product Scout.` : "Prueba Product Scout con oportunidades guardadas en tu tienda."}
+        title="Habla con tu agente"
+        subtitle={`Consulta y analiza los datos de ${storeName} en lenguaje natural con Product Scout.`}
       />
-      <AgentPlayground storeId={storeId} />
+      <AgentChat storeId={storeId} storeName={storeName} unavailableSkills={unavailableSkills} />
+
+      <div>
+        <h2 className="mb-3 px-1 text-sm font-medium text-hi">
+          Ranking directo de oportunidades guardadas
+        </h2>
+        <AgentPlayground storeId={storeId} />
+      </div>
     </div>
   );
 }
