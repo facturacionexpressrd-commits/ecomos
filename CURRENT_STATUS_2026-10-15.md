@@ -18,7 +18,7 @@ This evidence-based snapshot supersedes the optimistic completion percentages in
 - Added this status report and linked it from the README.
 - Marked September 30 completion reports as historical, preserving their original contents.
 
-No tests or build were run in this pass. The code/doc changes are on a review branch and still need CI after opening the pull request.
+GitHub Actions PR run 38831128424 passed TypeScript checking, lint, and the test step on the initial PR head. Documentation follow-up commits are pending a fresh CI run; no local build was run.
 
 ## Completion estimate
 
@@ -30,10 +30,11 @@ A single percentage would be misleading because code presence, production config
 
 These are planning estimates, not test coverage or a guarantee of readiness.
 
+An owner-oriented setup and acceptance checklist is in [INTEGRATION_HANDOFF_2026-10-15.md](./INTEGRATION_HANDOFF_2026-10-15.md).
+
 ## Next actions
 
-1. Review and merge the independent lint/documentation fixes after CI.
-2. Run the repository's prescribed verification suite in a complete checkout.
-3. Separately review auth and tenant isolation before changing agent endpoints.
-4. Have the account owner configure Runable and provider credentials, then verify Shopify/Meta flows with authorized test stores.
-5. Measure actual agent execution and approval/monitoring readiness.
+1. Wait for CI on the documentation follow-up commits and review the PR.
+2. Separately review auth and tenant isolation before changing agent endpoints.
+3. Have the account owner follow the integration handoff with authorized test stores and an ad account.
+4. Measure actual agent execution and approval/monitoring readiness.
