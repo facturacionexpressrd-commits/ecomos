@@ -5,6 +5,12 @@
  * Request validation and error handling for API endpoints
  */
 
+import {
+  AmbiguousStoreError,
+  ForbiddenError,
+  UnauthenticatedError
+} from '@/lib/auth/capabilities';
+
 import type { AgentType, RunableAgentConfig } from '@/lib/types/runable';
 
 export class ValidationError extends Error {
@@ -219,6 +225,35 @@ export function createErrorResponse(error: unknown): {
   statusCode: number;
   body: ErrorResponse;
 } {
+  // Los fallos de autenticación y de permisos se mapean antes del caso genérico: de lo
+  // contrario caerían en el 500 de abajo, que además devuelve el mensaje interno.
+  if (error instanceof UnauthenticatedError) {
+    return {
+      statusCode: 401,
+      body: { error: { code: 'UNAUTHENTICATED', message: 'Not authenticated' } }
+    };
+  }
+
+  if (error instanceof ForbiddenError) {
+    return {
+      statusCode: 403,
+      body: { error: { code: 'FORBIDDEN', message: 'Access denied' } }
+    };
+  }
+
+  if (error instanceof AmbiguousStoreError) {
+    return {
+      statusCode: 400,
+      body: {
+        error: {
+          code: 'AMBIGUOUS_STORE',
+          message: 'You have access to several stores: pass storeId explicitly.',
+          field: 'storeId'
+        }
+      }
+    };
+  }
+
   if (error instanceof ValidationError) {
     return {
       statusCode: error.statusCode,

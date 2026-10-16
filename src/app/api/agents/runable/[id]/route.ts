@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireActiveBusiness } from '@/lib/auth/capabilities';
+import { requireStoreAccess, CAPABILITIES } from '@/lib/auth/capabilities';
 import {
   getAgentById,
   updateAgent,
@@ -32,17 +32,14 @@ export async function GET(
   try {
     const { id } = await params;
 
-    // 1. Verify auth
-    const business = await requireActiveBusiness();
-    if (!business.storeId) {
-      return NextResponse.json(
-        { error: { code: 'NO_STORE', message: 'No active store selected' } },
-        { status: 400 }
-      );
-    }
+    // 1. Authenticate and check the capability before touching any data.
+    const { storeId } = await requireStoreAccess(
+      CAPABILITIES.storeRead,
+      new URL(request.url).searchParams.get('storeId') ?? undefined
+    );
 
     // 2. Fetch agent
-    const agent = await getAgentById(id, business.storeId);
+    const agent = await getAgentById(id, storeId);
     if (!agent) {
       return NextResponse.json(
         { error: { code: 'NOT_FOUND', message: 'Agent not found' } },
@@ -54,7 +51,7 @@ export async function GET(
     const [executions, actions, metrics] = await Promise.all([
       getExecutionHistory(id, 10),
       getAgentActions(id, 10),
-      getAgentMetrics(business.storeId, id)
+      getAgentMetrics(storeId, id)
     ]);
 
     // 4. Return agent with history
@@ -104,17 +101,18 @@ export async function PATCH(
   try {
     const { id } = await params;
 
-    // 1. Verify auth
-    const business = await requireActiveBusiness();
-    if (!business.storeId) {
-      return NextResponse.json(
-        { error: { code: 'NO_STORE', message: 'No active store selected' } },
-        { status: 400 }
-      );
-    }
+    // 1. Parse the body first: it may carry the store this request acts on.
+    const body = await request.json();
 
-    // 2. Verify agent exists and belongs to user's store
-    const agent = await getAgentById(id, business.storeId);
+    // 2. Authenticate and check the capability. Updating an agent pauses, resumes or
+    //    reconfigures Meta campaign automation, so read access is not enough.
+    const { storeId } = await requireStoreAccess(
+      CAPABILITIES.campaignsManage,
+      typeof body?.storeId === 'string' ? body.storeId : undefined
+    );
+
+    // 3. Verify agent exists and belongs to that store
+    const agent = await getAgentById(id, storeId);
     if (!agent) {
       return NextResponse.json(
         { error: { code: 'NOT_FOUND', message: 'Agent not found' } },
@@ -122,14 +120,13 @@ export async function PATCH(
       );
     }
 
-    // 3. Parse and validate request
-    const body = await request.json();
+    // 4. Validate the request
     const validated = validateUpdateAgentRequest(body);
 
-    // 4. Update in database
-    const updated = await updateAgent(id, business.storeId, validated);
+    // 5. Update in database
+    const updated = await updateAgent(id, storeId, validated);
 
-    // 5. Return updated agent
+    // 6. Return updated agent
     return NextResponse.json({
       agent: {
         id: updated.id,
@@ -161,17 +158,14 @@ export async function DELETE(
   try {
     const { id } = await params;
 
-    // 1. Verify auth
-    const business = await requireActiveBusiness();
-    if (!business.storeId) {
-      return NextResponse.json(
-        { error: { code: 'NO_STORE', message: 'No active store selected' } },
-        { status: 400 }
-      );
-    }
+    // 1. Authenticate and check the capability before touching any data.
+    const { storeId } = await requireStoreAccess(
+      CAPABILITIES.campaignsManage,
+      new URL(request.url).searchParams.get('storeId') ?? undefined
+    );
 
     // 2. Verify agent exists and belongs to user's store
-    const agent = await getAgentById(id, business.storeId);
+    const agent = await getAgentById(id, storeId);
     if (!agent) {
       return NextResponse.json(
         { error: { code: 'NOT_FOUND', message: 'Agent not found' } },
@@ -180,7 +174,7 @@ export async function DELETE(
     }
 
     // 3. Delete agent
-    await deleteAgent(id, business.storeId);
+    await deleteAgent(id, storeId);
 
     // 4. Return success
     return NextResponse.json({

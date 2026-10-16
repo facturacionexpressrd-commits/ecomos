@@ -12,58 +12,102 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # EcomOS — agent entry point
 
-Multi-tenant e-commerce SaaS for Dominican businesses: product management, AI-powered Meta Ads automation, Shopify integration, order tracking, analytics, and profit monitoring. Built for SMBs needing autonomous campaign management without developer involvement.
+Multi-tenant e-commerce SaaS for Dominican businesses: Shopify product/order sync, Meta Ads campaign management, supplier (CJ) fulfillment, financial metrics, approvals, and an AI operator agent. Built for SMBs that need campaign and catalog work done without a developer.
 
-All 19 build phases complete. Product deployed and actively managing ad campaigns across live stores.
+Code comments and UI copy are in **Spanish**. Keep it that way. This `ai/` layer is in English.
 
-Code comments, UI copy, and `docs/` are in **Spanish**. Keep it that way. This `ai/` layer is in English.
+## Stack (VERIFIED against package.json + code, 2026-10-16)
 
-## Stack (VERIFIED)
+Next.js 16.3 (App Router, `src/proxy.ts` — not `middleware.ts`) · React 19.2 · TypeScript strict · Tailwind v4 · **Prisma 7** over PostgreSQL (Supabase-hosted, `@prisma/adapter-pg`) · Supabase Auth (`@supabase/ssr`) · **Anthropic Claude** for every AI feature · Stripe billing · Shopify OAuth · Meta Graph API · pg-boss job queues · Vercel · npm · **vitest** for unit tests.
 
-Next.js 16.3 (App Router, `proxy.ts` not `middleware.ts`) · React 19 · TypeScript strict · Tailwind v4 · Supabase (Postgres 17 + Auth + Realtime + pgvector, RLS on every tenant table) · OpenAI (chat + embeddings) · Shopify OAuth · Meta Cloud API · Vercel (Fluid compute, cron) · npm · Prisma ORM · `node:test` for unit tests.
+There is no OpenAI dependency, no pgvector, and no embeddings layer.
 
-**Agentic Layer:** Runable AI for autonomous campaign orchestration (create/pause/optimize/rebudget Meta Ad campaigns, monitor performance, auto-adjust based on ROI).
+## Tenancy — read this before any query
+
+**Isolation is application-level, not RLS.** Every tenant row carries `storeId`. Prisma connects as the Postgres **owner role, which bypasses RLS**, so a query without a `storeId` filter returns every tenant's rows.
+
+RLS *is* enabled on tenant tables (`prisma/migrations/20260919003500_enable_rls`, `20260919_enable_rls_finance_meta`) but **with no policies at all**, and deliberately so: Supabase auto-exposes every public table over its REST API gated only by RLS, and enabling it with no policies closes that anon-key path. It does nothing for the app's own queries. Read the comment at the top of that migration before you touch it.
+
+So: filter by `storeId` yourself, and authorize before you query.
+
+## Authorization
+
+`src/lib/auth/capabilities.ts` is the only enforcement point:
+
+- `CAPABILITIES` — the capability strings (`store:read`, `orders:read`, `campaigns:manage`, `products:manage`, `ai:generate`, `approvals:decide`, `org:manage_users`, `store:sync`, `store:connect`).
+- `loadStoreAccessGrants(userId)` — the user's `UserStoreAccess` rows joined to `Role.capabilities`.
+- `hasCapability(grants, storeId, capability)` / `hasOrgCapability` — pure decision functions, unit-tested in `tests/rbac.test.ts`.
+- `requireCapability` / `requireOrgCapability` — throw `ForbiddenError`.
+- `requireStoreAccess(capability, requestedStoreId?)` — authenticates the Supabase session, loads grants and resolves the store in one call, for route handlers acting on a single store. `resolveStoreId` is its pure core (`tests/store-access.test.ts`): an explicit store must itself carry the capability, and with no store given exactly one eligible store is required — zero throws `ForbiddenError`, several throw `AmbiguousStoreError` rather than guessing.
+
+Route handlers either call `requireStoreAccess`, or do it inline: `createClient()` → `auth.getUser()` → `loadStoreAccessGrants` → `hasCapability`. **Never trust a `storeId` from the browser without checking it against the caller's grants.** Hiding a button is not access control.
 
 ## Repository map
 
 ```
-src/app/(auth)/        login, registro, invitacion/[token]
-src/app/(app)/         the product (guarded by requireActiveBusiness in layout.tsx)
-src/app/admin/         super-admin panel
-src/app/api/           chat, ai/process (worker+cron), webhooks/{meta,shopify,runable}, oauth/shopify, health
-src/lib/ai/            chat orchestrator, tools, guards, rules
-src/lib/channels/      meta, shopify integrations, send (outbound adapter)
-src/lib/auth/          session.ts (requireRole/requireActiveBusiness), actions.ts
-src/lib/{crm,inbox,billing,knowledge,integrations,admin,calendar,metrics,agents}/  queries + Server Actions
-src/lib/supabase/      server (RLS client) · service (bypasses RLS, restricted) · middleware
-src/components/        ui.tsx primitives, app-shell, sidebar, topbar, inbox/, agents/
-supabase/migrations/   0001–0040 (all applied in prod 2026-10-01)
-scripts/               verify-rls.mjs (runs supabase/tests in PGlite), ai-worker.mjs (local)
-docs/                  Spanish reference docs · ai/ agent memory · plans/ forward work
+src/app/dashboard/       the product: agents, approvals, campaigns, custom, customers,
+                         exceptions, integrations, meta, orders, products, research,
+                         stores, team
+src/app/api/             agents/{chat,runable}, ai/{creative,product-copy}, approvals,
+                         billing, campaigns, cron/{daily,drain,agents}, exceptions,
+                         health, invitations, meta/*, onboarding, products, research,
+                         runable/webhook, shopify/*, suppliers/cj/*, variants, webhooks,
+                         workspace
+src/app/{login,onboarding,billing,invite,pricing,privacy,terms,data-deletion}/
+src/lib/agents/          EcomOS Operator: permissions registry, read-only tools, Claude loop
+src/lib/ai/              Claude providers (claude.ts, claude-creative.ts), guards (verify.ts)
+src/lib/auth/            capabilities.ts — capability checks, store resolution
+src/lib/{finance,meta,research,shopify,suppliers,approval,notifications,email,jobs}/
+src/lib/supabase/        server.ts (session) · client.ts (browser) · admin.ts (service role)
+src/lib/{db,limits,crypto,money,billing,alerts,onboarding,setup,scenery}.ts
+src/components/dashboard/  ui/ primitives (PageHeader, StatTile, Sparkline), nav.ts
+src/components/{agents,approval,campaigns,creative,meta,orders,products,research,team,legal}/
+src/worker/index.ts     pg-boss worker: sync-store and process-webhook queues
+prisma/schema.prisma    the schema
+prisma/migrations/      16 applied migrations
+tests/                  vitest unit tests (tests/*.test.ts)
+scripts/                db-check.mjs, Shopify webhook-secret setup
+docs/                   STATUS.md, CAMPAIGNS_UI.md, E2E_TESTING.md, META_SYNC_SETUP.md,
+                        LAUNCH_SUBMISSIONS.md
 ```
+
+Most reference docs live as **root-level `*.md` files**, not under `docs/`: `ARCHITECTURE.md`, `DATABASE.md`, `DEVELOPMENT.md`, `INTEGRATIONS.md`, `RUNABLE_AI_INTEGRATION.md`, `META_WRITE_ACTIONS.md`, `ONBOARDING_GUIDE.md`, `README.md`.
 
 ## Commands
 
 ```bash
-npm run dev            # port 3002 in this machine's .env.local
-npm run verify         # tsc + eslint + unit tests + DB tests  ← run before finishing
-npm test               # node:test unit tests (src/**/*.test.ts)
-npm run test:db        # PGlite: migrations + supabase/tests/*.sql
-npm run ai:worker      # local queue worker (Vercel cron does this in prod)
-vercel --prod --yes    # deploy (project already linked: ecomos)
+npm run dev            # next dev
+npm run typecheck      # tsc --noEmit
+npm run lint           # eslint --max-warnings 0  ← a single warning fails CI
+npm test               # vitest run
+npm run worker         # local pg-boss worker
+npm run db:migrate     # prisma migrate dev
+npm run db:seed        # prisma/seed.ts
+npm run db:check       # scripts/db-check.mjs
 ```
 
-## Non-negotiable rules (full list: `ai/RULES.md`)
+### Before finishing — run what CI runs, in this order
 
-1. Every tenant row has `business_id`; isolation is RLS in Postgres, not app filters.
-2. `createServiceClient()` bypasses RLS → only in `/api/webhooks/*`, the worker, and `channels/send.ts` after RLS already authorized. Never in a Server Component/Action that reads for the browser.
-3. Server Actions call `requireRole()` / `requireActiveBusiness()` first. Hiding a button is not access control.
-4. The AI never invents prices/metrics: `guards.ts` rejects unbacked claims; escalate.
-5. Inbound messages persist before processing (`webhook_events`, `ingest_inbound`).
-6. Shopify tokens are encrypted at rest (`crypto.ts`); `*_encrypted` columns never reach the browser.
-7. Meta Ads API credentials are read-only from Supabase during worker execution; stored encrypted and rotated per business.
-8. Don't edit applied migrations (0001–0040). Add a new numbered file.
-9. Runable agent config is published and immutable during execution; draft config for testing only.
+```bash
+npx prisma generate    # needs DATABASE_URL set to anything parseable; there is no .env here
+npx next typegen       # writes LayoutProps/PageProps into .next/types
+npm run typecheck
+npm run lint
+npm test
+```
+
+Both generate steps matter. Skip `prisma generate` and every `prisma.*` access is untyped, so the typecheck passes vacuously. Skip `next typegen` and the typecheck fails on `LayoutProps` in `src/app/layout.tsx`, which exists only once those types are built. CI (`.github/workflows`) does exactly this on Node 24 after `npm ci`. If the typecheck reports a pile of missing `@supabase/*` or `lucide-react` types, the install is incomplete — run `npm ci`.
+
+## Non-negotiable rules
+
+1. Every tenant row has `storeId`, and isolation is **your query filter plus a capability check** — not RLS. See "Tenancy" above.
+2. `createAdminClient()` (`src/lib/supabase/admin.ts`) uses the service-role key. It is for privileged server-only work such as creating an auth user during invitation acceptance. Never import it from client code, and never use it to read data on the browser's behalf.
+3. Route handlers and Server Actions authorize before they query (`requireStoreAccess` or the inline pattern).
+4. The AI never invents prices or metrics: `src/lib/ai/verify.ts` withholds unbacked claims, and `src/lib/agents/` tools label estimates, partial windows and missing fields. Keep it that way.
+5. Shopify and Meta tokens are encrypted at rest (`src/lib/crypto.ts`). `*_encrypted` columns never reach the browser — do not even `select` one when a `count` predicate answers the question.
+6. Don't edit an applied migration. Add a new one.
+7. Keep AI calls server-side. `ANTHROPIC_API_KEY` must never appear in browser code.
+8. Webhooks persist before processing (`WebhookEvent`, unique on `shopifyWebhookId`, which makes double delivery a no-op).
 
 ## Context-loading protocol (progressive, keep tokens low)
 
@@ -73,52 +117,54 @@ Then only what the task needs:
 
 | Task touches | Read |
 |---|---|
-| product behavior / business rules | `docs/PRODUCT.md` |
-| non-negotiable rules (tenancy, contracts, secrets, envs) | `docs/PROJECT_CONSTITUTION.md` |
-| types that cross module boundaries | `docs/API_CONTRACTS.md` → import from `src/lib/contracts.ts` |
-| structure, data flow, AI engine | `docs/ARCHITECTURE.md` |
-| schema, RLS, migrations | `docs/DATABASE.md` |
-| routes, Server Actions, webhooks | `docs/API.md`; provider rules → `docs/INTEGRATIONS.md` |
-| screens, components, design tokens | `docs/UI-UX.md` |
-| deploy, env vars, monitoring | `docs/DEPLOY.md` |
-| Runable agent orchestration, workflow | `docs/RUNABLE.md`; plan → `plans/RUNABLE-ROADMAP.md` |
-| "why is it like this?" | `ai/DECISIONS.md` |
-| something failing that feels familiar | `ai/ERRORS.md` |
-| per-phase build history | `docs/ROADMAP.md` (long — search, don't read whole) |
+| structure, data flow | `ARCHITECTURE.md` |
+| schema, RLS, migrations | `DATABASE.md` + `prisma/schema.prisma` (the schema is the truth) |
+| local setup, env vars | `DEVELOPMENT.md` |
+| Shopify / Meta / CJ provider rules | `INTEGRATIONS.md`, `META_WRITE_ACTIONS.md` |
+| Meta campaign UI | `docs/CAMPAIGNS_UI.md`, `docs/META_SYNC_SETUP.md` |
+| the Operator agent, its tools or permissions | `src/lib/agents/` (code first — it is small) |
+| Runable orchestration | `RUNABLE_AI_INTEGRATION.md` + `src/lib/runable/` |
+| where the product stands | `docs/STATUS.md` |
+| end-to-end test plan | `docs/E2E_TESTING.md` |
+| onboarding / store connection | `ONBOARDING_GUIDE.md` |
 
-Code is the source of truth. If a doc disagrees with code, fix the doc, not the code.
+There is no `docs/PRODUCT.md`, `docs/PROJECT_CONSTITUTION.md`, `docs/API.md`, `docs/UI-UX.md`, `docs/DEPLOY.md`, `docs/ROADMAP.md`, `src/lib/contracts.ts`, `ai/RULES.md`, `ai/DECISIONS.md`, `ai/ERRORS.md`, or `plans/` directory. Don't send the next agent after them.
+
+Code is the source of truth. If a doc disagrees with code, fix the doc.
 
 ## Session protocol
 
-Start: read Level-1 files → load task-specific docs → inspect the source you will change → implement → `npm run verify`.
+Start: read the three Level-1 files → load task-specific docs → inspect the source you will change → implement → run the CI sequence above.
 
-End: update `ai/PROGRESS.md` and `ai/CURRENT-TASK.md`; `ai/DECISIONS.md` only for a real decision; `ai/ERRORS.md` only for a reusable lesson; `plans/BACKLOG.md` if tasks changed; `docs/` only if you made them inaccurate. Never rewrite every doc per task.
+End: update `ai/PROGRESS.md` and `ai/CURRENT-TASK.md`. Touch other docs only if your change made them inaccurate. Never rewrite every doc per task.
 
-Stop and explain before: schema changes, auth changes, billing changes, production config, dependency swaps, API contract changes, agent workflow changes.
+Stop and explain before: schema changes, auth changes, billing changes, production config, dependency swaps, or changing what an agent is allowed to do.
 
-## Agent Responsibilities (Autonomous Layer)
+## Agent layer — what is actually wired
 
-| Agent | Responsibility | Triggers | Success Criterion |
-|---|---|---|---|
-| **Campaign Manager** | Create/pause/resume Meta Ad campaigns based on store performance | Daily or on manual trigger | Campaign created in Meta, tracked in `ai_agents.published_config` |
-| **Budget Optimizer** | Auto-adjust campaign budgets based on ROI per product | Hourly | Budget updated in Meta; cost per acquisition stays within limits |
-| **Performance Monitor** | Fetch campaign metrics, detect underperformers, flag for action | Every 4 hours | Metrics stored in `agent_executions` table with status |
-| **Copy Generator** | Create ad copy from product catalog + AI | Per new product or manual trigger | Copy in `ai_training_examples`, human-reviewed before publish |
-| **Audience Targeting** | Segment customers by behavior, update campaign audiences | Weekly | Audiences synced to Meta via API |
+Two separate things live under "agents". Don't conflate them.
 
-## Current Agent Config (Prod)
+### EcomOS Operator (working)
 
-- **Framework:** Runable AI orchestration (external)
-- **Execution:** Via `/api/runable/*` webhooks + Vercel cron (`ai/process`)
-- **State:** Published configs immutable during execution; draft configs for staging
-- **Monitoring:** `/api/health` → agent queue depth, last execution time, error rates
-- **Escalation:** Failed campaigns → notification, human review, manual override in `/ia` (not yet public)
+`/dashboard/agents` → `POST /api/agents/chat` → `src/lib/agents/`. A Claude tool-use loop that runs **in this app**, on the provider in `src/lib/ai/providers/claude.ts`.
 
----
+- `permissions.ts` — skill registry with a `PermissionLevel` union (`auto | confirm | approval | human | never`). A skill with no real backing is `available: false` and the UI labels it unavailable instead of simulating it.
+- `tools.ts` — seven **read-only** tools: saved research opportunities (scored by the existing `OpportunityScorer`), store summary, catalog, orders, fulfillment exceptions, Meta campaigns, integration status. Every query filters by the server-verified `storeId`; no tool schema accepts a `storeId`; no customer PII, tokens or `raw` blobs leave the server.
+- `loop.ts` — bounded: 5 rounds, 8 tool calls, 1600 output tokens, 6000 chars per tool result. Tools resolve from the caller's allowed list, so a tool the user lacks the capability for is refused without touching the database.
+- Quota: `agentChatQuotaExceeded` in `src/lib/limits.ts`, counted from `AuditLog` rows with action `agent.chat` (10/min, 200/day per store).
 
-## Next Steps (Pending)
+It has **no write tools**. Adding one means a capability check, an explicit user confirmation, and the existing approvals flow — not a new tool on its own.
 
-1. **Agent Tuning:** Reduce false-positive budget cuts (Q4 2026)
-2. **Multi-Channel Campaigns:** Extend beyond Meta to Google Ads, TikTok (Q1 2027)
-3. **Predictive ROI:** Use historical data to forecast campaign performance before launch
-4. **Human-in-Loop:** Approval workflows for high-cost decisions (agent suggests, human confirms)
+### Runable (external, largely unfinished — do not describe it as live)
+
+`src/lib/runable/`, `/api/agents/runable`, `/api/runable/webhook`. A shell around the third-party `api.runable.ai` with a per-store encrypted vendor key.
+
+Verified state, not aspiration:
+
+- Three agent types exist (`campaign_manager`, `product_copy`, `performance_optimizer`). **Only `campaign_manager` has a workflow**; the other two return `"not yet implemented"` from `// TODO` branches in `src/lib/runable/executor.ts`.
+- `/api/cron/agents` exists as a route but is **not scheduled** — `vercel.json` registers one cron, `/api/cron/daily` at 06:00.
+- No `RUNABLE_API_KEY` is configured, so nothing executes.
+- `src/components/agents/agents-dashboard.tsx` is **not mounted on any page**.
+- `/api/health` is a database ping returning `{ ok: true }`. It reports no queue depth, execution times or error rates.
+
+The nightly job that *does* run is `/api/cron/daily` → `runDaily()` in `src/lib/jobs/daily.ts`: Shopify webhook registration, store sync enqueue, webhook drain, CJ order and link sync, Meta account sync, and approval recommendations.
