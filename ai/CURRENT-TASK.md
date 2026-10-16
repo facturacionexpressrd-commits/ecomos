@@ -1,34 +1,21 @@
 # Current Task
 
 ## Objective
-Support autonomous agent orchestration for Meta Ads campaign management in EcomOS while maintaining multi-tenant isolation and data security.
+Complete only self-contained repository fixes from the EcomOS audit; keep auth, tenant-boundary, production configuration, and agent workflow changes out of scope until separately reviewed.
 
-## Update 2026-10-01 (Agent Configuration)
-- AGENTS.md: Defines 5 autonomous agents (Campaign Manager, Budget Optimizer, Performance Monitor, Copy Generator, Audience Targeting)
-- Framework: Runable AI orchestration via `/api/runable/*` webhooks + Vercel cron
-- State: Published configs immutable during execution; draft configs for staging
-- GitHub: Committed and pushed agent configuration to `facturacionexpressrd-commits/ecomos`
+## Update — 2026-10-15
+The latest inspected GitHub Actions run (36921246861) passed TypeScript checking, failed lint on an unused `setWidgets` setter in `src/app/dashboard/custom/[id]/page.tsx`, and skipped tests. The setter/import are removed on the review branch. CI has not rerun yet.
 
-## Current State (verified 2026-10-01)
-- Deployed: https://ecomos-omega.vercel.app, `/api/health` → 200
-- Agent Dashboard: `/components/agents/agents-dashboard.tsx` ready (awaiting Runable webhook integration)
-- Database: All 40 migrations applied in production
-- Runable Integration: Documented in `RUNABLE_AI_INTEGRATION.md`, awaiting API key setup
+Current evidence-based progress and estimates are in [CURRENT_STATUS_2026-10-15.md](../CURRENT_STATUS_2026-10-15.md). Older September 30 reports are historical, not proof of current production behavior.
 
-## Relevant Files
-`AGENTS.md` · `RUNABLE_AI_INTEGRATION.md` · `docs/DEPLOY.md` · `src/app/api/runable/route.ts`
-
-## Next Steps (human steps marked H)
-1. **H** Set `RUNABLE_API_KEY` and `RUNABLE_WEBHOOK_SECRET` in Vercel Production environment
-2. **H** Configure Runable webhook in Runable dashboard pointing to `/api/runable/webhook`
-3. Verify agent dashboard loads with sample agents
-4. Create first autonomous campaign manager agent in Runable with test configuration
-5. Monitor agent execution logs in `/api/health` metrics
-6. Implement agent approval workflow for high-cost budget changes
-7. Add agent performance analytics to dashboard
+## Pending independent verification
+1. Run the repository-prescribed verification suite from a complete checkout.
+2. Confirm the lint change passes CI.
+3. Review current auth and tenant isolation before changing agent endpoints.
+4. Account owner configures Runable credentials/webhook and provider credentials, then verifies authorized test-store workflows.
+5. Measure actual agent execution and approval/monitoring readiness.
 
 ## Constraints
-- Do not edit migrations (0001–0040). Add new numbered files.
-- Agent configs must respect multi-tenant isolation (RLS enforced on `ai_agents` table)
-- Runable API credentials stored encrypted in Supabase
-- Published configs are immutable; only draft configs can be modified
+- Do not edit applied migrations (0001–0040); add a new numbered file if schema work is later approved.
+- Authentication, tenancy, production config, and agent workflow changes are excluded from this task pending focused review.
+- Do not store or expose secrets.

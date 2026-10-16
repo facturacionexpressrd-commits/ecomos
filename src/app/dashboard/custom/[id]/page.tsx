@@ -1,13 +1,12 @@
 "use client";
-import { useState } from "react";
 
 export default function CustomDashboardPage() {
-  const [widgets, setWidgets] = useState([
+  const widgets = [
     { id: 1, type: "revenue", title: "Revenue" },
     { id: 2, type: "profit", title: "Profit" },
     { id: 3, type: "products", title: "Top Products" },
     { id: 4, type: "campaigns", title: "Campaigns" },
-  ]);
+  ];
 
   return (
     <div className="p-6">
