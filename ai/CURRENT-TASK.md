@@ -28,7 +28,7 @@ Support autonomous agent orchestration for Meta Ads campaign management in EcomO
 - Added user-owned conversation threads scoped to the authenticated user and selected store.
 - Added authenticated list/create/read/delete endpoints at `/api/agents/conversations`; chat turns now load context from persisted messages instead of browser-supplied history.
 - Saved messages contain visible user/assistant text plus display metadata (tool labels, source labels, truncation state); raw tool payloads and provider credentials are not saved.
-- Added migration `0041_agent_conversations.sql` with RLS policies on conversations and messages.
+- Added Prisma migration `20261017000000_agent_conversations` and enabled RLS on both new tables, matching the existing policy of blocking direct Supabase REST access while Prisma remains the app's database client.
 - Added a conversation picker, automatic titles, new conversation, reopen after refresh, and confirmed delete controls.
 - Schema changes are in a proposed migration; the migration has not been applied to production.
 
