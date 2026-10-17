@@ -24,6 +24,14 @@ Support autonomous agent orchestration for Meta Ads campaign management in EcomO
 - Needs `ANTHROPIC_API_KEY` in the Vercel preview environment to answer; without it the endpoint
   returns 503 with a clear message.
 
+## Update 2026-10-16 (Saved EcomOS Operator conversations)
+- Added user-owned conversation threads scoped to the authenticated user and selected store.
+- Added authenticated list/create/read/delete endpoints at `/api/agents/conversations`; chat turns now load context from persisted messages instead of browser-supplied history.
+- Saved messages contain visible user/assistant text plus display metadata (tool labels, source labels, truncation state); raw tool payloads and provider credentials are not saved.
+- Added migration `0041_agent_conversations.sql` with RLS policies on conversations and messages.
+- Added a conversation picker, automatic titles, new conversation, reopen after refresh, and confirmed delete controls.
+- Schema changes are in a proposed migration; the migration has not been applied to production.
+
 ## Current State (verified 2026-10-01)
 - Deployed: https://ecomos-omega.vercel.app, `/api/health` → 200
 - Agent Dashboard: `/components/agents/agents-dashboard.tsx` ready (awaiting Runable webhook integration)
