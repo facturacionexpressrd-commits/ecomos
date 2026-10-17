@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Bot,
@@ -93,8 +93,6 @@ export default function AgentChat({
         setThreads(saved);
         if (saved.length > 0) {
           await openConversation(saved[0].id, cancelled);
-        } else {
-          await createConversation(cancelled);
         }
       } catch (cause) {
         if (!cancelled) setError(cause instanceof Error ? cause.message : "No se pudieron cargar las conversaciones.");
@@ -104,13 +102,13 @@ export default function AgentChat({
     }
     void loadThreads();
     return () => { cancelled = true; };
-  }, [storeId]);
+  }, [storeId, openConversation, createConversation]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
   }, [turns, sending]);
 
-  async function openConversation(id: string, cancelled = false) {
+  const openConversation = useCallback(async (id: string, cancelled = false) => {
     const response = await fetch(
       `/api/agents/conversations?storeId=${encodeURIComponent(storeId)}&conversationId=${encodeURIComponent(id)}`
     );
@@ -132,9 +130,9 @@ export default function AgentChat({
         ...(metadata.truncated === true ? { truncated: true } : {}),
       };
     }));
-  }
+  }, [storeId]);
 
-  async function createConversation(cancelled = false) {
+  const createConversation = useCallback(async (cancelled = false) => {
     const response = await fetch("/api/agents/conversations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -147,7 +145,7 @@ export default function AgentChat({
     setThreads((current) => [conversation, ...current]);
     setActiveConversationId(conversation.id);
     setTurns([]);
-  }
+  }, [storeId]);
 
   async function deleteConversation(id: string) {
     const thread = threads.find((item) => item.id === id);
