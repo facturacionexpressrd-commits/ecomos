@@ -21,7 +21,7 @@ All 19 build phases + agent integration framework (detail per phase: `docs/ROADM
 | Dashboard | Custom dashboard builder, metric widgets, real-time data, export functionality |
 | Deployments | Vercel (Hobby plan, daily cron), migrations on Supabase, CI workflow, health checks |
 | Agent Framework | Runable AI integration (documented), webhook routes, execution tracking, draft/published configs |
-| EcomOS Operator | Authenticated chat at `/dashboard/agents` + `POST /api/agents/chat`: bounded Anthropic tool-use loop, 7 read-only store-scoped tools, permission registry, per-store chat quota. Read-only; no write tools. |
+| EcomOS Operator | Authenticated chat at `/dashboard/agents` + `POST /api/agents/chat`: bounded Anthropic tool-use loop, 7 read-only store-scoped tools, permission registry, per-store chat quota, and persisted user/store-scoped conversation threads with reopen/delete. Read-only; no write tools. |
 
 ## In Progress
 
@@ -48,7 +48,7 @@ Runable API integration (agent execution layer):
 - No approval queue yet for high-budget decisions (manual review required)
 
 ## Last Updated
-2026-10-16 — EcomOS Operator conversational agent (Product Scout) added: read-only tool layer,
-bounded Claude tool-use loop, chat UI with source labels and data-processing notice. No migration.
+2026-10-16 — Saved EcomOS Operator conversations added on a proposed branch: private user/store-scoped
+threads, persisted visible messages, Prisma migration 20261017000000, and thread controls. Migration not applied.
 
 2026-10-01 — Agent configuration added to AGENTS.md; Runable orchestration framework documented; GitHub updated.

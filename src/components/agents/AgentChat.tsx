@@ -1,14 +1,17 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   Bot,
   CircleAlert,
   Clock,
   Info,
+  MessageSquare,
+  Plus,
   Send,
   ShieldCheck,
+  Trash2,
   Telescope,
   Wrench,
   X,
@@ -16,6 +19,7 @@ import {
 
 type Activity = { tool: string; status: "ok" | "error"; detail?: string };
 type Source = { label: string; window?: string };
+type SavedThread = { id: string; title: string; updatedAt: string };
 
 type Turn = {
   id: string;
@@ -60,6 +64,9 @@ export default function AgentChat({
   unavailableSkills: UnavailableSkill[];
 }) {
   const [turns, setTurns] = useState<Turn[]>([]);
+  const [threads, setThreads] = useState<SavedThread[]>([]);
+  const [activeConversationId, setActiveConversationId] = useState("");
+  const [loadingThreads, setLoadingThreads] = useState(true);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -73,14 +80,108 @@ export default function AgentChat({
     endRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
   }, [turns, sending]);
 
+  const openConversation = useCallback(async (id: string, cancelled = false) => {
+    const response = await fetch(
+      `/api/agents/conversations?storeId=${encodeURIComponent(storeId)}&conversationId=${encodeURIComponent(id)}`
+    );
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "No se pudo abrir la conversación.");
+    if (cancelled) return;
+    const messages = Array.isArray(data.conversation?.messages) ? data.conversation.messages : [];
+    setActiveConversationId(id);
+    setTurns(messages.map((item: { id: string; role: string; content: string; metadata?: unknown }) => {
+      const metadata = item.metadata && typeof item.metadata === "object"
+        ? item.metadata as { activity?: Activity[]; sources?: Source[]; truncated?: boolean }
+        : {};
+      return {
+        id: item.id,
+        role: item.role === "assistant" ? "assistant" as const : "user" as const,
+        content: item.content,
+        ...(Array.isArray(metadata.activity) ? { activity: metadata.activity } : {}),
+        ...(Array.isArray(metadata.sources) ? { sources: metadata.sources } : {}),
+        ...(metadata.truncated === true ? { truncated: true } : {}),
+      };
+    }));
+  }, [storeId]);
+
+  const createConversation = useCallback(async (cancelled = false) => {
+    const response = await fetch("/api/agents/conversations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ storeId }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(data.error || "No se pudo crear la conversación.");
+    const conversation = data.conversation as SavedThread;
+    if (cancelled) return;
+    setThreads((current) => [conversation, ...current]);
+    setActiveConversationId(conversation.id);
+    setTurns([]);
+  }, [storeId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadThreads() {
+      setLoadingThreads(true);
+      setThreads([]);
+      setActiveConversationId("");
+      setTurns([]);
+      setError("");
+      try {
+        const response = await fetch(`/api/agents/conversations?storeId=${encodeURIComponent(storeId)}`);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "No se pudieron cargar las conversaciones.");
+        const saved = Array.isArray(data.conversations) ? data.conversations as SavedThread[] : [];
+        if (cancelled) return;
+        setThreads(saved);
+        if (saved.length > 0) {
+          await openConversation(saved[0].id, cancelled);
+        }
+      } catch (cause) {
+        if (!cancelled) setError(cause instanceof Error ? cause.message : "No se pudieron cargar las conversaciones.");
+      } finally {
+        if (!cancelled) setLoadingThreads(false);
+      }
+    }
+    void loadThreads();
+    return () => { cancelled = true; };
+  }, [storeId, openConversation]);
+
+  async function deleteConversation(id: string) {
+    const thread = threads.find((item) => item.id === id);
+    if (!window.confirm(`¿Eliminar la conversación "${thread?.title || "Nueva conversación"}"? Esta acción no se puede deshacer.`)) return;
+    const response = await fetch("/api/agents/conversations", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ storeId, conversationId: id }),
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      setError(data.error || "No se pudo eliminar la conversación.");
+      return;
+    }
+    const remaining = threads.filter((thread) => thread.id !== id);
+    setThreads(remaining);
+    if (activeConversationId === id) {
+      if (remaining.length > 0) {
+        try { await openConversation(remaining[0].id); }
+        catch (cause) { setError(cause instanceof Error ? cause.message : "No se pudo abrir la conversación."); }
+      } else {
+        try { await createConversation(); }
+        catch (cause) { setError(cause instanceof Error ? cause.message : "No se pudo crear la conversación."); }
+      }
+    }
+  }
+
   async function send(text: string) {
     const question = text.trim();
     if (!question || sending) return;
+    if (!activeConversationId) {
+      setError("Espera a que cargue o crea una conversación nueva.");
+      return;
+    }
 
     const userTurn: Turn = { id: `u-${Date.now()}`, role: "user", content: question };
-    // El historial que viaja al servidor es solo lo que ya se mostró en pantalla.
-    const history = turns.map((turn) => ({ role: turn.role, content: turn.content }));
-
     setTurns((current) => [...current, userTurn]);
     setDraft("");
     setSending(true);
@@ -91,7 +192,7 @@ export default function AgentChat({
       const response = await fetch("/api/agents/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeId, message: question, history }),
+        body: JSON.stringify({ storeId, conversationId: activeConversationId, message: question }),
       });
 
       const data = await response.json().catch(() => ({}));
@@ -104,6 +205,21 @@ export default function AgentChat({
         throw new Error(data.error || "El agente no pudo responder.");
       }
 
+      setThreads((current) =>
+        current
+          .map((thread) =>
+            thread.id === activeConversationId
+              ? {
+                  ...thread,
+                  title: thread.title === "Nueva conversación"
+                    ? question.replace(/\s+/g, " ").slice(0, 64)
+                    : thread.title,
+                  updatedAt: new Date().toISOString(),
+                }
+              : thread
+          )
+          .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))
+      );
       setTurns((current) => [
         ...current,
         {
@@ -179,6 +295,70 @@ export default function AgentChat({
             </button>
           </div>
         )}
+
+        <div className="mt-5 rounded-xl border border-line bg-white/[0.02] p-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-sm font-medium text-hi">
+              <MessageSquare size={15} className="text-gold-hi" />
+              Conversaciones guardadas
+            </div>
+            <button
+              type="button"
+              disabled={loadingThreads || sending}
+              onClick={() => {
+                setError("");
+                void createConversation().catch((cause) =>
+                  setError(cause instanceof Error ? cause.message : "No se pudo crear la conversación.")
+                );
+              }}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-line-hi px-2.5 py-1.5 text-xs text-hi transition-colors hover:border-gold/50 disabled:opacity-50"
+            >
+              <Plus size={13} />
+              Nueva conversación
+            </button>
+          </div>
+          {loadingThreads ? (
+            <p className="text-xs text-faint">Cargando conversaciones…</p>
+          ) : threads.length === 0 ? (
+            <p className="text-xs text-faint">No hay conversaciones guardadas todavía.</p>
+          ) : (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {threads.map((thread) => (
+                <div
+                  key={thread.id}
+                  className={`flex shrink-0 items-center rounded-lg border ${thread.id === activeConversationId ? "border-gold/50 bg-gold/10" : "border-line bg-white/[0.02]"}`}
+                >
+                  <button
+                    type="button"
+                    disabled={sending}
+                    onClick={() => {
+                      setError("");
+                      void openConversation(thread.id).catch((cause) =>
+                        setError(cause instanceof Error ? cause.message : "No se pudo abrir la conversación.")
+                      );
+                    }}
+                    className="max-w-48 px-3 py-2 text-left text-xs text-hi disabled:opacity-50"
+                    title={thread.title}
+                  >
+                    <span className="block truncate">{thread.title || "Nueva conversación"}</span>
+                    <span className="mt-0.5 block text-[10px] text-faint">
+                      {new Date(thread.updatedAt).toLocaleDateString("es")}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    disabled={sending}
+                    onClick={() => void deleteConversation(thread.id)}
+                    aria-label={`Eliminar ${thread.title || "conversación"}`}
+                    className="mr-1 rounded-md p-1.5 text-faint transition-colors hover:bg-coral/10 hover:text-coral disabled:opacity-50"
+                  >
+                    <Trash2 size={13} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
 
         <div aria-live="polite" className="mt-5 space-y-3">
           {turns.length === 0 && !sending && (
@@ -271,7 +451,7 @@ export default function AgentChat({
             rows={2}
             value={draft}
             maxLength={2000}
-            disabled={sending}
+            disabled={sending || loadingThreads || !activeConversationId}
             placeholder="Ej.: ¿Cuáles son mis mejores oportunidades guardadas?"
             onChange={(event) => setDraft(event.target.value)}
             onKeyDown={(event) => {
