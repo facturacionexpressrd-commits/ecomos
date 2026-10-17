@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useT } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n";
 
 interface Product {
   id: string;
@@ -19,9 +21,12 @@ export default function ProductSelector({
   selectedProductId,
   onSelect,
 }: ProductSelectorProps) {
+  const t = useT();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  // Se guarda la clave del error, no el texto, para que el efecto no dependa de `t`.
+  const [errorKey, setErrorKey] = useState<MessageKey | null>(null);
+  const [errorText, setErrorText] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
@@ -31,11 +36,13 @@ export default function ProductSelector({
         const res = await fetch(
           `/api/products/list?storeId=${encodeURIComponent(storeId)}&limit=100`
         );
-        if (!res.ok) throw new Error("Failed to load products");
+        if (!res.ok) throw new Error("");
         const data = await res.json();
         setProducts(data.products || []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Error loading products");
+        const message = err instanceof Error ? err.message : "";
+        setErrorKey(message ? null : "productSelector.loadFailed");
+        setErrorText(message);
       } finally {
         setLoading(false);
       }
@@ -47,25 +54,32 @@ export default function ProductSelector({
     p.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  if (loading) return <div className="text-lo">Loading products...</div>;
-  if (error) return <div className="text-coral">Error: {error}</div>;
+  if (loading) return <div className="text-lo">{t("productSelector.loading")}</div>;
+  if (errorKey || errorText)
+    return (
+      <div className="text-coral">
+        {t("productSelector.error", {
+          message: errorText || t(errorKey ?? "productSelector.loadFailed"),
+        })}
+      </div>
+    );
 
   return (
     <div className="space-y-3">
       <div>
-        <label className="block text-sm font-medium">Search Products</label>
+        <label className="block text-sm font-medium">{t("productSelector.searchLabel")}</label>
         <input
           type="text"
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
-          placeholder="Search by name..."
+          placeholder={t("productSelector.searchPlaceholder")}
           className="mt-1 w-full rounded border border-line-hi px-3 py-2"
         />
       </div>
 
       {filtered.length === 0 ? (
         <div className="rounded bg-white/5 p-3 text-center text-sm text-lo">
-          {products.length === 0 ? "No products found" : "No matches"}
+          {products.length === 0 ? t("productSelector.none") : t("productSelector.noMatches")}
         </div>
       ) : (
         <div className="space-y-2 max-h-96 overflow-y-auto">

@@ -13,6 +13,7 @@ import DeleteProductButton from "@/components/products/DeleteProductButton";
 import { productImageUrl } from "@/components/products/ProductThumb";
 import { PageHeader } from "@/components/dashboard/ui/PageHeader";
 import { StatTile } from "@/components/dashboard/ui/StatTile";
+import { getT } from "@/lib/i18n/server";
 
 export default async function ProductDetailPage({
   params,
@@ -23,6 +24,7 @@ export default async function ProductDetailPage({
 }) {
   const { id: productId } = await params;
   const { store: requestedStoreId } = await searchParams;
+  const t = await getT();
 
   const supabase = await createClient();
   const {
@@ -35,7 +37,7 @@ export default async function ProductDetailPage({
 
   const storeId = requestedStoreId ?? grants[0].storeId;
   if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
-    return <div className="glass mx-auto mt-16 max-w-md p-8 text-center text-sm text-lo">No access to this store.</div>;
+    return <div className="glass mx-auto mt-16 max-w-md p-8 text-center text-sm text-lo">{t("common.noAccessStore")}</div>;
   }
 
   // Fetch product + variants + sales data
@@ -52,7 +54,7 @@ export default async function ProductDetailPage({
   });
 
   if (!product) {
-    return <div className="glass mx-auto mt-16 max-w-md p-8 text-center text-sm text-lo">Product not found.</div>;
+    return <div className="glass mx-auto mt-16 max-w-md p-8 text-center text-sm text-lo">{t("productDetail.notFound")}</div>;
   }
 
   // Each variant's real sales, from its own order lines: two grouped queries for the whole product.
@@ -125,15 +127,21 @@ export default async function ProductDetailPage({
       <div className="mb-6 flex flex-col gap-4 sm:flex-row">
         {imageUrl && <ProductImageZoom url={imageUrl} alt={product.title} />}
         <div className={`grid flex-1 content-start gap-4 grid-cols-2 ${imageUrl ? "" : "lg:grid-cols-4"}`}>
-          <StatTile label="Revenue" value={money(total.revenue)} />
-          <StatTile label="Units sold" value={total.unitsSold.toLocaleString()} />
-          <StatTile label="Profit" value={total.profit === null ? "Cost needed" : money(total.profit)} />
-          <StatTile label="Margin" value={total.margin === null ? "—" : `${total.margin.toFixed(1)}%`} />
+          <StatTile label={t("productDetail.revenue")} value={money(total.revenue)} />
+          <StatTile label={t("productDetail.unitsSold")} value={total.unitsSold.toLocaleString()} />
+          <StatTile
+            label={t("productDetail.profit")}
+            value={total.profit === null ? t("productDetail.costNeeded") : money(total.profit)}
+          />
+          <StatTile
+            label={t("productDetail.margin")}
+            value={total.margin === null ? t("common.none") : `${total.margin.toFixed(1)}%`}
+          />
         </div>
       </div>
 
       <section className="mb-6">
-        <p className="mb-3 text-xs font-medium tracking-[0.14em] text-faint uppercase">Variants</p>
+        <p className="mb-3 text-xs font-medium tracking-[0.14em] text-faint uppercase">{t("productDetail.variants")}</p>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {product.variants.map((variant) => {
             const inventory = variant.inventoryLevels.reduce((sum, inv) => sum + inv.available, 0);
@@ -141,22 +149,35 @@ export default async function ProductDetailPage({
 
             return (
               <div key={variant.id} className="glass rise-in p-5">
-                <p className="font-medium text-hi">{variant.title || "Untitled"}</p>
-                <p className="mb-4 text-xs text-faint">SKU: {variant.sku || "—"}</p>
+                <p className="font-medium text-hi">{variant.title || t("productDetail.untitled")}</p>
+                <p className="mb-4 text-xs text-faint">
+                  {t("productDetail.sku", { sku: variant.sku || t("common.none") })}
+                </p>
 
                 <div className="mb-4 grid grid-cols-2 gap-3 text-sm">
-                  <Figure label="Revenue" value={money(e.revenue)} />
-                  <Figure label="Units sold" value={e.unitsSold.toLocaleString()} />
+                  <Figure label={t("productDetail.revenue")} value={money(e.revenue)} />
+                  <Figure label={t("productDetail.unitsSold")} value={e.unitsSold.toLocaleString()} />
                   <Figure
-                    label="Profit"
-                    value={e.profit === null ? "enter cost" : money(e.profit)}
+                    label={t("productDetail.profit")}
+                    value={e.profit === null ? t("productDetail.enterCost") : money(e.profit)}
                     tone={e.profit === null ? "text-faint" : e.profit >= 0 ? "text-teal" : "text-coral"}
                   />
-                  <Figure label="Margin" value={e.margin === null ? "—" : `${e.margin.toFixed(1)}%`} />
-                  {e.refunds > 0 && <Figure label="Refunds" value={money(e.refunds)} tone="text-coral" />}
-                  <Figure label="Price" value={money(Number(variant.price ?? 0))} />
-                  <Figure label="Unit cost" value={variant.cost != null ? money(Number(variant.cost)) : "not entered"} />
-                  <Figure label="Stock" value={`${inventory} units`} />
+                  <Figure
+                    label={t("productDetail.margin")}
+                    value={e.margin === null ? t("common.none") : `${e.margin.toFixed(1)}%`}
+                  />
+                  {e.refunds > 0 && (
+                    <Figure label={t("productDetail.refunds")} value={money(e.refunds)} tone="text-coral" />
+                  )}
+                  <Figure label={t("productDetail.price")} value={money(Number(variant.price ?? 0))} />
+                  <Figure
+                    label={t("productDetail.unitCost")}
+                    value={variant.cost != null ? money(Number(variant.cost)) : t("productDetail.notEntered")}
+                  />
+                  <Figure
+                    label={t("productDetail.stock")}
+                    value={t("productDetail.stockUnits", { count: inventory })}
+                  />
                 </div>
 
                 {canManageProducts && (
@@ -180,7 +201,7 @@ export default async function ProductDetailPage({
       {canUseAi && (
         <section className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
           <div className="glass p-5">
-            <p className="mb-3 text-xs font-medium tracking-[0.14em] text-faint uppercase">AI product copy</p>
+            <p className="mb-3 text-xs font-medium tracking-[0.14em] text-faint uppercase">{t("productDetail.aiCopy")}</p>
             <ProductCopyEditor
               storeId={storeId}
               productId={productId}
@@ -200,7 +221,7 @@ export default async function ProductDetailPage({
             />
           </div>
           <div className="glass p-5">
-            <p className="mb-3 text-xs font-medium tracking-[0.14em] text-faint uppercase">Ad creative ideas</p>
+            <p className="mb-3 text-xs font-medium tracking-[0.14em] text-faint uppercase">{t("productDetail.creativeIdeas")}</p>
             <CreativeLibrary
               storeId={storeId}
               productId={productId}
@@ -221,23 +242,23 @@ export default async function ProductDetailPage({
       )}
 
       <section className="glass p-5">
-        <p className="mb-3 text-sm font-medium text-hi">How these numbers are calculated</p>
+        <p className="mb-3 text-sm font-medium text-hi">{t("productDetail.howCalculated")}</p>
         <ul className="space-y-2 text-sm text-lo">
           <li>
-            <span className="text-hi">Revenue</span> is what customers paid for each variant after discounts, from
-            every synced order, all time.
+            <span className="text-hi">{t("productDetail.calc.revenueLabel")}</span>{" "}
+            {t("productDetail.calc.revenue")}
           </li>
           <li>
-            <span className="text-hi">Profit</span> = revenue − refunds − payment fees − unit cost × units sold. Only
-            known costs are counted: labor, rent, platform fees and taxes are not.
+            <span className="text-hi">{t("productDetail.calc.profitLabel")}</span>{" "}
+            {t("productDetail.calc.profit")}
           </li>
           <li>
-            <span className="text-hi">Unit cost</span> is what you enter, or CJ&apos;s price + shipping when the
-            variant is linked to CJ. Without one, profit shows as unknown instead of assuming free goods.
+            <span className="text-hi">{t("productDetail.calc.unitCostLabel")}</span>{" "}
+            {t("productDetail.calc.unitCost")}
           </li>
           <li>
-            <span className="text-hi">Payment fees</span> use this store&apos;s estimated rate ({feePercent}%) on
-            revenue before refunds, not Shopify&apos;s actual per-order fees.
+            <span className="text-hi">{t("productDetail.calc.feesLabel")}</span>{" "}
+            {t("productDetail.calc.fees", { percent: feePercent })}
           </li>
         </ul>
       </section>

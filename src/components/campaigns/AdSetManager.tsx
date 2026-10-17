@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/lib/i18n/client";
+import type { MessageKey, T } from "@/lib/i18n";
 
 interface AdSet {
   id: string;
@@ -19,11 +21,36 @@ interface AdSetManagerProps {
   adSets: AdSet[];
 }
 
+// Los enums de Meta llegan crudos desde la base de datos: se traducen por tabla
+// y, si aparece uno nuevo, se muestra el valor crudo en vez de dejarlo vacío.
+const BILLING_EVENT_KEYS: Record<string, MessageKey> = {
+  CLICKS: "billingEvent.CLICKS",
+  IMPRESSIONS: "billingEvent.IMPRESSIONS",
+  CONVERSIONS: "billingEvent.CONVERSIONS",
+};
+
+const OPTIMIZATION_GOAL_KEYS: Record<string, MessageKey> = {
+  LINK_CLICKS: "objective.LINK_CLICKS",
+  CONVERSIONS: "objective.CONVERSIONS",
+  REACH: "objective.REACH",
+};
+
+const STATUS_KEYS: Record<string, MessageKey> = {
+  ACTIVE: "campaignStatus.ACTIVE",
+  PAUSED: "campaignStatus.PAUSED",
+};
+
+const label = (t: T, table: Record<string, MessageKey>, value: string) => {
+  const key = table[value];
+  return key ? t(key) : value;
+};
+
 export default function AdSetManager({
   storeId,
   metaCampaignId,
   adSets,
 }: AdSetManagerProps) {
+  const t = useT();
   const router = useRouter();
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({
@@ -33,15 +60,18 @@ export default function AdSetManager({
     daily_budget: "1",
   });
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  // Se guarda la clave del error, no el texto, para traducirlo en el render.
+  const [errorKey, setErrorKey] = useState<MessageKey | null>(null);
+  const [errorText, setErrorText] = useState("");
 
   const handleCreate = async () => {
     try {
       setLoading(true);
-      setError("");
+      setErrorKey(null);
+      setErrorText("");
 
       if (!formData.name.trim()) {
-        setError("Ad set name required");
+        setErrorKey("adSets.nameRequired");
         return;
       }
 
@@ -62,15 +92,17 @@ export default function AdSetManager({
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to create ad set");
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "");
       }
 
       setShowCreateForm(false);
       setFormData({ name: "", billing_event: "CLICKS", optimization_goal: "LINK_CLICKS", daily_budget: "1" });
       router.refresh();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error creating ad set");
+      const message = err instanceof Error ? err.message : "";
+      setErrorKey(message ? null : "adSets.createFailed");
+      setErrorText(message);
     } finally {
       setLoading(false);
     }
@@ -79,57 +111,59 @@ export default function AdSetManager({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Ad Sets ({adSets.length})</h3>
+        <h3 className="text-lg font-semibold">
+          {t("adSets.heading", { count: adSets.length })}
+        </h3>
         <button
           onClick={() => setShowCreateForm(!showCreateForm)}
           className="rounded bg-teal px-3 py-1 text-sm font-medium text-ink hover:opacity-90"
         >
-          + New Ad Set
+          {t("adSets.new")}
         </button>
       </div>
 
       {showCreateForm && (
         <div className="rounded-lg border border-line bg-white/5 p-4 space-y-3">
           <div>
-            <label className="block text-sm font-medium">Ad Set Name</label>
+            <label className="block text-sm font-medium">{t("adSets.nameLabel")}</label>
             <input
               type="text"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="E.g., Audience A - Test"
+              placeholder={t("adSets.namePlaceholder")}
               className="mt-1 w-full rounded border border-line-hi px-3 py-2"
             />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm font-medium">Billing Event</label>
+              <label className="block text-sm font-medium">{t("adSets.billingEvent")}</label>
               <select
                 value={formData.billing_event}
                 onChange={(e) => setFormData({ ...formData, billing_event: e.target.value })}
                 className="mt-1 w-full rounded border border-line-hi px-3 py-2"
               >
-                <option value="CLICKS">Clicks</option>
-                <option value="IMPRESSIONS">Impressions</option>
-                <option value="CONVERSIONS">Conversions</option>
+                <option value="CLICKS">{t("billingEvent.CLICKS")}</option>
+                <option value="IMPRESSIONS">{t("billingEvent.IMPRESSIONS")}</option>
+                <option value="CONVERSIONS">{t("billingEvent.CONVERSIONS")}</option>
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium">Optimization Goal</label>
+              <label className="block text-sm font-medium">{t("adSets.optimizationGoal")}</label>
               <select
                 value={formData.optimization_goal}
                 onChange={(e) => setFormData({ ...formData, optimization_goal: e.target.value })}
                 className="mt-1 w-full rounded border border-line-hi px-3 py-2"
               >
-                <option value="LINK_CLICKS">Link Clicks</option>
-                <option value="CONVERSIONS">Conversions</option>
-                <option value="REACH">Reach</option>
+                <option value="LINK_CLICKS">{t("objective.LINK_CLICKS")}</option>
+                <option value="CONVERSIONS">{t("objective.CONVERSIONS")}</option>
+                <option value="REACH">{t("objective.REACH")}</option>
               </select>
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium">Daily Budget (USD)</label>
+            <label className="block text-sm font-medium">{t("adSets.dailyBudget")}</label>
             <div className="mt-1 flex items-center">
               <span className="text-lg font-medium">$</span>
               <input
@@ -143,7 +177,11 @@ export default function AdSetManager({
             </div>
           </div>
 
-          {error && <div className="rounded bg-coral/15 p-2 text-sm text-coral">{error}</div>}
+          {(errorKey || errorText) && (
+            <div className="rounded bg-coral/15 p-2 text-sm text-coral">
+              {errorText || t(errorKey ?? "adSets.createFailed")}
+            </div>
+          )}
 
           <div className="flex gap-2">
             <button
@@ -151,14 +189,14 @@ export default function AdSetManager({
               disabled={loading}
               className="flex-1 rounded bg-white/10 px-3 py-2 font-medium hover:bg-white/15 disabled:opacity-50"
             >
-              Cancel
+              {t("common.cancel")}
             </button>
             <button
               onClick={handleCreate}
               disabled={loading || !formData.name}
               className="flex-1 rounded bg-teal px-3 py-2 font-medium text-ink hover:opacity-90 disabled:opacity-50"
             >
-              {loading ? "Creating..." : "Create Ad Set"}
+              {loading ? t("adSets.creating") : t("adSets.create")}
             </button>
           </div>
         </div>
@@ -166,7 +204,7 @@ export default function AdSetManager({
 
       {adSets.length === 0 ? (
         <div className="rounded-lg border border-line bg-white/5 p-6 text-center">
-          <p className="text-lo">No ad sets yet. Create one to add creatives and start spending.</p>
+          <p className="text-lo">{t("adSets.empty")}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -175,7 +213,11 @@ export default function AdSetManager({
               <div>
                 <p className="font-medium">{adSet.name}</p>
                 <p className="text-xs text-lo">
-                  {adSet.billingEvent} • {adSet.optimizationGoal} • {adSet.creatives.length} creatives
+                  {t("adSets.summary", {
+                    billing: label(t, BILLING_EVENT_KEYS, adSet.billingEvent),
+                    goal: label(t, OPTIMIZATION_GOAL_KEYS, adSet.optimizationGoal),
+                    count: adSet.creatives.length,
+                  })}
                 </p>
               </div>
               <div className="text-right">
@@ -186,7 +228,7 @@ export default function AdSetManager({
                       : "bg-gold/15 text-gold-hi"
                   }`}
                 >
-                  {adSet.status}
+                  {label(t, STATUS_KEYS, adSet.status)}
                 </span>
               </div>
             </div>

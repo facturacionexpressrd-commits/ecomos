@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useT, useLocale } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n";
 
 interface Creative {
   id: string;
@@ -16,15 +18,24 @@ interface CreativeSelectorProps {
   onUpload?: (file: File) => Promise<void>;
 }
 
+const TYPE_KEYS: Record<Creative["type"], MessageKey> = {
+  image: "creativeSelector.type.image",
+  video: "creativeSelector.type.video",
+};
+
 export default function CreativeSelector({
   selectedCreativeIds,
   onSelectCreative,
   onUpload,
 }: CreativeSelectorProps) {
+  const t = useT();
+  const locale = useLocale();
   const [creatives, setCreatives] = useState<Creative[]>([]);
   const [showUpload, setShowUpload] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [error, setError] = useState("");
+  // Se guarda la clave del error, no el texto, para traducirlo en el render.
+  const [errorKey, setErrorKey] = useState<MessageKey | null>(null);
+  const [errorText, setErrorText] = useState("");
 
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -32,7 +43,8 @@ export default function CreativeSelector({
 
     try {
       setUploading(true);
-      setError("");
+      setErrorKey(null);
+      setErrorText("");
 
       if (onUpload) {
         await onUpload(file);
@@ -47,15 +59,17 @@ export default function CreativeSelector({
       });
 
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Upload failed");
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || "");
       }
 
       const data = await res.json();
       setCreatives([...creatives, data.creative]);
       setShowUpload(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Upload error");
+      const message = err instanceof Error ? err.message : "";
+      setErrorKey(message ? null : "creativeSelector.uploadFailed");
+      setErrorText(message);
     } finally {
       setUploading(false);
     }
@@ -64,12 +78,12 @@ export default function CreativeSelector({
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h4 className="font-medium">Creatives</h4>
+        <h4 className="font-medium">{t("creativeSelector.heading")}</h4>
         <button
           onClick={() => setShowUpload(!showUpload)}
           className="rounded bg-gold/10 px-3 py-1 text-sm text-gold-hi hover:bg-gold/20"
         >
-          + Upload Creative
+          {t("creativeSelector.upload")}
         </button>
       </div>
 
@@ -82,14 +96,18 @@ export default function CreativeSelector({
             disabled={uploading}
             className="block w-full text-sm"
           />
-          {error && <p className="mt-2 text-sm text-coral">{error}</p>}
-          {uploading && <p className="mt-2 text-sm text-lo">Uploading...</p>}
+          {(errorKey || errorText) && (
+            <p className="mt-2 text-sm text-coral">
+              {errorText || t(errorKey ?? "creativeSelector.uploadFailed")}
+            </p>
+          )}
+          {uploading && <p className="mt-2 text-sm text-lo">{t("creativeSelector.uploading")}</p>}
         </div>
       )}
 
       {creatives.length === 0 ? (
         <div className="rounded-lg border border-dashed border-line-hi p-6 text-center">
-          <p className="text-sm text-lo">No creatives yet. Upload images or videos.</p>
+          <p className="text-sm text-lo">{t("creativeSelector.empty")}</p>
         </div>
       ) : (
         <div className="space-y-2">
@@ -107,7 +125,8 @@ export default function CreativeSelector({
               <div>
                 <p className="font-medium">{creative.name}</p>
                 <p className="text-xs text-faint">
-                  {creative.type} • {new Date(creative.uploadedAt).toLocaleDateString()}
+                  {t(TYPE_KEYS[creative.type] ?? "creativeSelector.type.image")} •{" "}
+                  {new Date(creative.uploadedAt).toLocaleDateString(locale)}
                 </p>
               </div>
             </label>
