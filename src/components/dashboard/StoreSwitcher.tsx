@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ChevronDown, Check, Store as StoreIcon } from "lucide-react";
 import ConnectStoreForm from "@/components/dashboard/ConnectStoreForm";
+import { useT } from "@/lib/i18n/client";
 
 type StoreOption = { id: string; name: string; status: string };
 
@@ -13,6 +14,7 @@ export default function StoreSwitcher({ stores }: { stores: StoreOption[] }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const t = useT();
 
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
@@ -43,7 +45,7 @@ export default function StoreSwitcher({ stores }: { stores: StoreOption[] }) {
         className="flex w-full items-center gap-2 rounded-lg border border-line-hi bg-white/5 px-3 py-2 text-left text-sm hover:bg-white/8"
       >
         <StoreIcon size={15} className="shrink-0 text-gold-hi" strokeWidth={1.75} />
-        <span className="flex-1 truncate text-hi">{current?.name ?? "Select store"}</span>
+        <span className="flex-1 truncate text-hi">{current?.name ?? t("store.select")}</span>
         <ChevronDown size={15} className="shrink-0 text-faint" />
       </button>
 
@@ -66,7 +68,7 @@ export default function StoreSwitcher({ stores }: { stores: StoreOption[] }) {
             ))}
           </ul>
           <div className="mt-1 border-t border-line p-2.5">
-            <p className="mb-2 text-[11px] font-medium tracking-wide text-faint uppercase">Connect another store</p>
+            <p className="mb-2 text-[11px] font-medium tracking-wide text-faint uppercase">{t("store.connectAnother")}</p>
             <ConnectStoreForm compact />
           </div>
         </div>

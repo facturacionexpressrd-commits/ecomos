@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import { PageHeader, EmptyState, StatusPill } from "@/components/dashboard/ui/PageHeader";
 import ProductThumb from "@/components/products/ProductThumb";
+import { getT } from "@/lib/i18n/server";
 
 export default async function ProductsPage({
   searchParams,
@@ -12,6 +13,7 @@ export default async function ProductsPage({
   searchParams: Promise<{ store?: string }>;
 }) {
   const { store: requestedStoreId } = await searchParams;
+  const t = await getT();
 
   const supabase = await createClient();
   const {
@@ -24,7 +26,9 @@ export default async function ProductsPage({
 
   const storeId = requestedStoreId && grants.some((g) => g.storeId === requestedStoreId) ? requestedStoreId : grants[0].storeId;
   if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
-    return <div className="glass mx-auto mt-16 max-w-md p-8 text-center text-sm text-lo">No access to this store.</div>;
+    return (
+      <div className="glass mx-auto mt-16 max-w-md p-8 text-center text-sm text-lo">{t("common.noAccessStore")}</div>
+    );
   }
 
   const products = await prisma.product.findMany({
@@ -36,19 +40,23 @@ export default async function ProductsPage({
 
   return (
     <div className="mx-auto max-w-6xl">
-      <PageHeader eyebrow="Catalog" title="Products" subtitle="Every product synced from this store." />
+      <PageHeader
+        eyebrow={t("products.eyebrow")}
+        title={t("products.title")}
+        subtitle={t("products.subtitle")}
+      />
 
       {products.length === 0 ? (
-        <EmptyState title="No products yet">Products appear here once Shopify sync completes.</EmptyState>
+        <EmptyState title={t("products.empty.title")}>{t("products.empty.body")}</EmptyState>
       ) : (
         <div className="glass overflow-hidden">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-line text-left text-xs tracking-wide text-faint uppercase">
-                <th className="px-5 py-3 font-medium">Product</th>
-                <th className="px-5 py-3 font-medium">Status</th>
-                <th className="px-5 py-3 font-medium">Variants</th>
-                <th className="px-5 py-3 text-right font-medium">Price range</th>
+                <th className="px-5 py-3 font-medium">{t("products.colProduct")}</th>
+                <th className="px-5 py-3 font-medium">{t("products.colStatus")}</th>
+                <th className="px-5 py-3 font-medium">{t("products.colVariants")}</th>
+                <th className="px-5 py-3 text-right font-medium">{t("products.colPriceRange")}</th>
               </tr>
             </thead>
             <tbody>
@@ -68,7 +76,7 @@ export default async function ProductsPage({
                       </Link>
                     </td>
                     <td className="px-5 py-3">
-                      <StatusPill status={p.status ?? "unknown"} />
+                      <StatusPill status={p.status ?? t("common.unknown")} />
                     </td>
                     <td className="px-5 py-3 font-mono text-lo">{p.variants.length}</td>
                     <td className="px-5 py-3 text-right font-mono text-hi">

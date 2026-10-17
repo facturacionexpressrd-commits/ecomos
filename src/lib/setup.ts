@@ -1,4 +1,14 @@
-export type SetupStep = { key: string; label: string; hint: string; href: string; done: boolean };
+import type { MessageKey, Vars } from "@/lib/i18n";
+
+/** El paso lleva claves, no texto: la traducción ocurre donde se renderiza. */
+export type SetupStep = {
+  key: string;
+  labelKey: MessageKey;
+  hintKey: MessageKey;
+  hintVars?: Vars;
+  href: string;
+  done: boolean;
+};
 
 /**
  * The first-run checklist on Overview, derived from data the workspace already has — no flags to
@@ -17,32 +27,33 @@ export function setupSteps(input: {
   const steps: SetupStep[] = [
     {
       key: "store",
-      label: "Connect your Shopify store",
-      hint: "Products, orders and inventory flow in automatically.",
+      labelKey: "setup.store.label",
+      hintKey: "setup.store.hint",
       href: `/dashboard/stores${q}`,
       done: true,
     },
     {
       key: "sync",
-      label: "Finish the first sync",
-      hint: "Your catalog is still importing. This page fills in as it lands.",
+      labelKey: "setup.sync.label",
+      hintKey: "setup.sync.hint",
       href: `/dashboard/products${q}`,
       done: input.productCount > 0,
     },
     {
       key: "costs",
-      label: "Enter product costs",
-      hint:
+      labelKey: "setup.costs.label",
+      hintKey: input.variantsMissingCost > 0 ? "setup.costs.hintMissing" : "setup.costs.hint",
+      hintVars:
         input.variantsMissingCost > 0
-          ? `${input.variantsMissingCost} of ${input.variantCount} variants have no cost, so their profit is unknown.`
-          : "Enter a cost or link CJ on each variant so profit is real.",
+          ? { missing: input.variantsMissingCost, total: input.variantCount }
+          : undefined,
       href: `/dashboard/products${q}`,
       done: input.variantCount > 0 && input.variantsMissingCost === 0,
     },
     {
       key: "meta",
-      label: "Connect Meta Ads",
-      hint: "Brings in ad spend so you see ROAS and true profit.",
+      labelKey: "setup.meta.label",
+      hintKey: "setup.meta.hint",
       href: `/dashboard/integrations${q}`,
       done: input.metaConnected,
     },
@@ -50,8 +61,8 @@ export function setupSteps(input: {
   if (input.billingEnabled) {
     steps.push({
       key: "billing",
-      label: "Choose a plan",
-      hint: "Keep access after your trial.",
+      labelKey: "setup.billing.label",
+      hintKey: "setup.billing.hint",
       href: "/billing",
       done: input.subscribed,
     });

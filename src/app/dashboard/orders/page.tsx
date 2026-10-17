@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import { PageHeader, EmptyState, StatusPill } from "@/components/dashboard/ui/PageHeader";
 import SendToCjButton from "@/components/orders/SendToCjButton";
+import { getT } from "@/lib/i18n/server";
 
 export default async function OrderHubPage({
   searchParams,
@@ -11,6 +12,7 @@ export default async function OrderHubPage({
   searchParams: Promise<{ store?: string }>;
 }) {
   const { store: requestedStoreId } = await searchParams;
+  const t = await getT();
 
   const supabase = await createClient();
   const {
@@ -23,7 +25,9 @@ export default async function OrderHubPage({
 
   const storeId = requestedStoreId && grants.some((g) => g.storeId === requestedStoreId) ? requestedStoreId : grants[0].storeId;
   if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
-    return <div className="glass mx-auto mt-16 max-w-md p-8 text-center text-sm text-lo">No access to this store.</div>;
+    return (
+      <div className="glass mx-auto mt-16 max-w-md p-8 text-center text-sm text-lo">{t("common.noAccessStore")}</div>
+    );
   }
 
   const store = await prisma.store.findUniqueOrThrow({ where: { id: storeId }, select: { organizationId: true } });
@@ -58,10 +62,14 @@ export default async function OrderHubPage({
 
   return (
     <div className="mx-auto max-w-6xl">
-      <PageHeader eyebrow="Fulfillment" title="Order Hub" subtitle="Unified view of every order and its supplier fulfillment." />
+      <PageHeader
+        eyebrow={t("orders.eyebrow")}
+        title={t("orders.title")}
+        subtitle={t("orders.subtitle")}
+      />
 
       {orders.length === 0 ? (
-        <EmptyState title="No orders yet">Once you receive orders from Shopify, they&apos;ll appear here.</EmptyState>
+        <EmptyState title={t("orders.empty.title")}>{t("orders.empty.body")}</EmptyState>
       ) : (
         <div className="space-y-4">
           {orders.map((order) => {
@@ -76,18 +84,20 @@ export default async function OrderHubPage({
               <div key={order.id} className="glass rise-in p-6">
                 <div className="mb-4 flex items-start justify-between">
                   <div>
-                    <p className="text-xs font-medium text-faint">Order #{order.shopifyGid?.slice(-8)}</p>
+                    <p className="text-xs font-medium text-faint">
+                      {t("orders.orderNumber", { number: order.shopifyGid?.slice(-8) ?? "" })}
+                    </p>
                     <p className="font-mono text-2xl font-medium text-hi">${Number(order.totalPrice).toFixed(2)}</p>
                     <p className="mt-0.5 text-xs text-lo">{new Date(order.placedAt).toLocaleString()}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-xs text-faint">Estimated margin</p>
+                    <p className="text-xs text-faint">{t("orders.estimatedMargin")}</p>
                     <p className={`font-mono text-xl font-medium ${totalMargin >= 0 ? "text-teal" : "text-coral"}`}>
                       ${totalMargin.toFixed(2)}
                     </p>
                     {order.supplierOrders.length > 0 && (
                       <p className={`text-xs ${allCompleted ? "text-teal" : "text-gold"}`}>
-                        {allCompleted ? "Completed" : "In progress"}
+                        {allCompleted ? t("orders.completed") : t("orders.inProgress")}
                       </p>
                     )}
                     {showSendToCj && (
@@ -115,21 +125,21 @@ export default async function OrderHubPage({
                           </div>
                           {supplierOrder.status === "awaiting_payment" && (
                             <p className="mb-3 rounded-lg bg-gold/10 p-2.5 text-xs text-gold-hi">
-                              Created at CJ, not paid yet. Pay it in your CJ account and CJ will start fulfilling.
+                              {t("orders.awaitingPayment")}
                             </p>
                           )}
                           {supplierOrder.fulfillments[0]?.shipment?.trackingNumber && (
                             <p className="mb-3 text-xs text-lo">
-                              Tracking:{" "}
+                              {t("orders.tracking")}{" "}
                               <span className="font-mono text-hi">{supplierOrder.fulfillments[0].shipment.trackingNumber}</span>
                               {supplierOrder.fulfillments[0].shipment.carrier && ` · ${supplierOrder.fulfillments[0].shipment.carrier}`}
                             </p>
                           )}
 
                           <div className="mb-3 grid grid-cols-3 gap-2 text-sm">
-                            <Field label="Cost" value={`$${Number(supplierOrder.totalCost).toFixed(2)}`} />
-                            <Field label="Shipping" value={`$${Number(supplierOrder.totalShipping).toFixed(2)}`} />
-                            <Field label="Margin" value={`$${Number(supplierOrder.estimatedMargin).toFixed(2)}`} />
+                            <Field label={t("orders.cost")} value={`$${Number(supplierOrder.totalCost).toFixed(2)}`} />
+                            <Field label={t("orders.shipping")} value={`$${Number(supplierOrder.totalShipping).toFixed(2)}`} />
+                            <Field label={t("orders.margin")} value={`$${Number(supplierOrder.estimatedMargin).toFixed(2)}`} />
                           </div>
 
                           {latestEvent && (
@@ -143,7 +153,7 @@ export default async function OrderHubPage({
                           {supplierOrder.exceptions.length > 0 && (
                             <div className="rounded-lg border border-coral/30 bg-coral/10 p-2.5">
                               <p className="text-xs font-semibold text-coral">
-                                {supplierOrder.exceptions.length} issue{supplierOrder.exceptions.length !== 1 ? "s" : ""}
+                                {t("orders.issues", { count: supplierOrder.exceptions.length })}
                               </p>
                               {supplierOrder.exceptions.slice(0, 2).map((exc) => (
                                 <p key={exc.id} className="text-xs text-coral/90">
