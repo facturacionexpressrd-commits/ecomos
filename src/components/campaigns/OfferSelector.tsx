@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useT } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n";
 
 interface Offer {
   id: string;
@@ -23,9 +25,12 @@ export default function OfferSelector({
   selectedOfferId,
   onSelect,
 }: OfferSelectorProps) {
+  const t = useT();
   const [offers, setOffers] = useState<Offer[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  // Se guarda la clave del error, no el texto, para que el efecto no dependa de `t`.
+  const [errorKey, setErrorKey] = useState<MessageKey | null>(null);
+  const [errorText, setErrorText] = useState("");
 
   useEffect(() => {
     const loadOffers = async () => {
@@ -34,11 +39,13 @@ export default function OfferSelector({
         const res = await fetch(
           `/api/offers?storeId=${encodeURIComponent(storeId)}&productId=${encodeURIComponent(productId)}`
         );
-        if (!res.ok) throw new Error("Failed to load offers");
+        if (!res.ok) throw new Error("");
         const data = await res.json();
         setOffers(data.offers || []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Error loading offers");
+        const message = err instanceof Error ? err.message : "";
+        setErrorKey(message ? null : "offerSelector.loadFailed");
+        setErrorText(message);
       } finally {
         setLoading(false);
       }
@@ -46,13 +53,20 @@ export default function OfferSelector({
     loadOffers();
   }, [storeId, productId]);
 
-  if (loading) return <div className="text-lo">Loading offers...</div>;
-  if (error) return <div className="text-coral">Error: {error}</div>;
+  if (loading) return <div className="text-lo">{t("offerSelector.loading")}</div>;
+  if (errorKey || errorText)
+    return (
+      <div className="text-coral">
+        {t("offerSelector.error", {
+          message: errorText || t(errorKey ?? "offerSelector.loadFailed"),
+        })}
+      </div>
+    );
 
   if (offers.length === 0) {
     return (
       <div className="rounded bg-gold/15 p-3 text-center text-sm text-gold-hi">
-        No offers found for this product. Create one in your sourcing tool.
+        {t("offerSelector.empty")}
       </div>
     );
   }
@@ -75,8 +89,12 @@ export default function OfferSelector({
               <p className="text-xs text-faint">{offer.url}</p>
             </div>
             <div className="text-right">
-              <p className="text-sm font-medium">Cost: ${offer.cost.toFixed(2)}</p>
-              <p className="text-xs text-teal">Margin: {(offer.margin * 100).toFixed(0)}%</p>
+              <p className="text-sm font-medium">
+                {t("offerSelector.cost", { value: offer.cost.toFixed(2) })}
+              </p>
+              <p className="text-xs text-teal">
+                {t("offerSelector.margin", { value: (offer.margin * 100).toFixed(0) })}
+              </p>
             </div>
           </div>
         </button>

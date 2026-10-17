@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n";
 
 interface ScoredOpportunity {
   productId: string;
@@ -25,9 +27,13 @@ interface ResearchWorkspaceProps {
 }
 
 export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
+  const t = useT();
   const [results, setResults] = useState<ScoredOpportunity[]>([]);
   const [searching, setSearching] = useState(false);
-  const [error, setError] = useState("");
+  // Se guarda la clave del error, no el texto, para traducirlo en el render;
+  // `errorText` es el mensaje que ya viene traducido desde la API.
+  const [errorKey, setErrorKey] = useState<MessageKey | null>(null);
+  const [errorText, setErrorText] = useState("");
   const [selectedOpportunity, setSelectedOpportunity] =
     useState<ScoredOpportunity | null>(null);
 
@@ -40,7 +46,8 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
   const handleSearch = async () => {
     try {
       setSearching(true);
-      setError("");
+      setErrorKey(null);
+      setErrorText("");
 
       const response = await fetch("/api/research/search", {
         method: "POST",
@@ -55,14 +62,18 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Search failed");
+        const data = await response.json().catch(() => ({}));
+        setErrorKey(data.error ? null : "research.searchFailed");
+        setErrorText(data.error ?? "");
+        return;
       }
 
       const data = await response.json();
       setResults(data.results || []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error searching");
+      const message = err instanceof Error ? err.message : "";
+      setErrorKey(message ? null : "research.searchError");
+      setErrorText(message);
     } finally {
       setSearching(false);
     }
@@ -86,11 +97,11 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
     <div className="space-y-6">
       {/* Search Filters */}
       <div className="rounded-lg border border-line bg-white/5 p-6">
-        <h2 className="mb-4 text-lg font-semibold">Search Opportunities</h2>
+        <h2 className="mb-4 text-lg font-semibold">{t("research.searchHeading")}</h2>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <div>
-            <label className="block text-sm font-medium">Min Margin (%)</label>
+            <label className="block text-sm font-medium">{t("research.minMargin")}</label>
             <input
               type="number"
               value={minMargin * 100}
@@ -103,7 +114,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium">Max Cost (USD)</label>
+            <label className="block text-sm font-medium">{t("research.maxCost")}</label>
             <input
               type="number"
               value={maxCost}
@@ -115,7 +126,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium">Max Shipping (USD)</label>
+            <label className="block text-sm font-medium">{t("research.maxShipping")}</label>
             <input
               type="number"
               value={maxShipping}
@@ -127,7 +138,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium">Competition Level</label>
+            <label className="block text-sm font-medium">{t("research.competitionLevel")}</label>
             <select
               value={competitionLevel}
               onChange={(e) =>
@@ -137,16 +148,18 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
               }
               className="mt-1 w-full rounded border border-line-hi px-3 py-2"
             >
-              <option value="">Any</option>
-              <option value="low">Low</option>
-              <option value="medium">Medium</option>
-              <option value="high">High</option>
+              <option value="">{t("research.competitionAny")}</option>
+              <option value="low">{t("research.competitionLow")}</option>
+              <option value="medium">{t("research.competitionMedium")}</option>
+              <option value="high">{t("research.competitionHigh")}</option>
             </select>
           </div>
         </div>
 
-        {error && (
-          <p className="mt-4 rounded bg-coral/15 p-2 text-sm text-coral">{error}</p>
+        {(errorKey || errorText) && (
+          <p className="mt-4 rounded bg-coral/15 p-2 text-sm text-coral">
+            {errorText || t(errorKey ?? "research.searchError")}
+          </p>
         )}
 
         <button
@@ -154,16 +167,14 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
           disabled={searching}
           className="mt-4 rounded bg-gold px-6 py-2 text-ink hover:bg-gold-hi disabled:opacity-50"
         >
-          {searching ? "Searching..." : "Search Opportunities"}
+          {searching ? t("research.searching") : t("research.search")}
         </button>
       </div>
 
       {/* Results Grid */}
       {results.length > 0 ? (
         <div>
-          <p className="mb-4 text-sm text-lo">
-            Found <strong>{results.length}</strong> matching opportunities
-          </p>
+          <p className="mb-4 text-sm text-lo">{t("research.found", { count: results.length })}</p>
 
           <div className="space-y-3">
             {results.map((opp) => (
@@ -180,16 +191,20 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
                   <div className="flex-1">
                     <h3 className="font-semibold">{opp.productTitle}</h3>
                     <p className="text-sm text-lo">
-                      Cost: ${opp.cost.toFixed(2)} | Retail: ${opp.estimatedRetailPrice.toFixed(2)} | Margin: {(opp.margin * 100).toFixed(0)}%
+                      {t("research.summary", {
+                        cost: opp.cost.toFixed(2),
+                        retail: opp.estimatedRetailPrice.toFixed(2),
+                        margin: (opp.margin * 100).toFixed(0),
+                      })}
                     </p>
                   </div>
                   <div className={`rounded-lg border-2 ${scoreBg(opp.opportunityScore)} p-4 text-center`}>
                     <p className={`text-3xl font-bold ${scoreColor(opp.opportunityScore)}`}>
                       {opp.opportunityScore.toFixed(0)}
                     </p>
-                    <p className="text-xs text-lo">Score</p>
+                    <p className="text-xs text-lo">{t("research.score")}</p>
                     <p className="mt-1 text-xs text-faint">
-                      {(opp.confidence * 100).toFixed(0)}% confidence
+                      {t("research.confidence", { value: (opp.confidence * 100).toFixed(0) })}
                     </p>
                   </div>
                 </div>
@@ -199,7 +214,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
         </div>
       ) : searching ? null : (
         <div className="rounded-lg border border-dashed border-line-hi p-12 text-center">
-          <p className="text-lo">No opportunities found. Adjust filters and search.</p>
+          <p className="text-lo">{t("research.empty")}</p>
         </div>
       )}
 
@@ -210,6 +225,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
             <h3 className="text-xl font-bold">{selectedOpportunity.productTitle}</h3>
             <button
               onClick={() => setSelectedOpportunity(null)}
+              aria-label={t("research.closeDetail")}
               className="text-faint hover:text-hi"
             >
               ✕
@@ -219,25 +235,25 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
           {/* Score Breakdown */}
           <div className="mb-6 grid gap-4 md:grid-cols-4">
             <div className="rounded bg-white/5 p-3">
-              <p className="text-xs text-lo">Margin Score</p>
+              <p className="text-xs text-lo">{t("research.marginScore")}</p>
               <p className={`text-2xl font-bold ${scoreColor(selectedOpportunity.scoreBreakdown.marginScore)}`}>
                 {selectedOpportunity.scoreBreakdown.marginScore.toFixed(0)}
               </p>
             </div>
             <div className="rounded bg-white/5 p-3">
-              <p className="text-xs text-lo">Cost Score</p>
+              <p className="text-xs text-lo">{t("research.costScore")}</p>
               <p className={`text-2xl font-bold ${scoreColor(selectedOpportunity.scoreBreakdown.costScore)}`}>
                 {selectedOpportunity.scoreBreakdown.costScore.toFixed(0)}
               </p>
             </div>
             <div className="rounded bg-white/5 p-3">
-              <p className="text-xs text-lo">Demand Score</p>
+              <p className="text-xs text-lo">{t("research.demandScore")}</p>
               <p className={`text-2xl font-bold ${scoreColor(selectedOpportunity.scoreBreakdown.demandScore)}`}>
                 {selectedOpportunity.scoreBreakdown.demandScore.toFixed(0)}
               </p>
             </div>
             <div className="rounded bg-white/5 p-3">
-              <p className="text-xs text-lo">Competition Score</p>
+              <p className="text-xs text-lo">{t("research.competitionScore")}</p>
               <p className={`text-2xl font-bold ${scoreColor(selectedOpportunity.scoreBreakdown.competitionScore)}`}>
                 {selectedOpportunity.scoreBreakdown.competitionScore.toFixed(0)}
               </p>
@@ -247,21 +263,21 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
           {/* Metrics */}
           <div className="mb-6 grid gap-3 md:grid-cols-2">
             <div className="rounded bg-white/5 p-4">
-              <p className="text-sm text-lo">Cost</p>
+              <p className="text-sm text-lo">{t("research.cost")}</p>
               <p className="text-2xl font-bold">${selectedOpportunity.cost.toFixed(2)}</p>
             </div>
             <div className="rounded bg-white/5 p-4">
-              <p className="text-sm text-lo">Estimated Retail</p>
+              <p className="text-sm text-lo">{t("research.estimatedRetail")}</p>
               <p className="text-2xl font-bold">
                 ${selectedOpportunity.estimatedRetailPrice.toFixed(2)}
               </p>
             </div>
             <div className="rounded bg-white/5 p-4">
-              <p className="text-sm text-lo">Shipping Cost</p>
+              <p className="text-sm text-lo">{t("research.shippingCost")}</p>
               <p className="text-2xl font-bold">${selectedOpportunity.shippingCost.toFixed(2)}</p>
             </div>
             <div className="rounded bg-white/5 p-4">
-              <p className="text-sm text-lo">Net Margin</p>
+              <p className="text-sm text-lo">{t("research.netMargin")}</p>
               <p className="text-2xl font-bold text-teal">
                 {(selectedOpportunity.margin * 100).toFixed(0)}%
               </p>
@@ -271,7 +287,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
           {/* Reasoning */}
           {selectedOpportunity.reasoning.length > 0 && (
             <div className="rounded bg-white/5 p-4">
-              <p className="mb-2 font-medium">Why This Opportunity</p>
+              <p className="mb-2 font-medium">{t("research.why")}</p>
               <ul className="space-y-1">
                 {selectedOpportunity.reasoning.map((reason, i) => (
                   <li key={i} className="text-sm">
@@ -285,10 +301,10 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
           {/* Actions */}
           <div className="mt-6 flex gap-2">
             <button className="flex-1 rounded bg-teal px-4 py-2 text-ink hover:opacity-90">
-              Add to Watchlist
+              {t("research.addWatchlist")}
             </button>
             <button className="flex-1 rounded bg-gold px-4 py-2 text-ink hover:bg-gold-hi">
-              Create Campaign
+              {t("research.createCampaign")}
             </button>
           </div>
         </div>

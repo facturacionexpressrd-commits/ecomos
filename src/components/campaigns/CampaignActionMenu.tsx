@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n";
 
 interface CampaignActionMenuProps {
   storeId: string;
@@ -19,21 +21,27 @@ export default function CampaignActionMenu({
   status,
   onActionCompleted,
 }: CampaignActionMenuProps) {
+  const t = useT();
   const [showMenu, setShowMenu] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  // Se guarda la clave del error, no el texto, para traducirlo en el render.
+  const [errorKey, setErrorKey] = useState<MessageKey | null>(null);
+  const [errorText, setErrorText] = useState("");
 
   const handleAction = async (action: string) => {
     try {
       if (action === "delete") {
-        const label = campaignName ? `"${campaignName}"` : "this campaign";
-        if (!window.confirm(`Delete ${label}? This removes it from Meta and EcomOS. Cannot be undone.`)) {
+        const label = campaignName
+          ? t("campaignAction.named", { name: campaignName })
+          : t("campaignAction.thisCampaign");
+        if (!window.confirm(t("campaignAction.confirmDelete", { label }))) {
           return;
         }
       }
 
       setLoading(true);
-      setError("");
+      setErrorKey(null);
+      setErrorText("");
 
       const endpoint =
         action === "pause"
@@ -46,7 +54,10 @@ export default function CampaignActionMenu({
                 ? "/api/meta/campaigns/delete"
                 : null;
 
-      if (!endpoint) throw new Error("Unknown action");
+      if (!endpoint) {
+        setErrorKey("campaignAction.unknown");
+        return;
+      }
 
       const response = await fetch(endpoint, {
         method: "POST",
@@ -55,19 +66,26 @@ export default function CampaignActionMenu({
           storeId,
           campaignId,
           metaCampaignId,
-          ...(action === "duplicate" && { newName: `Copy of campaign` }),
+          ...(action === "duplicate" && { newName: t("campaignAction.copyName") }),
         }),
       });
 
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || `Action failed: ${response.statusText}`);
+        if (data.error) {
+          setErrorText(data.error);
+        } else {
+          setErrorText(t("campaignAction.failedStatus", { status: response.statusText }));
+        }
+        return;
       }
 
       setShowMenu(false);
       onActionCompleted();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Action failed");
+      const message = err instanceof Error ? err.message : "";
+      setErrorKey(message ? null : "campaignAction.failed");
+      setErrorText(message);
     } finally {
       setLoading(false);
     }
@@ -77,6 +95,7 @@ export default function CampaignActionMenu({
     <div className="relative inline-block">
       <button
         onClick={() => setShowMenu(!showMenu)}
+        aria-label={t("campaignAction.menu")}
         className="rounded-lg border border-line-hi bg-white/5 px-3 py-1 text-sm font-medium text-hi hover:bg-white/10"
         disabled={loading}
       >
@@ -91,7 +110,7 @@ export default function CampaignActionMenu({
               className="block w-full rounded-md px-3 py-2 text-left text-sm text-hi hover:bg-white/8 disabled:opacity-50"
               disabled={loading}
             >
-              ⏸ Pause
+              {t("campaignAction.pause")}
             </button>
           )}
           {status === "PAUSED" && (
@@ -100,7 +119,7 @@ export default function CampaignActionMenu({
               className="block w-full rounded-md px-3 py-2 text-left text-sm text-hi hover:bg-white/8 disabled:opacity-50"
               disabled={loading}
             >
-              ▶ Activate
+              {t("campaignAction.activate")}
             </button>
           )}
           <button
@@ -108,19 +127,23 @@ export default function CampaignActionMenu({
             className="block w-full rounded-md px-3 py-2 text-left text-sm text-hi hover:bg-white/8 disabled:opacity-50"
             disabled={loading}
           >
-            📋 Duplicate
+            {t("campaignAction.duplicate")}
           </button>
           <button
             onClick={() => handleAction("delete")}
             className="block w-full rounded-md px-3 py-2 text-left text-sm text-coral hover:bg-white/8 disabled:opacity-50"
             disabled={loading}
           >
-            🗑 Delete
+            {t("campaignAction.delete")}
           </button>
         </div>
       )}
 
-      {error && <div className="absolute mt-1 text-xs text-coral">{error}</div>}
+      {(errorKey || errorText) && (
+        <div className="absolute mt-1 text-xs text-coral">
+          {errorText || t(errorKey ?? "campaignAction.failed")}
+        </div>
+      )}
     </div>
   );
 }

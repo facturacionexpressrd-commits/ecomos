@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useT } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n";
 
 interface ApprovalActionItem {
   id: string;
@@ -19,11 +21,39 @@ interface ApprovalCenterProps {
   storeId: string;
 }
 
+// Los valores vienen de la base de datos, así que se traducen por tabla y, si
+// aparece uno nuevo, se muestra el valor crudo en vez de romper la pantalla.
+const PRIORITY_KEYS: Record<string, MessageKey> = {
+  critical: "approvalCenter.priority.critical",
+  high: "approvalCenter.priority.high",
+  medium: "approvalCenter.priority.medium",
+  low: "approvalCenter.priority.low",
+};
+
+const STATUS_KEYS: Record<string, MessageKey> = {
+  pending: "approvalCenter.status.pending",
+  approved: "approvalCenter.status.approved",
+  rejected: "approvalCenter.status.rejected",
+};
+
+const ACTION_TYPE_KEYS: Record<string, MessageKey> = {
+  supplier_add: "approvalCenter.action.supplier_add",
+  budget_update: "approvalCenter.action.budget_update",
+  price_adjustment: "approvalCenter.action.price_adjustment",
+  creative_approval: "approvalCenter.action.creative_approval",
+  campaign_launch: "approvalCenter.action.campaign_launch",
+  product_publish: "approvalCenter.action.product_publish",
+  order_fulfillment: "approvalCenter.action.order_fulfillment",
+};
+
 export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
+  const t = useT();
   const [approvals, setApprovals] = useState<ApprovalActionItem[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
+  // La clave del error se guarda sin traducir para que el efecto no dependa de `t`.
+  const [errorKey, setErrorKey] = useState<MessageKey | null>(null);
+  const [errorText, setErrorText] = useState("");
+  const [noticeKey, setNoticeKey] = useState<MessageKey | null>(null);
   const [selectedApproval, setSelectedApproval] = useState<ApprovalActionItem | null>(null);
   const [deciding, setDeciding] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
@@ -37,14 +67,16 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
         );
 
         if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.error || "Failed to load approvals");
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || "");
         }
 
         const data = await response.json();
         setApprovals(data.approvals || []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Error loading approvals");
+        const message = err instanceof Error ? err.message : "";
+        setErrorKey(message ? null : "approvalCenter.loadFailed");
+        setErrorText(message);
       } finally {
         setLoading(false);
       }
@@ -56,13 +88,15 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
   const handleDecision = async (decision: "approved" | "rejected") => {
     if (!selectedApproval) return;
     if (decision === "rejected" && !rejectionReason.trim()) {
-      setError("Rejection reason required");
+      setErrorKey("approvalCenter.reasonRequired");
+      setErrorText("");
       return;
     }
 
     try {
       setDeciding(true);
-      setError("");
+      setErrorKey(null);
+      setErrorText("");
 
       const response = await fetch("/api/approvals/decide", {
         method: "POST",
@@ -76,15 +110,13 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Decision failed");
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "");
       }
 
       const result = await response.json();
-      setNotice(
-        decision === "approved" && !result.executed
-          ? "Approved and recorded. This action type has no automatic step yet, so nothing was executed."
-          : ""
+      setNoticeKey(
+        decision === "approved" && !result.executed ? "approvalCenter.approvedNoStep" : null
       );
 
       // Remove from list and deselect
@@ -92,7 +124,9 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
       setSelectedApproval(null);
       setRejectionReason("");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error deciding");
+      const message = err instanceof Error ? err.message : "";
+      setErrorKey(message ? null : "approvalCenter.decisionFailed");
+      setErrorText(message);
     } finally {
       setDeciding(false);
     }
@@ -111,6 +145,21 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
       default:
         return "bg-white/5 text-hi border-line-hi";
     }
+  };
+
+  const priorityLabel = (priority: string) => {
+    const key = PRIORITY_KEYS[priority];
+    return key ? t(key) : priority.toUpperCase();
+  };
+
+  const statusLabel = (status: string) => {
+    const key = STATUS_KEYS[status];
+    return key ? t(key) : status;
+  };
+
+  const actionTypeLabel = (actionType: string) => {
+    const key = ACTION_TYPE_KEYS[actionType];
+    return key ? t(key) : actionType;
   };
 
   const actionTypeIcon = (actionType: string) => {
@@ -135,29 +184,33 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
   };
 
   if (loading) {
-    return <div className="text-center text-lo">Loading approvals...</div>;
+    return <div className="text-center text-lo">{t("approvalCenter.loading")}</div>;
   }
 
   return (
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold">Approval Center</h2>
+        <h2 className="text-2xl font-bold">{t("approvalCenter.title")}</h2>
         <p className="mt-1 text-lo">
-          {approvals.length} action{approvals.length !== 1 ? "s" : ""} awaiting approval
+          {approvals.length === 1
+            ? t("approvalCenter.pendingCountOne")
+            : t("approvalCenter.pendingCount", { count: approvals.length })}
         </p>
       </div>
 
-      {error && (
-        <div className="rounded-lg bg-coral/15 p-4 text-sm text-coral">{error}</div>
+      {(errorKey || errorText) && (
+        <div className="rounded-lg bg-coral/15 p-4 text-sm text-coral">
+          {errorText || t(errorKey ?? "approvalCenter.loadError")}
+        </div>
       )}
-      {notice && (
-        <div className="rounded-lg bg-gold/10 p-4 text-sm text-gold-hi">{notice}</div>
+      {noticeKey && (
+        <div className="rounded-lg bg-gold/10 p-4 text-sm text-gold-hi">{t(noticeKey)}</div>
       )}
 
       {approvals.length === 0 ? (
         <div className="rounded-lg border border-dashed border-line-hi bg-white/5 p-12 text-center">
-          <p className="text-lo">No pending approvals. Everything is up to date!</p>
+          <p className="text-lo">{t("approvalCenter.empty")}</p>
         </div>
       ) : (
         <div className="grid gap-4 lg:grid-cols-3">
@@ -187,10 +240,12 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
                             approval.priority
                           )}`}
                         >
-                          {approval.priority.toUpperCase()}
+                          {priorityLabel(approval.priority)}
                         </span>
                         <span className="text-xs text-faint">
-                          {(approval.confidenceScore * 100).toFixed(0)}% confident
+                          {t("approvalCenter.confidentShort", {
+                            value: (approval.confidenceScore * 100).toFixed(0),
+                          })}
                         </span>
                       </div>
                     </div>
@@ -208,14 +263,16 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
                   <span className="text-4xl">{actionTypeIcon(selectedApproval.actionType)}</span>
                   <div>
                     <h3 className="text-2xl font-bold">{selectedApproval.title}</h3>
-                    <p className="text-sm text-lo">{selectedApproval.actionType}</p>
+                    <p className="text-sm text-lo">{actionTypeLabel(selectedApproval.actionType)}</p>
                   </div>
                 </div>
               </div>
 
               {/* Executive Explanation */}
               <div className="mb-6 rounded-lg bg-white/5 p-4 border-l-4 border-gold">
-                <p className="text-sm font-medium text-lo mb-2">Executive Summary</p>
+                <p className="text-sm font-medium text-lo mb-2">
+                  {t("approvalCenter.executiveSummary")}
+                </p>
                 <p className="text-base leading-relaxed">
                   {selectedApproval.executiveExplanation}
                 </p>
@@ -224,15 +281,15 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
               {/* Details */}
               <div className="mb-6 grid gap-4 md:grid-cols-2">
                 <div className="rounded bg-white/5 p-4">
-                  <p className="text-sm text-lo">Priority</p>
+                  <p className="text-sm text-lo">{t("approvalCenter.priority")}</p>
                   <p className={`mt-1 inline-block rounded px-3 py-1 text-sm font-medium ${priorityColor(
                     selectedApproval.priority
                   )}`}>
-                    {selectedApproval.priority.toUpperCase()}
+                    {priorityLabel(selectedApproval.priority)}
                   </p>
                 </div>
                 <div className="rounded bg-white/5 p-4">
-                  <p className="text-sm text-lo">Confidence</p>
+                  <p className="text-sm text-lo">{t("approvalCenter.confidence")}</p>
                   <p className="mt-1 text-2xl font-bold text-gold-hi">
                     {(selectedApproval.confidenceScore * 100).toFixed(0)}%
                   </p>
@@ -241,7 +298,7 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
 
               {/* Reasoning */}
               <div className="mb-6 rounded bg-white/5 p-4">
-                <p className="mb-2 text-sm font-medium">AI Reasoning</p>
+                <p className="mb-2 text-sm font-medium">{t("approvalCenter.aiReasoning")}</p>
                 <p className="text-sm text-lo">{selectedApproval.reasoning}</p>
               </div>
 
@@ -250,18 +307,20 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
                 <div className="space-y-4 border-t pt-6">
                   {selectedApproval.priority === "critical" && (
                     <div className="rounded bg-coral/15 p-4 text-sm text-coral">
-                      ⚠️ This is a critical action requiring immediate attention
+                      {t("approvalCenter.criticalWarning")}
                     </div>
                   )}
 
                   {rejectionReason && (
                     <div>
-                      <label className="block text-sm font-medium">Rejection Reason</label>
+                      <label className="block text-sm font-medium">
+                        {t("approvalCenter.rejectionReason")}
+                      </label>
                       <textarea
                         value={rejectionReason}
                         onChange={(e) => setRejectionReason(e.target.value)}
                         className="mt-2 h-20 w-full rounded border border-line-hi px-3 py-2"
-                        placeholder="Why are you rejecting this action?"
+                        placeholder={t("approvalCenter.rejectionPlaceholder")}
                       />
                     </div>
                   )}
@@ -272,20 +331,23 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
                       disabled={deciding}
                       className="flex-1 rounded bg-teal px-4 py-3 text-ink hover:opacity-90 disabled:opacity-50 font-medium"
                     >
-                      {deciding ? "Processing..." : "✓ Approve"}
+                      {deciding ? t("approvalCenter.processing") : t("approvalCenter.approve")}
                     </button>
                     <button
                       onClick={() => {
                         if (rejectionReason) {
                           handleDecision("rejected");
                         } else {
-                          setRejectionReason("Pending");
+                          // Primer clic: abre el campo del motivo con un texto por defecto.
+                          setRejectionReason(t("approvalCenter.rejectionPending"));
                         }
                       }}
                       disabled={deciding}
                       className="flex-1 rounded bg-coral px-4 py-3 text-ink hover:opacity-90 disabled:opacity-50 font-medium"
                     >
-                      {rejectionReason ? "✗ Confirm Reject" : "✗ Reject"}
+                      {rejectionReason
+                        ? t("approvalCenter.confirmReject")
+                        : t("approvalCenter.reject")}
                     </button>
                   </div>
                 </div>
@@ -293,7 +355,8 @@ export default function ApprovalCenter({ storeId }: ApprovalCenterProps) {
 
               {selectedApproval.status !== "pending" && (
                 <div className="rounded bg-white/5 p-4 text-center text-sm text-lo">
-                  Status: <span className="font-medium capitalize">{selectedApproval.status}</span>
+                  {t("approvalCenter.statusLabel")}{" "}
+                  <span className="font-medium">{statusLabel(selectedApproval.status)}</span>
                 </div>
               )}
             </div>

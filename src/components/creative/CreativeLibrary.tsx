@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n";
 
 interface CreativeIdea {
   id: string;
@@ -25,16 +27,20 @@ export default function CreativeLibrary({
   productId,
   initialIdeas = [],
 }: CreativeLibraryProps) {
+  const t = useT();
   const [ideas, setIdeas] = useState<CreativeIdea[]>(initialIdeas);
   const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState("");
+  // Se guarda la clave del error, no el texto, para traducirlo en el render.
+  const [errorKey, setErrorKey] = useState<MessageKey | null>(null);
+  const [errorText, setErrorText] = useState("");
   const [selectedIdea, setSelectedIdea] = useState<CreativeIdea | null>(null);
-  const [targetAudience, setTargetAudience] = useState("general customers");
+  const [targetAudience, setTargetAudience] = useState(t("creativeLib.defaultAudience"));
 
   const handleGenerateConcepts = async () => {
     try {
       setGenerating(true);
-      setError("");
+      setErrorKey(null);
+      setErrorText("");
 
       const response = await fetch("/api/ai/creative/concepts", {
         method: "POST",
@@ -47,14 +53,16 @@ export default function CreativeLibrary({
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Generation failed");
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "");
       }
 
       const data = await response.json();
       setIdeas([...ideas, ...data.ideas]);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error generating concepts");
+      const message = err instanceof Error ? err.message : "";
+      setErrorKey(message ? null : "creativeLib.generateFailed");
+      setErrorText(message);
     } finally {
       setGenerating(false);
     }
@@ -64,15 +72,15 @@ export default function CreativeLibrary({
     <div className="space-y-6">
       {/* Generate Section */}
       <div className="rounded-lg border border-line bg-white/5 p-6">
-        <h3 className="mb-4 text-lg font-semibold">Generate Creative Concepts</h3>
+        <h3 className="mb-4 text-lg font-semibold">{t("creativeLib.heading")}</h3>
         <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium">Target Audience</label>
+            <label className="block text-sm font-medium">{t("creativeLib.audienceLabel")}</label>
             <input
               type="text"
               value={targetAudience}
               onChange={(e) => setTargetAudience(e.target.value)}
-              placeholder="e.g., busy professionals, eco-conscious buyers"
+              placeholder={t("creativeLib.audiencePlaceholder")}
               className="mt-1 w-full rounded border border-line-hi px-3 py-2"
             />
           </div>
@@ -81,10 +89,12 @@ export default function CreativeLibrary({
             disabled={generating}
             className="rounded bg-gold px-4 py-2 text-ink hover:bg-gold-hi disabled:opacity-50"
           >
-            {generating ? "Generating..." : "Generate 3 Concepts"}
+            {generating ? t("creativeLib.generating") : t("creativeLib.generate")}
           </button>
-          {error && (
-            <p className="rounded bg-coral/15 p-2 text-sm text-coral">{error}</p>
+          {(errorKey || errorText) && (
+            <p className="rounded bg-coral/15 p-2 text-sm text-coral">
+              {errorText || t(errorKey ?? "creativeLib.generateFailed")}
+            </p>
           )}
         </div>
       </div>
@@ -92,9 +102,7 @@ export default function CreativeLibrary({
       {/* Ideas Grid */}
       {ideas.length === 0 ? (
         <div className="rounded-lg border border-dashed border-line-hi p-12 text-center">
-          <p className="text-lo">
-            No creative concepts yet. Generate some to get started!
-          </p>
+          <p className="text-lo">{t("creativeLib.empty")}</p>
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-3">
@@ -123,6 +131,7 @@ export default function CreativeLibrary({
             <h3 className="text-xl font-bold">{selectedIdea.headlineText}</h3>
             <button
               onClick={() => setSelectedIdea(null)}
+              aria-label={t("creativeLib.closeDetail")}
               className="text-faint hover:text-hi"
             >
               ✕
@@ -132,23 +141,25 @@ export default function CreativeLibrary({
           <div className="space-y-4">
             {/* Headline Details */}
             <div className="rounded bg-gold/10 p-4">
-              <p className="mb-2 text-sm font-medium text-gold-hi">Headline Strategy</p>
+              <p className="mb-2 text-sm font-medium text-gold-hi">
+                {t("creativeLib.headlineStrategy")}
+              </p>
               <p className="text-sm">
-                <strong>Hook:</strong> {selectedIdea.headlineHook}
+                <strong>{t("creativeLib.hook")}</strong> {selectedIdea.headlineHook}
               </p>
               <p className="mt-1 text-sm">
-                <strong>CTA Style:</strong> {selectedIdea.headlineCta}
+                <strong>{t("creativeLib.ctaStyle")}</strong> {selectedIdea.headlineCta}
               </p>
             </div>
 
             {/* Visual Concepts */}
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded border border-line p-4">
-                <p className="mb-2 font-medium">Image Concept</p>
+                <p className="mb-2 font-medium">{t("creativeLib.imageConcept")}</p>
                 <p className="text-sm text-lo">{selectedIdea.imageConceptText}</p>
               </div>
               <div className="rounded border border-line p-4">
-                <p className="mb-2 font-medium">Video Concept</p>
+                <p className="mb-2 font-medium">{t("creativeLib.videoConcept")}</p>
                 <p className="text-sm text-lo">{selectedIdea.videoConceptText}</p>
               </div>
             </div>
@@ -156,7 +167,7 @@ export default function CreativeLibrary({
             {/* Emotional Appeals */}
             {selectedIdea.emotionalApeals.length > 0 && (
               <div>
-                <p className="mb-2 font-medium">Emotional Appeals</p>
+                <p className="mb-2 font-medium">{t("creativeLib.emotionalAppeals")}</p>
                 <div className="flex flex-wrap gap-2">
                   {selectedIdea.emotionalApeals.map((appeal, i) => (
                     <span
@@ -172,20 +183,20 @@ export default function CreativeLibrary({
 
             {/* Target Audience */}
             <div className="rounded bg-white/5 p-4">
-              <p className="text-sm font-medium">Target Audience</p>
+              <p className="text-sm font-medium">{t("creativeLib.targetAudience")}</p>
               <p className="mt-1 text-sm text-lo">{selectedIdea.targetAudience}</p>
             </div>
 
             {/* Actions */}
             <div className="flex gap-2 pt-4">
               <button className="flex-1 rounded bg-teal px-4 py-2 text-sm text-ink hover:opacity-90">
-                Generate Image
+                {t("creativeLib.generateImage")}
               </button>
               <button className="flex-1 rounded bg-violet px-4 py-2 text-sm text-ink hover:opacity-90">
-                Generate Video
+                {t("creativeLib.generateVideo")}
               </button>
               <button className="flex-1 rounded bg-white/10 px-4 py-2 text-sm hover:bg-white/15">
-                Save to Campaign
+                {t("creativeLib.saveToCampaign")}
               </button>
             </div>
           </div>

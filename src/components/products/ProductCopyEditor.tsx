@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n";
 
 interface ProductCopy {
   id: string;
@@ -27,10 +29,13 @@ export default function ProductCopyEditor({
   onPublish,
   onGenerate,
 }: ProductCopyEditorProps) {
+  const t = useT();
   const [copy, setCopy] = useState<ProductCopy | null>(initialCopy ?? null);
   const [generating, setGenerating] = useState(false);
   const [publishing, setPublishing] = useState(false);
-  const [error, setError] = useState("");
+  // Se guarda la clave del error, no el texto, para traducirlo en el render.
+  const [errorKey, setErrorKey] = useState<MessageKey | null>(null);
+  const [errorText, setErrorText] = useState("");
   const [editHeadline, setEditHeadline] = useState(initialCopy?.headline ?? "");
   const [editDescription, setEditDescription] = useState(
     initialCopy?.description ?? ""
@@ -39,7 +44,8 @@ export default function ProductCopyEditor({
   const handleGenerate = async (targetAudience?: string) => {
     try {
       setGenerating(true);
-      setError("");
+      setErrorKey(null);
+      setErrorText("");
 
       const response = await fetch("/api/ai/product-copy/generate", {
         method: "POST",
@@ -53,8 +59,8 @@ export default function ProductCopyEditor({
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Generation failed");
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "");
       }
 
       const data = await response.json();
@@ -64,7 +70,9 @@ export default function ProductCopyEditor({
 
       if (onGenerate) onGenerate();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error generating copy");
+      const message = err instanceof Error ? err.message : "";
+      setErrorKey(message ? null : "copyEditor.generateFailed");
+      setErrorText(message);
     } finally {
       setGenerating(false);
     }
@@ -75,7 +83,8 @@ export default function ProductCopyEditor({
 
     try {
       setPublishing(true);
-      setError("");
+      setErrorKey(null);
+      setErrorText("");
 
       const response = await fetch("/api/ai/product-copy/publish", {
         method: "POST",
@@ -89,8 +98,8 @@ export default function ProductCopyEditor({
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Publish failed");
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "");
       }
 
       const data = await response.json();
@@ -98,7 +107,9 @@ export default function ProductCopyEditor({
 
       if (onPublish) onPublish(data.copy);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Error publishing copy");
+      const message = err instanceof Error ? err.message : "";
+      setErrorKey(message ? null : "copyEditor.publishFailed");
+      setErrorText(message);
     } finally {
       setPublishing(false);
     }
@@ -109,15 +120,13 @@ export default function ProductCopyEditor({
       {/* Generate Section */}
       {!copy ? (
         <div className="rounded-lg border border-line bg-white/5 p-6 text-center">
-          <p className="mb-4 text-sm text-lo">
-            AI will generate optimized product copy tailored to your audience
-          </p>
+          <p className="mb-4 text-sm text-lo">{t("copyEditor.intro")}</p>
           <button
             onClick={() => handleGenerate()}
             disabled={generating}
             className="rounded bg-gold px-4 py-2 text-ink hover:bg-gold-hi disabled:opacity-50"
           >
-            {generating ? "Generating..." : "Generate Product Copy"}
+            {generating ? t("copyEditor.generating") : t("copyEditor.generate")}
           </button>
         </div>
       ) : (
@@ -125,9 +134,9 @@ export default function ProductCopyEditor({
           {/* Headline */}
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <label className="text-sm font-medium">Headline</label>
+              <label className="text-sm font-medium">{t("copyEditor.headline")}</label>
               <span className="text-xs text-faint">
-                Confidence: {(copy.confidence * 100).toFixed(0)}%
+                {t("copyEditor.confidence", { value: (copy.confidence * 100).toFixed(0) })}
               </span>
             </div>
             <input
@@ -138,25 +147,25 @@ export default function ProductCopyEditor({
               maxLength={60}
             />
             <p className="mt-1 text-xs text-faint">
-              {editHeadline.length}/60 characters
+              {t("copyEditor.headlineCount", { count: editHeadline.length })}
             </p>
           </div>
 
           {/* Description */}
           <div>
-            <label className="mb-2 block text-sm font-medium">Description</label>
+            <label className="mb-2 block text-sm font-medium">{t("copyEditor.description")}</label>
             <textarea
               value={editDescription}
               onChange={(e) => setEditDescription(e.target.value)}
               className="h-40 w-full rounded border border-line-hi px-3 py-2"
-              placeholder="Edit product description..."
+              placeholder={t("copyEditor.descriptionPlaceholder")}
             />
           </div>
 
           {/* Bullet Points */}
           {copy.bulletPoints.length > 0 && (
             <div>
-              <label className="mb-2 block text-sm font-medium">Bullet Points</label>
+              <label className="mb-2 block text-sm font-medium">{t("copyEditor.bullets")}</label>
               <div className="space-y-2 rounded-lg bg-white/5 p-4">
                 {copy.bulletPoints.map((point, i) => (
                   <p key={i} className="text-sm">
@@ -170,7 +179,9 @@ export default function ProductCopyEditor({
           {/* SEO Keywords */}
           {copy.seoKeywords.length > 0 && (
             <div>
-              <label className="mb-2 block text-sm font-medium">SEO Keywords</label>
+              <label className="mb-2 block text-sm font-medium">
+                {t("copyEditor.seoKeywords")}
+              </label>
               <div className="flex flex-wrap gap-2">
                 {copy.seoKeywords.map((keyword, i) => (
                   <span
@@ -185,8 +196,10 @@ export default function ProductCopyEditor({
           )}
 
           {/* Errors */}
-          {error && (
-            <div className="rounded bg-coral/15 p-3 text-sm text-coral">{error}</div>
+          {(errorKey || errorText) && (
+            <div className="rounded bg-coral/15 p-3 text-sm text-coral">
+              {errorText || t(errorKey ?? "copyEditor.generateFailed")}
+            </div>
           )}
 
           {/* Actions */}
@@ -196,20 +209,24 @@ export default function ProductCopyEditor({
               disabled={generating || publishing || copy.isPublished}
               className="flex-1 rounded bg-white/10 px-4 py-2 text-sm hover:bg-white/15 disabled:opacity-50"
             >
-              {generating ? "Generating..." : "Regenerate"}
+              {generating ? t("copyEditor.generating") : t("copyEditor.regenerate")}
             </button>
             <button
               onClick={handlePublish}
               disabled={publishing || copy.isPublished}
               className="flex-1 rounded bg-teal px-4 py-2 text-sm text-ink hover:opacity-90 disabled:opacity-50"
             >
-              {publishing ? "Publishing..." : copy.isPublished ? "Published" : "Publish to Shopify"}
+              {publishing
+                ? t("copyEditor.publishing")
+                : copy.isPublished
+                  ? t("copyEditor.published")
+                  : t("copyEditor.publishToShopify")}
             </button>
           </div>
 
           {copy.isPublished && (
             <p className="rounded bg-teal/15 p-3 text-sm text-teal">
-              ✓ Published to Shopify
+              {t("copyEditor.publishedNotice")}
             </p>
           )}
         </div>

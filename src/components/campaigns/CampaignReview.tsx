@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useT } from "@/lib/i18n/client";
+import type { MessageKey } from "@/lib/i18n";
 
 interface CampaignReviewProps {
   storeId: string;
@@ -19,6 +21,22 @@ interface CampaignReviewProps {
   error: string;
 }
 
+const OBJECTIVE_KEYS: Record<string, MessageKey> = {
+  LINK_CLICKS: "objective.LINK_CLICKS",
+  CONVERSIONS: "objective.CONVERSIONS",
+  REACH: "objective.REACH",
+  IMPRESSIONS: "objective.IMPRESSIONS",
+  VIDEO_VIEWS: "objective.VIDEO_VIEWS",
+};
+
+const MARKET_KEYS: Record<string, MessageKey> = {
+  us: "market.us",
+  ca: "market.ca",
+  uk: "market.uk",
+  au: "market.au",
+  global: "market.global",
+};
+
 export default function CampaignReview({
   campaignData,
   onBack,
@@ -26,89 +44,80 @@ export default function CampaignReview({
   loading,
   error,
 }: CampaignReviewProps) {
+  const t = useT();
   const [approved, setApproved] = useState(false);
 
-  const objectiveLabels: Record<string, string> = {
-    LINK_CLICKS: "Link Clicks",
-    CONVERSIONS: "Conversions",
-    REACH: "Reach",
-    IMPRESSIONS: "Impressions",
-    VIDEO_VIEWS: "Video Views",
-  };
-
-  const marketLabels: Record<string, string> = {
-    us: "United States",
-    ca: "Canada",
-    uk: "United Kingdom",
-    au: "Australia",
-    global: "Global",
-  };
+  // Si Meta añade un objetivo o mercado nuevo, se muestra el valor crudo.
+  const objectiveKey = OBJECTIVE_KEYS[campaignData.objective];
+  const marketKey = MARKET_KEYS[campaignData.market];
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Review Campaign</h1>
-        <p className="mt-2 text-lo">
-          Please review your campaign configuration below. Once published, you can edit the campaign in Meta Ads
-          Manager.
-        </p>
+        <h1 className="text-3xl font-bold">{t("review.title")}</h1>
+        <p className="mt-2 text-lo">{t("review.intro")}</p>
       </div>
 
       {/* Configuration Summary */}
       <div className="rounded-lg border border-line bg-white/5 p-6 space-y-6">
         {/* Campaign Basics */}
         <div>
-          <h2 className="text-lg font-semibold">Campaign Details</h2>
+          <h2 className="text-lg font-semibold">{t("review.detailsHeading")}</h2>
           <div className="mt-4 space-y-3 text-sm">
             <div className="flex justify-between border-b border-line pb-3">
-              <span className="text-lo">Campaign Name</span>
+              <span className="text-lo">{t("review.name")}</span>
               <span className="font-medium">{campaignData.name}</span>
             </div>
             <div className="flex justify-between border-b border-line pb-3">
-              <span className="text-lo">Objective</span>
-              <span className="font-medium">{objectiveLabels[campaignData.objective]}</span>
+              <span className="text-lo">{t("review.objective")}</span>
+              <span className="font-medium">
+                {objectiveKey ? t(objectiveKey) : campaignData.objective}
+              </span>
             </div>
           </div>
         </div>
 
         {/* Targeting */}
         <div>
-          <h2 className="text-lg font-semibold">Targeting & Audience</h2>
+          <h2 className="text-lg font-semibold">{t("review.targetingHeading")}</h2>
           <div className="mt-4 space-y-3 text-sm">
             <div className="flex justify-between border-b border-line pb-3">
-              <span className="text-lo">Primary Market</span>
-              <span className="font-medium">{marketLabels[campaignData.market]}</span>
+              <span className="text-lo">{t("review.market")}</span>
+              <span className="font-medium">
+                {marketKey ? t(marketKey) : campaignData.market}
+              </span>
             </div>
             <div className="flex justify-between border-b border-line pb-3">
-              <span className="text-lo">Age Range</span>
+              <span className="text-lo">{t("review.ageRange")}</span>
               <span className="font-medium">
-                {campaignData.ageMin} – {campaignData.ageMax}
+                {t("review.ageValue", { min: campaignData.ageMin, max: campaignData.ageMax })}
               </span>
             </div>
             <div className="rounded bg-gold/10 p-3 text-xs text-gold-hi mt-3">
-              More detailed targeting (interests, behaviors, placements) can be configured in Meta Ads Manager
-              after campaign creation.
+              {t("review.targetingNote")}
             </div>
           </div>
         </div>
 
         {/* Budget */}
         <div>
-          <h2 className="text-lg font-semibold">Budget</h2>
+          <h2 className="text-lg font-semibold">{t("review.budgetHeading")}</h2>
           <div className="mt-4 space-y-3 text-sm">
             <div className="flex justify-between border-b border-line pb-3">
-              <span className="text-lo">Daily Budget</span>
-              <span className="font-medium">${campaignData.budget.toFixed(2)} USD</span>
+              <span className="text-lo">{t("review.dailyBudget")}</span>
+              <span className="font-medium">
+                {t("review.budgetValue", { value: campaignData.budget.toFixed(2) })}
+              </span>
             </div>
             <div className="rounded bg-gold/15 p-3 text-xs text-gold-hi mt-3">
               <p>
-                <strong>Important:</strong> The campaign will be created in PAUSED status. You&apos;ll need to:
+                <strong>{t("review.importantLabel")}</strong> {t("review.importantBody")}
               </p>
               <ul className="mt-2 space-y-1 ml-4 list-disc">
-                <li>Set up ad sets (audience targeting, placements)</li>
-                <li>Upload creative (images, videos, copy)</li>
-                <li>Activate the campaign to start spending</li>
+                <li>{t("review.todo1")}</li>
+                <li>{t("review.todo2")}</li>
+                <li>{t("review.todo3")}</li>
               </ul>
             </div>
           </div>
@@ -116,12 +125,12 @@ export default function CampaignReview({
 
         {/* Warnings */}
         <div className="rounded-lg border-l-4 border-gold bg-gold/15 p-4">
-          <p className="text-sm font-semibold text-gold-hi">⚠ Before You Publish</p>
+          <p className="text-sm font-semibold text-gold-hi">{t("review.beforePublish")}</p>
           <ul className="mt-2 space-y-1 text-sm text-gold-hi ml-4 list-disc">
-            <li>You&apos;ll manage creatives and ad sets directly in Meta Ads Manager (read-only in EcomOS for now)</li>
-            <li>Campaign status can be edited in EcomOS (pause, activate, duplicate)</li>
-            <li>Budget changes must be made in Meta Ads Manager</li>
-            <li>This campaign cannot be edited or deleted via EcomOS once created</li>
+            <li>{t("review.warn1")}</li>
+            <li>{t("review.warn2")}</li>
+            <li>{t("review.warn3")}</li>
+            <li>{t("review.warn4")}</li>
           </ul>
         </div>
 
@@ -135,12 +144,12 @@ export default function CampaignReview({
               className="mt-1 rounded border-line-hi"
             />
             <span className="ml-3 text-sm">
-              I confirm that I&apos;ve reviewed the campaign details and understand that:
+              {t("review.confirmIntro")}
               <ul className="mt-2 space-y-1 ml-4 list-disc text-xs text-lo">
-                <li>The campaign will be created in a PAUSED state</li>
-                <li>I must activate it in EcomOS or Meta Ads Manager to start spending</li>
-                <li>Meta will begin charging according to the daily budget once activated</li>
-                <li>I&apos;m responsible for accurate campaign setup and compliance</li>
+                <li>{t("review.confirm1")}</li>
+                <li>{t("review.confirm2")}</li>
+                <li>{t("review.confirm3")}</li>
+                <li>{t("review.confirm4")}</li>
               </ul>
             </span>
           </label>
@@ -148,7 +157,7 @@ export default function CampaignReview({
 
         {error && (
           <div className="rounded bg-coral/15 p-3 text-sm text-coral">
-            <strong>Error:</strong> {error}
+            <strong>{t("review.errorLabel")}</strong> {error}
           </div>
         )}
       </div>
@@ -160,21 +169,21 @@ export default function CampaignReview({
           disabled={loading}
           className="rounded bg-white/10 px-4 py-2 font-medium hover:bg-white/15 disabled:opacity-50"
         >
-          ← Back to Setup
+          {t("review.back")}
         </button>
         <button
           onClick={onPublish}
           disabled={!approved || loading}
           className="rounded bg-teal px-4 py-2 font-medium text-ink hover:opacity-90 disabled:opacity-50"
         >
-          {loading ? "Publishing..." : "✓ Publish Campaign"}
+          {loading ? t("review.publishing") : t("review.publish")}
         </button>
       </div>
 
       {/* Success Message Area */}
       {loading && (
         <div className="mt-4 rounded bg-gold/10 p-3 text-sm text-gold-hi">
-          Creating campaign in Meta Ads Manager... This may take a few seconds.
+          {t("review.creating")}
         </div>
       )}
     </div>
