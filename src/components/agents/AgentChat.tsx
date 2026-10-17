@@ -150,6 +150,8 @@ export default function AgentChat({
   }
 
   async function deleteConversation(id: string) {
+    const thread = threads.find((item) => item.id === id);
+    if (!window.confirm(`¿Eliminar la conversación "${thread?.title || "Nueva conversación"}"? Esta acción no se puede deshacer.`)) return;
     const response = await fetch("/api/agents/conversations", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
@@ -206,11 +208,19 @@ export default function AgentChat({
       }
 
       setThreads((current) =>
-        current.map((thread) =>
-          thread.id === activeConversationId && thread.title === "Nueva conversación"
-            ? { ...thread, title: question.replace(/\s+/g, " ").slice(0, 64), updatedAt: new Date().toISOString() }
-            : thread
-        )
+        current
+          .map((thread) =>
+            thread.id === activeConversationId
+              ? {
+                  ...thread,
+                  title: thread.title === "Nueva conversación"
+                    ? question.replace(/\s+/g, " ").slice(0, 64)
+                    : thread.title,
+                  updatedAt: new Date().toISOString(),
+                }
+              : thread
+          )
+          .sort((left, right) => Date.parse(right.updatedAt) - Date.parse(left.updatedAt))
       );
       setTurns((current) => [
         ...current,
