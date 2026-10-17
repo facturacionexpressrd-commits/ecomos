@@ -145,7 +145,7 @@ export default function AgentChat({
     }
     void loadThreads();
     return () => { cancelled = true; };
-  }, [storeId, openConversation, createConversation]);
+  }, [storeId, openConversation]);
 
   async function deleteConversation(id: string) {
     const thread = threads.find((item) => item.id === id);
