@@ -77,34 +77,6 @@ export default function AgentChat({
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    let cancelled = false;
-    async function loadThreads() {
-      setLoadingThreads(true);
-      setThreads([]);
-      setActiveConversationId("");
-      setTurns([]);
-      setError("");
-      try {
-        const response = await fetch(`/api/agents/conversations?storeId=${encodeURIComponent(storeId)}`);
-        const data = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(data.error || "No se pudieron cargar las conversaciones.");
-        const saved = Array.isArray(data.conversations) ? data.conversations as SavedThread[] : [];
-        if (cancelled) return;
-        setThreads(saved);
-        if (saved.length > 0) {
-          await openConversation(saved[0].id, cancelled);
-        }
-      } catch (cause) {
-        if (!cancelled) setError(cause instanceof Error ? cause.message : "No se pudieron cargar las conversaciones.");
-      } finally {
-        if (!cancelled) setLoadingThreads(false);
-      }
-    }
-    void loadThreads();
-    return () => { cancelled = true; };
-  }, [storeId, openConversation, createConversation]);
-
-  useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
   }, [turns, sending]);
 
@@ -146,6 +118,34 @@ export default function AgentChat({
     setActiveConversationId(conversation.id);
     setTurns([]);
   }, [storeId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadThreads() {
+      setLoadingThreads(true);
+      setThreads([]);
+      setActiveConversationId("");
+      setTurns([]);
+      setError("");
+      try {
+        const response = await fetch(`/api/agents/conversations?storeId=${encodeURIComponent(storeId)}`);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.error || "No se pudieron cargar las conversaciones.");
+        const saved = Array.isArray(data.conversations) ? data.conversations as SavedThread[] : [];
+        if (cancelled) return;
+        setThreads(saved);
+        if (saved.length > 0) {
+          await openConversation(saved[0].id, cancelled);
+        }
+      } catch (cause) {
+        if (!cancelled) setError(cause instanceof Error ? cause.message : "No se pudieron cargar las conversaciones.");
+      } finally {
+        if (!cancelled) setLoadingThreads(false);
+      }
+    }
+    void loadThreads();
+    return () => { cancelled = true; };
+  }, [storeId, openConversation, createConversation]);
 
   async function deleteConversation(id: string) {
     const thread = threads.find((item) => item.id === id);
