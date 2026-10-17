@@ -36,6 +36,14 @@ CREATE POLICY "Users can access their own store conversations"
     "userId" = (SELECT auth.uid())::text
     AND EXISTS (
       SELECT 1
+      FROM public."Store" store
+      JOIN public."User" account ON account."id" = (SELECT auth.uid())::text
+      WHERE store."id" = "AgentConversation"."storeId"
+        AND store."organizationId" = "AgentConversation"."organizationId"
+        AND account."organizationId" = "AgentConversation"."organizationId"
+    )
+    AND EXISTS (
+      SELECT 1
       FROM public."UserStoreAccess" access
       WHERE access."userId" = (SELECT auth.uid())::text
         AND access."storeId" = "AgentConversation"."storeId"
@@ -43,6 +51,14 @@ CREATE POLICY "Users can access their own store conversations"
   )
   WITH CHECK (
     "userId" = (SELECT auth.uid())::text
+    AND EXISTS (
+      SELECT 1
+      FROM public."Store" store
+      JOIN public."User" account ON account."id" = (SELECT auth.uid())::text
+      WHERE store."id" = "AgentConversation"."storeId"
+        AND store."organizationId" = "AgentConversation"."organizationId"
+        AND account."organizationId" = "AgentConversation"."organizationId"
+    )
     AND EXISTS (
       SELECT 1
       FROM public."UserStoreAccess" access
