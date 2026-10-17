@@ -49,6 +49,6 @@ Runable API integration (agent execution layer):
 
 ## Last Updated
 2026-10-16 — Saved EcomOS Operator conversations added on a proposed branch: private user/store-scoped
-threads, persisted visible messages, RLS migration 0041, and thread controls. Migration not applied.
+threads, persisted visible messages, Prisma migration 20261017000000, and thread controls. Migration not applied.
 
 2026-10-01 — Agent configuration added to AGENTS.md; Runable orchestration framework documented; GitHub updated.
