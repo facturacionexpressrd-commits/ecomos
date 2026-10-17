@@ -34,14 +34,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Cuerpo de la solicitud inválido." }, { status: 400 });
   }
 
-  const { storeId, message, history } = (body ?? {}) as {
+  const { storeId, conversationId, message } = (body ?? {}) as {
     storeId?: unknown;
+    conversationId?: unknown;
     message?: unknown;
-    history?: unknown;
   };
 
   if (typeof storeId !== "string" || !storeId) {
     return NextResponse.json({ error: "Falta la tienda." }, { status: 400 });
+  }
+  if (typeof conversationId !== "string" || !conversationId) {
+    return NextResponse.json({ error: "Falta la conversación." }, { status: 400 });
   }
   if (typeof message !== "string" || !message.trim()) {
     return NextResponse.json({ error: "Escribe una pregunta." }, { status: 400 });
@@ -56,6 +59,14 @@ export async function POST(req: NextRequest) {
   const grants = await loadStoreAccessGrants(user.id);
   if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
     return NextResponse.json({ error: "No tienes acceso a esta tienda." }, { status: 403 });
+  }
+
+  const conversation = await prisma.agentConversation.findFirst({
+    where: { id: conversationId, storeId, userId: user.id },
+    select: { id: true, title: true },
+  });
+  if (!conversation) {
+    return NextResponse.json({ error: "Conversación no encontrada." }, { status: 404 });
   }
 
   const limited = await agentChatQuotaExceeded(storeId);
@@ -91,9 +102,46 @@ export async function POST(req: NextRequest) {
       ctx: { storeId, grants },
       storeName: store.name,
       tools,
-      history: sanitizeHistory(history),
+      history: sanitizeHistory(
+        (
+          await prisma.agentConversationMessage.findMany({
+            where: { conversationId: conversation.id },
+            orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+            take: AGENT_LIMITS.maxHistoryMessages,
+            select: { role: true, content: true },
+          })
+        )
+          .reverse()
+          .map((item) => ({ role: item.role, content: item.content }))
+      ),
       message: message.trim(),
     });
+
+    const title = message.trim().replace(/\\s+/g, " ").slice(0, 64);
+    await prisma.$transaction([
+      prisma.agentConversationMessage.create({
+        data: { conversationId: conversation.id, role: "user", content: message.trim() },
+      }),
+      prisma.agentConversationMessage.create({
+        data: {
+          conversationId: conversation.id,
+          role: "assistant",
+          content: result.reply,
+          metadata: {
+            activity: result.activity,
+            sources: result.sources,
+            truncated: result.truncated,
+          },
+        },
+      }),
+      prisma.agentConversation.update({
+        where: { id: conversation.id },
+        data: {
+          ...(conversation.title === "Nueva conversación" ? { title } : {}),
+          updatedAt: new Date(),
+        },
+      }),
+    ]);
 
     // Una fila por turno: deja rastro de uso y es el contador de la cuota. Sin prompts,
     // sin respuesta del modelo y sin datos de la tienda.
