@@ -3,23 +3,15 @@ import type { Metadata } from "next";
 import { Check, ArrowRight } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { billingEnabled, stripe } from "@/lib/billing";
-import Backdrop from "@/components/Backdrop";
-import HeroBanner from "@/components/dashboard/HeroBanner";
 
 export const metadata: Metadata = {
-  title: "Pricing — EcomOS",
-  description: "One plan. Every store, every integration, every teammate.",
+  title: "Precios — EcomOS",
+  description: "Un solo plan. Todas las tiendas, todas las integraciones, todo tu equipo.",
 };
 
-const primary =
-  "inline-flex items-center gap-2 rounded-lg bg-gradient-to-b from-gold-hi to-gold px-5 py-3 text-sm font-medium text-ink transition-opacity hover:opacity-90";
-const secondary =
-  "inline-flex items-center gap-2 rounded-lg border border-line-hi px-5 py-3 text-sm text-hi hover:bg-white/5";
-
-// Live price pull. Falls back to defaults when Stripe isn't configured so the page still renders.
 async function loadPrice(): Promise<{ display: string; interval: string }> {
   if (!billingEnabled() || !process.env.STRIPE_PRICE_ID) {
-    return { display: "$49", interval: "month" };
+    return { display: "$49", interval: "mes" };
   }
   try {
     const price = await stripe().prices.retrieve(process.env.STRIPE_PRICE_ID);
@@ -28,24 +20,24 @@ async function loadPrice(): Promise<{ display: string; interval: string }> {
     const symbol = currency === "USD" ? "$" : `${currency} `;
     return {
       display: `${symbol}${amount.toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
-      interval: price.recurring?.interval ?? "month",
+      interval: price.recurring?.interval === "year" ? "año" : "mes",
     };
   } catch {
-    return { display: "$49", interval: "month" };
+    return { display: "$49", interval: "mes" };
   }
 }
 
 const INCLUDES = [
-  "Unlimited Shopify stores",
-  "Unlimited products, variants, orders",
-  "Meta Ads: read, create, pause, activate, duplicate",
-  "CJ Dropshipping: variant linking + order send",
-  "Contribution profit per variant (revenue − refunds − fees − COGS)",
-  "Nightly full re-sync + live webhooks",
-  "Team invitations with role-based access",
-  "Encrypted tokens (AES-256-GCM) and audit log",
-  "GDPR compliance webhooks",
-  "Cancel any time from the billing portal",
+  "Tiendas Shopify ilimitadas",
+  "Productos, variantes y órdenes sin tope",
+  "Meta Ads: leer, crear, pausar, activar, duplicar",
+  "CJ Dropshipping: vinculado de variantes + envío de órdenes",
+  "Ganancia por variante (ingresos − devoluciones − comisiones − COGS)",
+  "Re-sync nocturno completo + webhooks en vivo",
+  "Invitaciones de equipo con roles",
+  "Tokens cifrados (AES-256-GCM) y audit log",
+  "Webhooks de cumplimiento GDPR",
+  "Cancela cuando quieras desde el portal de facturación",
 ];
 
 export default async function PricingPage() {
@@ -56,104 +48,139 @@ export default async function PricingPage() {
 
   const { display, interval } = await loadPrice();
   const ctaHref = user ? "/billing" : "/login?mode=sign-up&next=/billing";
-  const ctaLabel = user ? "Subscribe" : "Create account & subscribe";
+  const ctaLabel = user ? "Suscribirse" : "Crear cuenta y suscribirse";
 
   return (
-    <>
-      <Backdrop />
-      <main className="relative z-10 mx-auto w-full max-w-5xl px-3 pt-3 pb-16">
-        <div className="relative">
-          <HeroBanner />
-          <header className="relative flex items-center justify-between px-4 pt-4 sm:px-8">
-            <Link href="/" className="flex items-center gap-2.5">
-              <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-gold to-coral text-sm font-bold text-ink">
-                E
-              </span>
-              <span className="font-[family-name:var(--font-display)] text-2xl text-hi italic">
-                EcomOS
-              </span>
+    <div className="min-h-screen bg-white text-neutral-900">
+      <div className="mx-auto w-full max-w-6xl px-6 sm:px-10">
+        <header className="flex items-center justify-between pt-8">
+          <Link href="/" className="flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-black text-sm font-semibold text-white">
+              E
+            </span>
+            <span className="text-base font-medium tracking-tight">EcomOS</span>
+          </Link>
+          <nav className="flex items-center gap-7 text-sm">
+            <Link href="/" className="text-neutral-700 hover:text-black">
+              Producto
             </Link>
-            <Link href={user ? "/dashboard" : "/login"} className="text-sm text-hi hover:opacity-80">
-              {user ? "Dashboard" : "Sign in"}
+            <Link
+              href={user ? "/dashboard" : "/login"}
+              className="text-neutral-700 hover:text-black"
+            >
+              {user ? "Panel" : "Iniciar sesión"}
             </Link>
-          </header>
+          </nav>
+        </header>
 
-          <section className="relative px-4 pt-24 pb-8 sm:px-8 lg:pt-32">
-            <p className="mb-3 text-xs font-medium tracking-[0.14em] text-faint uppercase">Pricing</p>
-            <h1 className="max-w-2xl font-[family-name:var(--font-display)] text-4xl leading-tight font-medium text-hi italic sm:text-5xl">
-              One plan. Everything included.
-            </h1>
-            <p className="mt-4 max-w-xl text-base text-hi/90">
-              No seat tiers, no per-store fees, no integration paywalls. Cancel any time.
+        <section className="pt-24 pb-16 sm:pt-32 sm:pb-20">
+          <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
+            Precios
+          </p>
+          <h1 className="max-w-3xl text-5xl font-medium leading-[1.05] tracking-[-0.03em] sm:text-6xl lg:text-7xl">
+            Un solo plan. Todo incluido.
+          </h1>
+          <p className="mt-6 max-w-xl text-lg leading-relaxed text-neutral-700">
+            Sin tramos por usuario, sin pagos por tienda, sin integraciones de pago extra. Cancela cuando quieras.
+          </p>
+        </section>
+
+        <section className="grid grid-cols-1 gap-6 lg:grid-cols-[1.3fr_1fr]">
+          <div className="rounded-2xl border border-neutral-200 bg-white p-8 sm:p-10">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
+              EcomOS
             </p>
-          </section>
-        </div>
-
-        <section className="grid grid-cols-1 gap-4 px-1 lg:grid-cols-[1.2fr_1fr]">
-          <div className="glass rise-in p-8">
-            <p className="text-xs font-medium tracking-[0.14em] text-gold-hi uppercase">EcomOS</p>
-            <div className="mt-4 flex items-baseline gap-2">
-              <span className="font-[family-name:var(--font-display)] text-5xl text-hi italic">{display}</span>
-              <span className="text-sm text-lo">/ {interval}</span>
+            <div className="mt-5 flex items-baseline gap-2">
+              <span className="font-mono text-6xl font-semibold tracking-tight text-neutral-900">
+                {display}
+              </span>
+              <span className="text-sm text-neutral-500">/ {interval}</span>
             </div>
-            <p className="mt-3 text-sm text-lo">Billed monthly. No annual lock-in.</p>
+            <p className="mt-3 text-sm text-neutral-600">Facturado mensual. Sin contratos anuales.</p>
 
             <div className="mt-8 flex flex-wrap gap-3">
               <form method="POST" action="/api/billing/checkout">
                 {user ? (
-                  <button className={primary} type="submit">
+                  <button
+                    className="inline-flex items-center gap-2 rounded-full bg-black px-6 py-3 text-sm font-medium text-white hover:bg-neutral-800"
+                    type="submit"
+                  >
                     {ctaLabel} <ArrowRight size={16} />
                   </button>
                 ) : (
-                  <Link href={ctaHref} className={primary}>
+                  <Link
+                    href={ctaHref}
+                    className="inline-flex items-center gap-2 rounded-full bg-black px-6 py-3 text-sm font-medium text-white hover:bg-neutral-800"
+                  >
                     {ctaLabel} <ArrowRight size={16} />
                   </Link>
                 )}
               </form>
-              <Link href="/" className={secondary}>
-                Back to overview
+              <Link
+                href="/"
+                className="inline-flex items-center gap-2 rounded-full border border-neutral-300 px-6 py-3 text-sm font-medium text-neutral-900 hover:border-neutral-500"
+              >
+                Volver al producto
               </Link>
             </div>
 
-            <ul className="mt-8 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <ul className="mt-10 grid grid-cols-1 gap-y-3 border-t border-neutral-200 pt-8 sm:grid-cols-2 sm:gap-x-6">
               {INCLUDES.map((line) => (
-                <li key={line} className="flex items-start gap-2 text-sm text-lo">
-                  <Check size={16} className="mt-0.5 shrink-0 text-gold-hi" />
+                <li key={line} className="flex items-start gap-2 text-sm text-neutral-700">
+                  <Check size={16} className="mt-0.5 shrink-0 text-neutral-900" />
                   <span>{line}</span>
                 </li>
               ))}
             </ul>
           </div>
 
-          <aside className="glass rise-in p-8">
-            <p className="text-xs font-medium tracking-[0.14em] text-faint uppercase">Need something bigger?</p>
-            <h2 className="mt-3 font-[family-name:var(--font-display)] text-2xl text-hi italic">Enterprise</h2>
-            <p className="mt-2 text-sm text-lo">
-              Higher API limits, SSO, custom SLAs, invoicing, dedicated support — talk to us.
+          <aside className="rounded-2xl border border-neutral-200 bg-neutral-50 p-8 sm:p-10">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
+              ¿Necesitas algo más grande?
             </p>
-            <a href="mailto:rreyes325@gmail.com?subject=EcomOS%20Enterprise" className={`${secondary} mt-5`}>
-              Contact sales
+            <h2 className="mt-3 text-2xl font-semibold tracking-tight text-neutral-900">
+              Enterprise
+            </h2>
+            <p className="mt-3 text-sm text-neutral-700">
+              Mayor cuota de API, SSO, SLA personalizado, facturación tradicional y soporte dedicado.
+            </p>
+            <a
+              href="mailto:rreyes325@gmail.com?subject=EcomOS%20Enterprise"
+              className="mt-6 inline-flex items-center gap-2 rounded-full border border-neutral-300 bg-white px-5 py-2.5 text-sm font-medium text-neutral-900 hover:border-neutral-500"
+            >
+              Contactar ventas <ArrowRight size={14} />
             </a>
-            <div className="mt-8 border-t border-line pt-6 text-xs text-lo">
-              <p className="font-medium text-hi">Questions?</p>
+            <div className="mt-10 border-t border-neutral-200 pt-6 text-xs text-neutral-600">
+              <p className="font-semibold text-neutral-900">¿Preguntas?</p>
               <p className="mt-1">
-                See the <Link href="/" className="text-gold-hi hover:underline">product overview</Link>,
-                the <Link href="/terms" className="text-gold-hi hover:underline">terms</Link>, or
-                the <Link href="/privacy" className="text-gold-hi hover:underline">privacy policy</Link>.
+                Mira el{" "}
+                <Link href="/" className="text-neutral-900 underline underline-offset-4 hover:no-underline">
+                  producto
+                </Link>
+                , los{" "}
+                <Link href="/terms" className="text-neutral-900 underline underline-offset-4 hover:no-underline">
+                  términos
+                </Link>{" "}
+                o la{" "}
+                <Link href="/privacy" className="text-neutral-900 underline underline-offset-4 hover:no-underline">
+                  política de privacidad
+                </Link>
+                .
               </p>
             </div>
           </aside>
         </section>
 
-        <footer className="mt-12 flex flex-wrap gap-5 px-1 text-xs text-faint">
+        <footer className="mt-20 flex flex-wrap items-center justify-between gap-4 border-t border-neutral-200 py-10 text-sm text-neutral-500">
           <span>© {new Date().getFullYear()} EcomOS</span>
-          <Link href="/privacy" className="hover:text-lo">Privacy</Link>
-          <Link href="/terms" className="hover:text-lo">Terms</Link>
-          <Link href="/data-deletion" className="hover:text-lo">Data deletion</Link>
+          <nav className="flex flex-wrap gap-6">
+            <Link href="/" className="hover:text-black">Producto</Link>
+            <Link href="/privacy" className="hover:text-black">Privacidad</Link>
+            <Link href="/terms" className="hover:text-black">Términos</Link>
+            <Link href="/data-deletion" className="hover:text-black">Eliminación de datos</Link>
+          </nav>
         </footer>
-      </main>
-    </>
+      </div>
+    </div>
   );
 }
-
-// ponytail: single-tier only. Add multi-tier + comparison table when a second STRIPE_PRICE_ID lands.

@@ -4,19 +4,18 @@ import { prisma } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasOrgCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import { billingEnabled, hasAccess, stripe, syncSubscription } from "@/lib/billing";
-import { PageHeader, StatusPill } from "@/components/dashboard/ui/PageHeader";
-import HeroBanner from "@/components/dashboard/HeroBanner";
+import { StatusPill } from "@/components/dashboard/ui/PageHeader";
 import type { MessageKey } from "@/lib/i18n";
 import { getLocale, getT } from "@/lib/i18n/server";
+import { ArrowRight, ArrowLeft } from "lucide-react";
 
-/** Clave de mensaje por código de error devuelto en la URL. */
 const ERRORS: Record<string, MessageKey> = {
   forbidden: "billing.error.forbidden",
   failed: "billing.error.failed",
 };
 
-const button =
-  "rounded-lg bg-gradient-to-b from-gold-hi to-gold px-4 py-2.5 text-sm font-medium text-ink transition-opacity hover:opacity-90";
+const primaryBtn =
+  "inline-flex items-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-medium text-white hover:bg-neutral-800";
 
 export default async function BillingPage({
   searchParams,
@@ -37,8 +36,6 @@ export default async function BillingPage({
   if (!dbUser) redirect("/onboarding");
   let org = dbUser.organization;
 
-  // Back from Checkout before the webhook landed: pull the subscription now so the dashboard opens
-  // straight away instead of bouncing back here. The webhook still does the same write later.
   if (checkout === "success" && billingEnabled() && org.stripeCustomerId && !hasAccess(org.subscriptionStatus)) {
     const subs = await stripe().subscriptions.list({ customer: org.stripeCustomerId, status: "all", limit: 1 });
     if (subs.data[0]) {
@@ -51,24 +48,40 @@ export default async function BillingPage({
   const active = hasAccess(org.subscriptionStatus);
 
   return (
-    <main className="relative z-10 mx-auto max-w-3xl px-3 pt-3 pb-16">
-      <div className="relative">
-      <HeroBanner />
-      <div className="relative px-4 pt-28 sm:px-8">
-      <PageHeader eyebrow={org.name} title={t("billing.title")} subtitle={t("billing.subtitle")} />
+    <main className="mx-auto max-w-2xl px-6 py-16 sm:px-10 sm:py-24">
+      <Link href="/" className="mb-10 inline-flex items-center gap-2.5">
+        <span className="flex h-8 w-8 items-center justify-center rounded-md bg-black text-sm font-semibold text-white">
+          E
+        </span>
+        <span className="text-base font-medium tracking-tight text-neutral-900">EcomOS</span>
+      </Link>
 
-      {error && ERRORS[error] && <p className="glass mb-6 p-4 text-sm text-coral">{t(ERRORS[error])}</p>}
+      <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
+        {org.name}
+      </p>
+      <h1 className="text-4xl font-medium tracking-[-0.02em] text-neutral-900 sm:text-5xl">
+        {t("billing.title")}
+      </h1>
+      <p className="mt-3 max-w-xl text-sm text-neutral-600">{t("billing.subtitle")}</p>
+
+      {error && ERRORS[error] && (
+        <p className="mt-8 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {t(ERRORS[error])}
+        </p>
+      )}
       {checkout === "success" && active && (
-        <p className="glass mb-6 p-4 text-sm text-teal">{t("billing.paymentReceived")}</p>
+        <p className="mt-8 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-700">
+          {t("billing.paymentReceived")}
+        </p>
       )}
 
-      <section className="glass rise-in p-6">
+      <section className="mt-10 rounded-2xl border border-neutral-200 bg-white p-6 sm:p-8">
         {!billingEnabled() ? (
-          <p className="text-sm text-lo">{t("billing.notEnabled")}</p>
+          <p className="text-sm text-neutral-600">{t("billing.notEnabled")}</p>
         ) : (
           <div className="space-y-5">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-lo">{t("billing.status")}</p>
+            <div className="flex items-center justify-between border-b border-neutral-100 pb-4">
+              <p className="text-sm text-neutral-600">{t("billing.status")}</p>
               {org.subscriptionStatus === "comped" ? (
                 <StatusPill status={t("billing.freeWorkspace")} />
               ) : (
@@ -76,29 +89,37 @@ export default async function BillingPage({
               )}
             </div>
             {org.currentPeriodEnd && org.subscriptionStatus !== "comped" && (
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-lo">
+              <div className="flex items-center justify-between border-b border-neutral-100 pb-4">
+                <p className="text-sm text-neutral-600">
                   {org.subscriptionStatus === "canceled" ? t("billing.ended") : t("billing.renews")}
                 </p>
-                <p className="text-sm text-hi">{org.currentPeriodEnd.toLocaleDateString(locale)}</p>
+                <p className="font-mono text-sm text-neutral-900">
+                  {org.currentPeriodEnd.toLocaleDateString(locale)}
+                </p>
               </div>
             )}
 
             {!canManage ? (
-              <p className="text-sm text-lo">{t("billing.askOwner")}</p>
+              <p className="text-sm text-neutral-600">{t("billing.askOwner")}</p>
             ) : org.subscriptionStatus === "comped" ? null : active ? (
               <form method="POST" action="/api/billing/portal">
-                <button className={button}>{t("billing.manage")}</button>
+                <button className={primaryBtn}>
+                  {t("billing.manage")} <ArrowRight size={14} />
+                </button>
               </form>
             ) : (
-              <div className="space-y-3">
-                <p className="text-sm text-lo">{t("billing.subscribePrompt")}</p>
+              <div className="space-y-4">
+                <p className="text-sm text-neutral-600">{t("billing.subscribePrompt")}</p>
                 <form method="POST" action="/api/billing/checkout">
-                  <button className={button}>{t("billing.subscribe")}</button>
+                  <button className={primaryBtn}>
+                    {t("billing.subscribe")} <ArrowRight size={14} />
+                  </button>
                 </form>
                 {org.stripeCustomerId && (
                   <form method="POST" action="/api/billing/portal">
-                    <button className="text-sm text-lo underline hover:text-hi">{t("billing.pastInvoices")}</button>
+                    <button className="text-sm text-neutral-600 underline underline-offset-4 hover:text-neutral-900">
+                      {t("billing.pastInvoices")}
+                    </button>
                   </form>
                 )}
               </div>
@@ -108,12 +129,13 @@ export default async function BillingPage({
       </section>
 
       {(active || !billingEnabled()) && (
-        <Link href="/dashboard" className="mt-6 inline-block text-sm text-lo hover:text-hi">
-          {t("billing.backToDashboard")}
+        <Link
+          href="/dashboard"
+          className="mt-8 inline-flex items-center gap-1.5 text-sm text-neutral-600 hover:text-neutral-900"
+        >
+          <ArrowLeft size={13} /> {t("billing.backToDashboard")}
         </Link>
       )}
-      </div>
-      </div>
     </main>
   );
 }

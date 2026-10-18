@@ -1,12 +1,14 @@
 "use client";
 
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { safePath } from "@/lib/redirect";
+import { ArrowRight } from "lucide-react";
 
 const field =
-  "rounded-lg border border-line-hi bg-white/5 px-3 py-2.5 text-sm text-hi placeholder:text-faint focus:border-gold/50 focus:outline-none";
+  "w-full rounded-lg border border-neutral-300 bg-white px-3.5 py-2.5 text-sm text-neutral-900 placeholder:text-neutral-400 focus:border-neutral-900 focus:outline-none";
 
 export default function LoginForm({ linkExpired, startSignUp }: { linkExpired: boolean; startSignUp?: boolean }) {
   const [email, setEmail] = useState("");
@@ -17,11 +19,9 @@ export default function LoginForm({ linkExpired, startSignUp }: { linkExpired: b
   );
   const [notice, setNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  // Offered after sign-up, or when sign-in fails because the email was never confirmed.
   const [canResend, setCanResend] = useState(false);
   const router = useRouter();
 
-  // Where the user was headed (e.g. an invitation link) survives login and email confirmation.
   const nextPath = () => safePath(new URLSearchParams(window.location.search).get("next"));
   const confirmRedirect = () => `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextPath())}`;
 
@@ -72,7 +72,6 @@ export default function LoginForm({ linkExpired, startSignUp }: { linkExpired: b
     setLoading(false);
     if (authError) return setError(authError.message);
 
-    // With email confirmation on there is no session yet: say so instead of bouncing back to login.
     if (!data.session) {
       setNotice(`We sent a confirmation link to ${email}. Open it to finish creating your account.`);
       setCanResend(true);
@@ -82,64 +81,111 @@ export default function LoginForm({ linkExpired, startSignUp }: { linkExpired: b
     router.refresh();
   }
 
+  const isSignIn = mode === "sign-in";
+
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-4">
-      <div className="glass rise-in flex flex-col gap-4 p-7">
-        <div className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-gold to-coral text-sm font-bold text-ink">
+    <div className="grid min-h-screen grid-cols-1 bg-white lg:grid-cols-2">
+      {/* Editorial brand pane — only shows on wide screens, mimics the landing hero. */}
+      <aside className="hidden flex-col justify-between border-r border-neutral-200 bg-neutral-50 p-10 lg:flex">
+        <Link href="/" className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-black text-sm font-semibold text-white">
             E
           </span>
-          <span className="font-[family-name:var(--font-display)] text-2xl text-hi italic">EcomOS</span>
+          <span className="text-base font-medium tracking-tight text-neutral-900">EcomOS</span>
+        </Link>
+
+        <div>
+          <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-700">
+            <span className="h-1.5 w-1.5 rounded-full bg-lime-400" />
+            12 módulos · un solo sistema
+          </p>
+          <h2 className="text-4xl font-medium leading-[1.05] tracking-[-0.03em] text-neutral-900 xl:text-5xl">
+            El sistema operativo con IA para tu tienda Shopify.
+          </h2>
+          <p className="mt-5 max-w-md text-sm text-neutral-600">
+            Inteligencia, Estudio Creativo, Operaciones y un Orquestador que cierra el día en una sola página.
+          </p>
         </div>
-        <p className="text-sm text-lo">{mode === "sign-in" ? "Sign in to your command center." : "Create your account."}</p>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <input
-            type="email"
-            required
-            placeholder="Email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className={field}
-          />
-          <input
-            type="password"
-            required
-            minLength={8}
-            placeholder="Password"
-            autoComplete={mode === "sign-in" ? "current-password" : "new-password"}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={field}
-          />
-          {error && <p className="text-sm text-coral">{error}</p>}
-          {notice && <p className="text-sm text-teal">{notice}</p>}
-          {canResend && (
+
+        <p className="text-xs text-neutral-500">
+          © {new Date().getFullYear()} EcomOS · <Link href="/privacy" className="hover:text-neutral-900">Privacy</Link> · <Link href="/terms" className="hover:text-neutral-900">Terms</Link>
+        </p>
+      </aside>
+
+      {/* Form pane */}
+      <main className="flex min-h-screen flex-col justify-center px-6 py-10 sm:px-10">
+        <div className="mx-auto w-full max-w-sm">
+          <Link href="/" className="mb-10 flex items-center gap-2.5 lg:hidden">
+            <span className="flex h-8 w-8 items-center justify-center rounded-md bg-black text-sm font-semibold text-white">
+              E
+            </span>
+            <span className="text-base font-medium tracking-tight text-neutral-900">EcomOS</span>
+          </Link>
+
+          <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">
+            {isSignIn ? "Inicia sesión" : "Crea tu cuenta"}
+          </h1>
+          <p className="mt-2 text-sm text-neutral-600">
+            {isSignIn ? "Entra a tu centro de mando." : "Un paso y estás dentro."}
+          </p>
+
+          <form onSubmit={handleSubmit} className="mt-8 flex flex-col gap-3">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-neutral-700">Email</span>
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={field}
+              />
+            </label>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-xs font-medium text-neutral-700">Contraseña</span>
+              <input
+                type="password"
+                required
+                minLength={8}
+                autoComplete={isSignIn ? "current-password" : "new-password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className={field}
+              />
+            </label>
+
+            {error && <p className="text-sm text-red-600">{error}</p>}
+            {notice && <p className="text-sm text-emerald-600">{notice}</p>}
+            {canResend && (
+              <button
+                type="button"
+                disabled={loading || !email}
+                onClick={resendConfirmation}
+                className="text-left text-sm font-medium text-neutral-900 underline underline-offset-4 hover:opacity-80 disabled:opacity-50"
+              >
+                Reenviar email de confirmación
+              </button>
+            )}
             <button
-              type="button"
-              disabled={loading || !email}
-              onClick={resendConfirmation}
-              className="text-left text-sm text-gold-hi underline hover:opacity-80 disabled:opacity-50"
+              type="submit"
+              disabled={loading}
+              className="mt-2 inline-flex items-center justify-center gap-2 rounded-full bg-black px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-neutral-800 disabled:opacity-50"
             >
-              Resend confirmation email
+              {loading ? "..." : isSignIn ? "Iniciar sesión" : "Crear cuenta"}
+              {!loading && <ArrowRight size={14} />}
             </button>
-          )}
+          </form>
+
           <button
-            type="submit"
-            disabled={loading}
-            className="rounded-lg bg-gradient-to-b from-gold-hi to-gold px-3 py-2.5 text-sm font-medium text-ink hover:opacity-90 disabled:opacity-50"
+            type="button"
+            className="mt-6 text-sm text-neutral-600 hover:text-neutral-900"
+            onClick={() => setMode(isSignIn ? "sign-up" : "sign-in")}
           >
-            {mode === "sign-in" ? "Sign in" : "Create account"}
+            {isSignIn ? "¿No tienes cuenta? Regístrate" : "¿Ya tienes cuenta? Inicia sesión"}
           </button>
-        </form>
-        <button
-          type="button"
-          className="text-sm text-lo hover:text-hi"
-          onClick={() => setMode(mode === "sign-in" ? "sign-up" : "sign-in")}
-        >
-          {mode === "sign-in" ? "Need an account? Sign up" : "Already have an account? Sign in"}
-        </button>
-      </div>
-    </main>
+        </div>
+      </main>
+    </div>
   );
 }
