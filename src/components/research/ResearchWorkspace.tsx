@@ -80,23 +80,23 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
   };
 
   const scoreColor = (score: number) => {
-    if (score >= 80) return "text-teal";
-    if (score >= 60) return "text-gold-hi";
-    if (score >= 40) return "text-gold-hi";
-    return "text-coral";
+    if (score >= 80) return "text-[#5d791c]";
+    if (score >= 60) return "text-[#9a7412]";
+    if (score >= 40) return "text-[#9a7412]";
+    return "text-[#b64b3c]";
   };
 
   const scoreBg = (score: number) => {
-    if (score >= 80) return "bg-teal/15 border-teal/30";
-    if (score >= 60) return "bg-gold/10 border-gold/40";
-    if (score >= 40) return "bg-gold/15 border-gold/30";
-    return "bg-coral/15 border-coral/30";
+    if (score >= 80) return "bg-[#f1f7e6] border-[#cfe39d]";
+    if (score >= 60) return "bg-[#fff7df] border-[#f0db9f]";
+    if (score >= 40) return "bg-[#fff7df] border-[#f0db9f]";
+    return "bg-[#fff0ed] border-[#f2c2b9]";
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 text-[#171914]">
       {/* Search Filters */}
-      <div className="rounded-lg border border-line bg-white/5 p-6">
+      <div className="rounded-2xl border border-[#e1e3dc] bg-white p-5 shadow-[0_2px_8px_rgba(25,30,15,.04)] sm:p-6">
         <h2 className="mb-4 text-lg font-semibold">{t("research.searchHeading")}</h2>
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -109,7 +109,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
               step={5}
               min={0}
               max={100}
-              className="mt-1 w-full rounded border border-line-hi px-3 py-2"
+              className="mt-1 w-full rounded-xl border border-[#d9ddd2] bg-[#fbfcf9] px-3 py-2.5 text-sm text-[#171914] outline-none focus:border-[#9fc924] focus:ring-2 focus:ring-[#d8f76b]/40"
             />
           </div>
 
@@ -121,7 +121,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
               onChange={(e) => setMaxCost(parseFloat(e.target.value))}
               step={5}
               min={0}
-              className="mt-1 w-full rounded border border-line-hi px-3 py-2"
+              className="mt-1 w-full rounded border border-[#d9ddd2] px-3 py-2"
             />
           </div>
 
@@ -133,7 +133,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
               onChange={(e) => setMaxShipping(parseFloat(e.target.value))}
               step={1}
               min={0}
-              className="mt-1 w-full rounded border border-line-hi px-3 py-2"
+              className="mt-1 w-full rounded border border-[#e1e3dc]-hi px-3 py-2"
             />
           </div>
 
@@ -165,7 +165,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
         <button
           onClick={handleSearch}
           disabled={searching}
-          className="mt-4 rounded bg-gold px-6 py-2 text-ink hover:bg-gold-hi disabled:opacity-50"
+          className="mt-4 rounded-xl bg-[#d8f76b] px-5 py-2.5 text-sm font-semibold text-[#171914] hover:bg-[#c7e653] disabled:cursor-wait disabled:opacity-60"
         >
           {searching ? t("research.searching") : t("research.search")}
         </button>
@@ -174,7 +174,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
       {/* Results Grid */}
       {results.length > 0 ? (
         <div>
-          <p className="mb-4 text-sm text-lo">{t("research.found", { count: results.length })}</p>
+          <p className="mb-4 text-sm text-[#6a6e64]">{t("research.found", { count: results.length })}</p>
 
           <div className="space-y-3">
             {results.map((opp) => (
@@ -183,8 +183,8 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
                 onClick={() => setSelectedOpportunity(opp)}
                 className={`cursor-pointer rounded-lg border-2 p-4 transition ${
                   selectedOpportunity?.productId === opp.productId
-                    ? "border-gold bg-gold/10"
-                    : "border-line hover:border-gold/50"
+                    ? "border-[#d0e3a5] bg-[#d8f76b]/10"
+                    : "border-line hover:border-[#9fc924]"
                 }`}
               >
                 <div className="flex items-start justify-between">
@@ -203,7 +203,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
                       {opp.opportunityScore.toFixed(0)}
                     </p>
                     <p className="text-xs text-lo">{t("research.score")}</p>
-                    <p className="mt-1 text-xs text-faint">
+                    <p className="mt-1 text-xs text-[#85897e]">
                       {t("research.confidence", { value: (opp.confidence * 100).toFixed(0) })}
                     </p>
                   </div>
@@ -226,7 +226,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
             <button
               onClick={() => setSelectedOpportunity(null)}
               aria-label={t("research.closeDetail")}
-              className="text-faint hover:text-hi"
+              className="text-faint hover:text-[#171914]"
             >
               ✕
             </button>
@@ -234,7 +234,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
 
           {/* Score Breakdown */}
           <div className="mb-6 grid gap-4 md:grid-cols-4">
-            <div className="rounded bg-white/5 p-3">
+            <div className="rounded bg-[#f7f8f5] p-3">
               <p className="text-xs text-lo">{t("research.marginScore")}</p>
               <p className={`text-2xl font-bold ${scoreColor(selectedOpportunity.scoreBreakdown.marginScore)}`}>
                 {selectedOpportunity.scoreBreakdown.marginScore.toFixed(0)}
@@ -278,7 +278,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
             </div>
             <div className="rounded bg-white/5 p-4">
               <p className="text-sm text-lo">{t("research.netMargin")}</p>
-              <p className="text-2xl font-bold text-teal">
+              <p className="text-2xl font-bold text-[#5d791c]">
                 {(selectedOpportunity.margin * 100).toFixed(0)}%
               </p>
             </div>
@@ -298,15 +298,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
             </div>
           )}
 
-          {/* Actions */}
-          <div className="mt-6 flex gap-2">
-            <button className="flex-1 rounded bg-teal px-4 py-2 text-ink hover:opacity-90">
-              {t("research.addWatchlist")}
-            </button>
-            <button className="flex-1 rounded bg-gold px-4 py-2 text-ink hover:bg-gold-hi">
-              {t("research.createCampaign")}
-            </button>
-          </div>
+
         </div>
       )}
     </div>
