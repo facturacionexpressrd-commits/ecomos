@@ -146,7 +146,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
                   e.target.value as "" | "low" | "medium" | "high"
                 )
               }
-              className="mt-1 w-full rounded border border-line-hi px-3 py-2"
+              className="mt-1 w-full rounded border border-[#d9ddd2] px-3 py-2"
             >
               <option value="">{t("research.competitionAny")}</option>
               <option value="low">{t("research.competitionLow")}</option>
@@ -157,7 +157,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
         </div>
 
         {(errorKey || errorText) && (
-          <p className="mt-4 rounded bg-coral/15 p-2 text-sm text-coral">
+          <p className="mt-4 rounded bg-[#fff0ed] p-2 text-sm text-[#b64b3c]">
             {errorText || t(errorKey ?? "research.searchError")}
           </p>
         )}
@@ -181,16 +181,16 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
               <div
                 key={opp.productId}
                 onClick={() => setSelectedOpportunity(opp)}
-                className={`cursor-pointer rounded-lg border-2 p-4 transition ${
+                className={`w-full cursor-pointer rounded-2xl border p-4 text-left shadow-[0_2px_8px_rgba(25,30,15,.04)] transition ${
                   selectedOpportunity?.productId === opp.productId
                     ? "border-[#d0e3a5] bg-[#d8f76b]/10"
-                    : "border-line hover:border-[#9fc924]"
+                    : "border-[#e1e3dc] hover:border-[#9fc924]"
                 }`}
               >
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <h3 className="font-semibold">{opp.productTitle}</h3>
-                    <p className="text-sm text-lo">
+                    <p className="text-sm text-[#6a6e64]">
                       {t("research.summary", {
                         cost: opp.cost.toFixed(2),
                         retail: opp.estimatedRetailPrice.toFixed(2),
@@ -198,11 +198,11 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
                       })}
                     </p>
                   </div>
-                  <div className={`rounded-lg border-2 ${scoreBg(opp.opportunityScore)} p-4 text-center`}>
+                  <div className={`rounded-2xl border ${scoreBg(opp.opportunityScore)} p-4 text-center`}>
                     <p className={`text-3xl font-bold ${scoreColor(opp.opportunityScore)}`}>
                       {opp.opportunityScore.toFixed(0)}
                     </p>
-                    <p className="text-xs text-lo">{t("research.score")}</p>
+                    <p className="text-xs text-[#6a6e64]">{t("research.score")}</p>
                     <p className="mt-1 text-xs text-[#85897e]">
                       {t("research.confidence", { value: (opp.confidence * 100).toFixed(0) })}
                     </p>
@@ -213,20 +213,20 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
           </div>
         </div>
       ) : searching ? null : (
-        <div className="rounded-lg border border-dashed border-line-hi p-12 text-center">
-          <p className="text-lo">{t("research.empty")}</p>
+        <div className="rounded-lg border border-dashed border-[#d9ddd2] p-12 text-center">
+          <p className="text-[#6a6e64]">{t("research.empty")}</p>
         </div>
       )}
 
       {/* Detail Panel */}
       {selectedOpportunity && (
-        <div className={`rounded-lg border-2 ${scoreBg(selectedOpportunity.opportunityScore)} p-6`}>
+        <div className={`rounded-2xl border ${scoreBg(selectedOpportunity.opportunityScore)} p-6`}>
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-xl font-bold">{selectedOpportunity.productTitle}</h3>
             <button
               onClick={() => setSelectedOpportunity(null)}
               aria-label={t("research.closeDetail")}
-              className="text-faint hover:text-[#171914]"
+              className="text-[#85897e] hover:text-[#171914]"
             >
               ✕
             </button>
@@ -234,26 +234,26 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
 
           {/* Score Breakdown */}
           <div className="mb-6 grid gap-4 md:grid-cols-4">
-            <div className="rounded bg-[#f7f8f5] p-3">
-              <p className="text-xs text-lo">{t("research.marginScore")}</p>
+            <div className="rounded-xl bg-[#f7f8f5] p-3">
+              <p className="text-xs text-[#6a6e64]">{t("research.marginScore")}</p>
               <p className={`text-2xl font-bold ${scoreColor(selectedOpportunity.scoreBreakdown.marginScore)}`}>
                 {selectedOpportunity.scoreBreakdown.marginScore.toFixed(0)}
               </p>
             </div>
-            <div className="rounded bg-white/5 p-3">
-              <p className="text-xs text-lo">{t("research.costScore")}</p>
+            <div className="rounded-xl bg-[#f7f8f5] p-3">
+              <p className="text-xs text-[#6a6e64]">{t("research.costScore")}</p>
               <p className={`text-2xl font-bold ${scoreColor(selectedOpportunity.scoreBreakdown.costScore)}`}>
                 {selectedOpportunity.scoreBreakdown.costScore.toFixed(0)}
               </p>
             </div>
-            <div className="rounded bg-white/5 p-3">
-              <p className="text-xs text-lo">{t("research.demandScore")}</p>
+            <div className="rounded-xl bg-[#f7f8f5] p-3">
+              <p className="text-xs text-[#6a6e64]">{t("research.demandScore")}</p>
               <p className={`text-2xl font-bold ${scoreColor(selectedOpportunity.scoreBreakdown.demandScore)}`}>
                 {selectedOpportunity.scoreBreakdown.demandScore.toFixed(0)}
               </p>
             </div>
-            <div className="rounded bg-white/5 p-3">
-              <p className="text-xs text-lo">{t("research.competitionScore")}</p>
+            <div className="rounded-xl bg-[#f7f8f5] p-3">
+              <p className="text-xs text-[#6a6e64]">{t("research.competitionScore")}</p>
               <p className={`text-2xl font-bold ${scoreColor(selectedOpportunity.scoreBreakdown.competitionScore)}`}>
                 {selectedOpportunity.scoreBreakdown.competitionScore.toFixed(0)}
               </p>
@@ -262,22 +262,22 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
 
           {/* Metrics */}
           <div className="mb-6 grid gap-3 md:grid-cols-2">
-            <div className="rounded bg-white/5 p-4">
-              <p className="text-sm text-lo">{t("research.cost")}</p>
+            <div className="rounded-xl bg-[#f7f8f5] p-4">
+              <p className="text-sm text-[#6a6e64]">{t("research.cost")}</p>
               <p className="text-2xl font-bold">${selectedOpportunity.cost.toFixed(2)}</p>
             </div>
-            <div className="rounded bg-white/5 p-4">
-              <p className="text-sm text-lo">{t("research.estimatedRetail")}</p>
+            <div className="rounded-xl bg-[#f7f8f5] p-4">
+              <p className="text-sm text-[#6a6e64]">{t("research.estimatedRetail")}</p>
               <p className="text-2xl font-bold">
                 ${selectedOpportunity.estimatedRetailPrice.toFixed(2)}
               </p>
             </div>
-            <div className="rounded bg-white/5 p-4">
-              <p className="text-sm text-lo">{t("research.shippingCost")}</p>
+            <div className="rounded-xl bg-[#f7f8f5] p-4">
+              <p className="text-sm text-[#6a6e64]">{t("research.shippingCost")}</p>
               <p className="text-2xl font-bold">${selectedOpportunity.shippingCost.toFixed(2)}</p>
             </div>
-            <div className="rounded bg-white/5 p-4">
-              <p className="text-sm text-lo">{t("research.netMargin")}</p>
+            <div className="rounded-xl bg-[#f7f8f5] p-4">
+              <p className="text-sm text-[#6a6e64]">{t("research.netMargin")}</p>
               <p className="text-2xl font-bold text-[#5d791c]">
                 {(selectedOpportunity.margin * 100).toFixed(0)}%
               </p>
@@ -286,7 +286,7 @@ export default function ResearchWorkspace({ storeId }: ResearchWorkspaceProps) {
 
           {/* Reasoning */}
           {selectedOpportunity.reasoning.length > 0 && (
-            <div className="rounded bg-white/5 p-4">
+            <div className="rounded-xl bg-[#f7f8f5] p-4">
               <p className="mb-2 font-medium">{t("research.why")}</p>
               <ul className="space-y-1">
                 {selectedOpportunity.reasoning.map((reason, i) => (
