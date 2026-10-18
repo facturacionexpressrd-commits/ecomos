@@ -47,3 +47,11 @@ Support autonomous agent orchestration for Meta Ads campaign management in EcomO
 - Agent configs must respect multi-tenant isolation (RLS enforced on `ai_agents` table)
 - Runable API credentials stored encrypted in Supabase
 - Published configs are immutable; only draft configs can be modified
+
+
+## Update 2026-10-18 (Operator Command Center visual foundation)
+- Added a live-data Command Center overview using store revenue/profit metrics, order counts for the displayed period, latest products, cost completeness, fulfillment exceptions, and Meta connection state.
+- Reworked the desktop navigation rail and Product Scout workspace to follow the owner-provided reference screens: dark labeled rail, light data surfaces, lime action color, compact metrics, and clear attention items.
+- Product Scout continues to use its existing store-scoped search API. Removed watchlist/campaign buttons that were not connected to actions.
+- No schema, authorization, agent permission, or write-action changes. Operator remains read-only.
+- Changes are on `codex/ecomos-command-center-ui` as a proposed preview, not deployed to production.
