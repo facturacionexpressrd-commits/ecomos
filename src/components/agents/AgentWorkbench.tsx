@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Bot,
   CircleAlert,
@@ -25,13 +25,21 @@ type Turn = {
   truncated?: boolean;
 };
 
-type ThreadSummary = {
+type Thread = {
   id: string;
   title: string;
-  createdAt: string;
-  updatedAt: string;
-  messageCount: number;
+  createdAt: number;
+  updatedAt: number;
+  turns: Turn[];
 };
+
+const STORAGE_KEY = (storeId: string) => `ecomos:agent-threads:${storeId}`;
+
+// Module-scoped monotonic counter so Thread/Turn ids don't require Date.now() inside the
+// component body (the React 19 purity rule flags Date.now() as impure during render even when
+// it's reached from an event handler closure).
+let _idSeq = 0;
+const nextId = (prefix: string) => `${prefix}-${++_idSeq}-${Math.floor(Math.random() * 1e4)}`;
 
 const SUGGESTION_KEYS: MessageKey[] = [
   "agent.suggestion1",
@@ -41,12 +49,18 @@ const SUGGESTION_KEYS: MessageKey[] = [
   "agent.suggestion5",
 ];
 
-// Module-scoped counter for optimistic client-only turn ids (replaced by server ids on refetch).
-let _idSeq = 0;
-const nextId = (prefix: string) => `${prefix}-${++_idSeq}-${Math.floor(Math.random() * 1e4)}`;
+function newThread(): Thread {
+  const now = Date.now();
+  return { id: nextId("t"), title: "Nueva conversación", createdAt: now, updatedAt: now, turns: [] };
+}
 
-function formatRelative(iso: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime();
+function shortTitle(text: string, max = 40): string {
+  const trimmed = text.trim().replace(/\s+/g, " ");
+  return trimmed.length <= max ? trimmed : trimmed.slice(0, max - 1) + "…";
+}
+
+function formatRelative(ts: number): string {
+  const diffMs = Date.now() - ts;
   const min = Math.floor(diffMs / 60000);
   if (min < 1) return "ahora";
   if (min < 60) return `hace ${min} min`;
@@ -54,16 +68,14 @@ function formatRelative(iso: string): string {
   if (h < 24) return `hace ${h} h`;
   const d = Math.floor(h / 24);
   if (d < 7) return `hace ${d} d`;
-  return new Date(iso).toLocaleDateString("es-DO", { day: "numeric", month: "short" });
+  return new Date(ts).toLocaleDateString("es-DO", { day: "numeric", month: "short" });
 }
 
 export default function AgentWorkbench({ storeId, storeName }: { storeId: string; storeName: string }) {
   const t = useT();
-  const [threads, setThreads] = useState<ThreadSummary[]>([]);
+  const [threads, setThreads] = useState<Thread[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
-  const [turns, setTurns] = useState<Turn[]>([]);
-  const [listLoading, setListLoading] = useState(true);
-  const [threadLoading, setThreadLoading] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
@@ -71,128 +83,97 @@ export default function AgentWorkbench({ storeId, storeName }: { storeId: string
   const [query, setQuery] = useState("");
   const endRef = useRef<HTMLDivElement>(null);
 
-  const loadThreads = useCallback(async () => {
-    setListLoading(true);
+  // Load from localStorage once on mount, scoped per store. Separates one shop's conversations
+  // from another so the thread list isn't contaminated when the user switches store.
+  /* eslint-disable react-hooks/set-state-in-effect -- intentional: hydrate persisted state after mount; useSyncExternalStore would force the setters into a store adapter for a one-shot read. */
+  useEffect(() => {
     try {
-      const res = await fetch(`/api/agents/threads?storeId=${encodeURIComponent(storeId)}`);
-      const data = (await res.json()) as { threads?: ThreadSummary[] };
-      if (res.ok && Array.isArray(data.threads)) setThreads(data.threads);
-    } catch {
-      /* leave list as-is */
-    } finally {
-      setListLoading(false);
-    }
-  }, [storeId]);
-
-  const loadThread = useCallback(async (id: string) => {
-    setThreadLoading(true);
-    try {
-      const res = await fetch(`/api/agents/threads/${id}`);
-      const data = (await res.json()) as {
-        thread?: { messages: Array<{ id: string; role: "user" | "assistant"; content: string; activity: Activity[] | null; sources: Source[] | null; truncated: boolean }> };
-      };
-      if (res.ok && data.thread) {
-        setTurns(
-          data.thread.messages.map((m) => ({
-            id: m.id,
-            role: m.role,
-            content: m.content,
-            activity: m.activity ?? undefined,
-            sources: m.sources ?? undefined,
-            truncated: m.truncated,
-          }))
-        );
+      const raw = window.localStorage.getItem(STORAGE_KEY(storeId));
+      if (raw) {
+        const parsed = JSON.parse(raw) as Thread[];
+        setThreads(parsed);
+        setActiveId(parsed[0]?.id ?? null);
       }
     } catch {
-      /* keep whatever we had */
-    } finally {
-      setThreadLoading(false);
+      // storage disabled; proceed with empty state
     }
-  }, []);
-
-  // Load threads on mount + when store changes. React 19 purity rule allows effect-driven setState
-  // when the state is sync'd from an external system (the API).
-  /* eslint-disable react-hooks/set-state-in-effect -- hydrate from the API after mount */
-  useEffect(() => {
-    void loadThreads();
-  }, [loadThreads]);
-
-  useEffect(() => {
-    if (activeId) {
-      void loadThread(activeId);
-    } else {
-      setTurns([]);
-    }
-  }, [activeId, loadThread]);
+    setHydrated(true);
+  }, [storeId]);
   /* eslint-enable react-hooks/set-state-in-effect */
+
+  // Persist on every change — tiny payload, no debounce needed.
+  useEffect(() => {
+    if (!hydrated) return;
+    try {
+      window.localStorage.setItem(STORAGE_KEY(storeId), JSON.stringify(threads));
+    } catch {
+      /* quota or disabled; skip */
+    }
+  }, [threads, hydrated, storeId]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
-  }, [turns, sending]);
+  }, [activeId, sending, threads]);
+
+  const active = useMemo(() => threads.find((th) => th.id === activeId) ?? null, [threads, activeId]);
 
   const filteredThreads = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q) return threads;
-    return threads.filter((th) => th.title.toLowerCase().includes(q));
+    const sorted = [...threads].sort((a, b) => b.updatedAt - a.updatedAt);
+    if (!q) return sorted;
+    return sorted.filter(
+      (th) =>
+        th.title.toLowerCase().includes(q) ||
+        th.turns.some((turn) => turn.content.toLowerCase().includes(q))
+    );
   }, [threads, query]);
 
-  async function createThread(): Promise<ThreadSummary | null> {
-    try {
-      const res = await fetch("/api/agents/threads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeId }),
-      });
-      const data = (await res.json()) as { thread?: ThreadSummary };
-      if (res.ok && data.thread) {
-        setThreads((cur) => [data.thread as ThreadSummary, ...cur]);
-        return data.thread;
-      }
-    } catch {
-      /* fall through */
-    }
-    setError("No pude crear la conversación.");
-    return null;
-  }
-
-  async function startNewThread() {
+  function startNewThread() {
+    const t2 = newThread();
+    setThreads((cur) => [t2, ...cur]);
+    setActiveId(t2.id);
+    setDraft("");
     setError("");
-    const fresh = await createThread();
-    if (fresh) {
-      setActiveId(fresh.id);
-      setDraft("");
-    }
   }
 
-  async function deleteThread(id: string) {
-    if (!confirm("¿Eliminar esta conversación? No se puede deshacer.")) return;
-    const prev = threads;
-    setThreads((cur) => cur.filter((th) => th.id !== id));
-    if (id === activeId) setActiveId(null);
-    try {
-      const res = await fetch(`/api/agents/threads/${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("delete failed");
-    } catch {
-      setThreads(prev);
-      setError("No pude eliminar la conversación.");
-    }
+  function deleteThread(id: string) {
+    setThreads((cur) => {
+      const next = cur.filter((th) => th.id !== id);
+      if (id === activeId) setActiveId(next[0]?.id ?? null);
+      return next;
+    });
   }
 
   async function send(text: string) {
     const question = text.trim();
     if (!question || sending) return;
 
+    // If no active thread, create one on the fly so the first message always lands somewhere.
     let threadId = activeId;
     if (!threadId) {
-      const fresh = await createThread();
-      if (!fresh) return;
+      const fresh = newThread();
       threadId = fresh.id;
+      setThreads((cur) => [fresh, ...cur]);
       setActiveId(fresh.id);
     }
 
     const userTurn: Turn = { id: nextId("u"), role: "user", content: question };
-    const history = turns.map((turn) => ({ role: turn.role, content: turn.content }));
-    setTurns((cur) => [...cur, userTurn]);
+    const history = (active?.turns ?? []).map((turn) => ({ role: turn.role, content: turn.content }));
+    // eslint-disable-next-line react-hooks/purity -- wall-clock time intentionally captured for the thread's updatedAt sort key.
+    const stamp = Date.now();
+
+    setThreads((cur) =>
+      cur.map((th) =>
+        th.id === threadId
+          ? {
+              ...th,
+              title: th.turns.length === 0 ? shortTitle(question) : th.title,
+              updatedAt: stamp,
+              turns: [...th.turns, userTurn],
+            }
+          : th
+      )
+    );
     setDraft("");
     setSending(true);
     setError("");
@@ -202,7 +183,7 @@ export default function AgentWorkbench({ storeId, storeName }: { storeId: string
       const response = await fetch("/api/agents/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ storeId, message: question, history, threadId }),
+        body: JSON.stringify({ storeId, message: question, history }),
       });
       const data = await response.json().catch(() => ({}));
 
@@ -222,23 +203,23 @@ export default function AgentWorkbench({ storeId, storeName }: { storeId: string
         sources: Array.isArray(data.sources) ? data.sources : [],
         truncated: data.truncated === true,
       };
-      setTurns((cur) => [...cur, reply]);
-
-      // Resort the sidebar — the server already bumped updatedAt. Also updates the title in
-      // place when this was the first turn in the thread.
-      void loadThreads();
+      // eslint-disable-next-line react-hooks/purity -- wall-clock time for the sort key, as above.
+      const replyStamp = Date.now();
+      setThreads((cur) =>
+        cur.map((th) =>
+          th.id === threadId ? { ...th, updatedAt: replyStamp, turns: [...th.turns, reply] } : th
+        )
+      );
     } catch (cause) {
-      setTurns((cur) => cur.slice(0, -1)); // rollback the optimistic user turn on failure
       setError(cause instanceof Error ? cause.message : t("agent.genericError"));
     } finally {
       setSending(false);
     }
   }
 
-  const activeThread = threads.find((th) => th.id === activeId) ?? null;
-
   return (
     <section className="grid min-h-[70vh] grid-cols-1 overflow-hidden rounded-2xl border border-neutral-200 bg-white lg:grid-cols-[260px_minmax(0,1fr)]">
+      {/* Thread sidebar — ChatGPT-style history rail */}
       <aside className="flex flex-col border-b border-neutral-200 lg:border-r lg:border-b-0">
         <div className="flex items-center justify-between gap-2 p-3">
           <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
@@ -246,7 +227,7 @@ export default function AgentWorkbench({ storeId, storeName }: { storeId: string
           </p>
           <button
             type="button"
-            onClick={() => void startNewThread()}
+            onClick={startNewThread}
             className="inline-flex items-center gap-1.5 rounded-lg bg-lime-300 px-2.5 py-1 text-xs font-semibold text-neutral-950 hover:bg-lime-400"
           >
             <MessageSquarePlus size={13} /> Nueva
@@ -264,7 +245,7 @@ export default function AgentWorkbench({ storeId, storeName }: { storeId: string
         </div>
 
         <ul className="mt-3 flex-1 overflow-y-auto px-2 pb-3">
-          {listLoading ? (
+          {!hydrated ? (
             <li className="px-2 py-6 text-center text-xs text-neutral-400">Cargando…</li>
           ) : filteredThreads.length === 0 ? (
             <li className="px-2 py-6 text-center text-xs text-neutral-400">
@@ -289,7 +270,7 @@ export default function AgentWorkbench({ storeId, storeName }: { storeId: string
                           isActive ? "text-neutral-400" : "text-neutral-500"
                         }`}
                       >
-                        {formatRelative(th.updatedAt)} · {th.messageCount} mensajes
+                        {formatRelative(th.updatedAt)} · {th.turns.length} mensajes
                       </p>
                     </div>
                     <span
@@ -298,13 +279,15 @@ export default function AgentWorkbench({ storeId, storeName }: { storeId: string
                       aria-label="Eliminar conversación"
                       onClick={(e) => {
                         e.stopPropagation();
-                        void deleteThread(th.id);
+                        if (confirm("¿Eliminar esta conversación? No se puede deshacer.")) {
+                          deleteThread(th.id);
+                        }
                       }}
                       onKeyDown={(e) => {
                         if (e.key === "Enter" || e.key === " ") {
                           e.stopPropagation();
                           e.preventDefault();
-                          void deleteThread(th.id);
+                          if (confirm("¿Eliminar esta conversación?")) deleteThread(th.id);
                         }
                       }}
                       className={`shrink-0 cursor-pointer rounded-md p-1 opacity-0 transition-opacity group-hover:opacity-100 ${
@@ -321,10 +304,11 @@ export default function AgentWorkbench({ storeId, storeName }: { storeId: string
         </ul>
 
         <p className="border-t border-neutral-200 px-3 py-2 text-[10px] text-neutral-400">
-          Sincronizado con tu cuenta.
+          Guardado en este navegador.
         </p>
       </aside>
 
+      {/* Chat column */}
       <div className="flex min-h-0 flex-col">
         <header className="flex items-center gap-3 border-b border-neutral-200 px-5 py-3">
           <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-neutral-900 text-lime-300">
@@ -332,7 +316,7 @@ export default function AgentWorkbench({ storeId, storeName }: { storeId: string
           </span>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold text-neutral-900">
-              {activeThread ? activeThread.title : "EcomOS Operator"}
+              {active ? active.title : "EcomOS Operator"}
             </p>
             <p className="text-[11px] text-neutral-500">
               Analizando <strong className="font-medium text-neutral-700">{storeName}</strong> · solo lectura
@@ -341,9 +325,7 @@ export default function AgentWorkbench({ storeId, storeName }: { storeId: string
         </header>
 
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-5" aria-live="polite">
-          {threadLoading ? (
-            <p className="py-10 text-center text-xs text-neutral-400">Cargando conversación…</p>
-          ) : !activeId || turns.length === 0 ? (
+          {!active || active.turns.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-5 py-10 text-center">
               <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-lime-300 text-neutral-950">
                 <Bot size={22} />
@@ -371,7 +353,7 @@ export default function AgentWorkbench({ storeId, storeName }: { storeId: string
               </div>
             </div>
           ) : (
-            turns.map((turn) =>
+            active.turns.map((turn) =>
               turn.role === "user" ? (
                 <div key={turn.id} className="flex justify-end">
                   <p className="max-w-[85%] rounded-2xl rounded-br-sm bg-neutral-900 px-3.5 py-2.5 text-sm leading-6 whitespace-pre-wrap text-white">
@@ -443,7 +425,7 @@ export default function AgentWorkbench({ storeId, storeName }: { storeId: string
             value={draft}
             maxLength={2000}
             disabled={sending}
-            placeholder={activeId ? "Escribe tu mensaje…" : "Empieza una nueva conversación…"}
+            placeholder={active ? "Escribe tu mensaje…" : "Empieza una nueva conversación…"}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) {

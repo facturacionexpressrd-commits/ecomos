@@ -35,11 +35,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Cuerpo de la solicitud inválido." }, { status: 400 });
   }
 
-  const { storeId, message, history, threadId } = (body ?? {}) as {
+  const { storeId, message, history } = (body ?? {}) as {
     storeId?: unknown;
     message?: unknown;
     history?: unknown;
-    threadId?: unknown;
   };
 
   if (typeof storeId !== "string" || !storeId) {
@@ -58,21 +57,6 @@ export async function POST(req: NextRequest) {
   const grants = await loadStoreAccessGrants(user.id);
   if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
     return NextResponse.json({ error: "No tienes acceso a esta tienda." }, { status: 403 });
-  }
-
-  // Optional thread persistence. Caller passes the thread id after creating it via POST
-  // /api/agents/threads; we check ownership here so a crafted body can't scribble into
-  // someone else's history.
-  let threadOwned: { id: string; title: string } | null = null;
-  if (typeof threadId === "string" && threadId) {
-    const existing = await prisma.agentThread.findUnique({
-      where: { id: threadId },
-      select: { id: true, userId: true, storeId: true, title: true },
-    });
-    if (!existing || existing.userId !== user.id || existing.storeId !== storeId) {
-      return NextResponse.json({ error: "Conversación no encontrada." }, { status: 404 });
-    }
-    threadOwned = { id: existing.id, title: existing.title };
   }
 
   const limited = await agentChatQuotaExceeded(storeId);
@@ -130,43 +114,12 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Persist the exchange if a thread was passed. First user message in a thread becomes
-    // the title (truncated); updatedAt auto-bumps and surfaces the thread to the top of the
-    // sidebar on the client's next fetch.
-    if (threadOwned) {
-      const trimmed = message.trim();
-      const titleFromFirst =
-        threadOwned.title === "Nueva conversación"
-          ? (trimmed.length > 60 ? trimmed.slice(0, 59) + "…" : trimmed)
-          : threadOwned.title;
-      await prisma.$transaction([
-        prisma.agentMessage.create({
-          data: { threadId: threadOwned.id, role: "user", content: trimmed },
-        }),
-        prisma.agentMessage.create({
-          data: {
-            threadId: threadOwned.id,
-            role: "assistant",
-            content: result.reply,
-            activityJson: result.activity as unknown as object,
-            sourcesJson: result.sources as unknown as object,
-            truncated: result.truncated,
-          },
-        }),
-        prisma.agentThread.update({
-          where: { id: threadOwned.id },
-          data: { title: titleFromFirst },
-        }),
-      ]);
-    }
-
     return NextResponse.json({
       reply: result.reply,
       activity: result.activity,
       sources: result.sources,
       truncated: result.truncated,
       readOnly: true,
-      threadId: threadOwned?.id ?? null,
     });
   } catch (error) {
     if (error instanceof AnthropicUnavailableError) {
