@@ -207,6 +207,7 @@ model User {
   auditLogs    AuditLog[]
   notifications Notification[]
   notificationPreferences NotificationPreferences?
+  agentThreads AgentThread[]
 
   @@index([organizationId])
 }
@@ -285,6 +286,7 @@ model Store {
   orderAttributions  OrderAttributionMeta[]
   metaAdSets         MetaAdSet[]
   metaCreatives      MetaCreative[]
+  agentThreads       AgentThread[]
 
   productAICopy      ProductAICopy[]
 
@@ -977,6 +979,39 @@ model RunableAgentExecution {
   @@unique([agentId, executionId])
   @@index([agentId, status])
   @@index([agentId, createdAt])
+}
+
+// ---------- Agent chat threads (ChatGPT-style history, scoped per user+store) ----------
+// Tenant isolation lives in the app layer (query by userId + storeId); RLS is enabled with no
+// policies to close the Supabase anon-key path, matching the rest of the schema.
+model AgentThread {
+  id        String   @id @default(cuid())
+  userId    String
+  storeId   String
+  title     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store    Store          @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  messages AgentMessage[]
+
+  @@index([userId, storeId, updatedAt(sort: Desc)])
+}
+
+model AgentMessage {
+  id           String   @id @default(cuid())
+  threadId     String
+  role         String   // "user" | "assistant"
+  content      String   @db.Text
+  activityJson Json?
+  sourcesJson  Json?
+  truncated    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  thread AgentThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+
+  @@index([threadId, createdAt])
 }
 
 // Immutable log of all actions taken by Runable AI agents
