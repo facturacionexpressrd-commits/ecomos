@@ -3,9 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/db";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import { PageHeader } from "@/components/dashboard/ui/PageHeader";
-import AgentChat from "@/components/agents/AgentChat";
+import AgentWorkbench from "@/components/agents/AgentWorkbench";
 import AgentPlayground from "@/components/agents/AgentPlayground";
-import { AGENT_SKILLS } from "@/lib/agents/permissions";
 import { getT } from "@/lib/i18n/server";
 
 export default async function AgentsPage({
@@ -32,7 +31,7 @@ export default async function AgentsPage({
 
   if (!hasCapability(grants, storeId, CAPABILITIES.storeRead)) {
     return (
-      <div className="glass mx-auto mt-16 max-w-md p-8 text-center text-sm text-lo">
+      <div className="mx-auto mt-16 max-w-md rounded-xl border border-neutral-200 bg-white p-8 text-center text-sm text-neutral-600">
         {t("common.noAccessStore")}
       </div>
     );
@@ -44,24 +43,19 @@ export default async function AgentsPage({
   });
   const storeName = store?.name ?? t("agents.yourStore");
 
-  // Se pasan las claves: el componente de cliente las traduce al idioma activo.
-  const unavailableSkills = AGENT_SKILLS.filter((skill) => !skill.available).map((skill) => ({
-    nameKey: skill.nameKey,
-    descriptionKey: skill.descriptionKey,
-    permission: skill.defaultPermission,
-  }));
-
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="flex flex-col gap-6">
       <PageHeader
         eyebrow="EcomOS Operator"
         title={t("agents.title")}
         subtitle={t("agents.subtitle", { store: storeName })}
       />
-      <AgentChat storeId={storeId} storeName={storeName} unavailableSkills={unavailableSkills} />
+      <AgentWorkbench storeId={storeId} storeName={storeName} />
 
       <div>
-        <h2 className="mb-3 px-1 text-sm font-medium text-hi">{t("agents.rankingHeading")}</h2>
+        <h2 className="mb-3 px-1 text-sm font-medium text-neutral-900">
+          {t("agents.rankingHeading")}
+        </h2>
         <AgentPlayground storeId={storeId} />
       </div>
     </div>
