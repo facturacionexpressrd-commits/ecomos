@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Make the Tailwind `dark:` variant respond to the dashboard's data-theme attribute instead of
+   the OS-level color-scheme media query. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
   /* Cinematic dusk palette — deep navy/teal ground, warm amber for accents & signal. */
   --ink: #05080f;
@@ -198,3 +202,56 @@ body {
   font-style: normal;
   letter-spacing: -0.02em;
 }
+
+/* Dark mode on the dashboard: variables fall from :root (which is already the dark palette), but
+   we need to paint the subtree background and keep .glass as the original frosted-dark panel. */
+[data-theme="dark"] {
+  background: var(--ink);
+  color: var(--text-hi);
+  color-scheme: dark;
+}
+[data-theme="dark"] .glass {
+  background: linear-gradient(180deg, rgba(14, 23, 41, 0.72), rgba(10, 18, 32, 0.66));
+  border: 1px solid var(--line);
+  backdrop-filter: blur(22px) saturate(140%);
+  -webkit-backdrop-filter: blur(22px) saturate(140%);
+  box-shadow: 0 1px 0 0 rgba(255, 255, 255, 0.05) inset, 0 24px 48px -24px rgba(0, 0, 0, 0.7);
+}
+/* The new Orchestrator / Competidores / Voz / Operaciones pages were painted with literal
+   bg-white / text-neutral-* / border-neutral-* for the light aesthetic. Rather than add dark:
+   variants to every one, we re-color the literals from here when dark mode is active. Cascades
+   through every page in the dashboard subtree with no component edits. */
+[data-theme="dark"] .bg-white { background-color: #0f1420; }
+[data-theme="dark"] .bg-neutral-50 { background-color: #0b111c; }
+[data-theme="dark"] .bg-neutral-100 { background-color: #141a28; }
+[data-theme="dark"] .bg-neutral-200 { background-color: #1f2735; }
+[data-theme="dark"] .text-neutral-900 { color: #f3ede1; }
+[data-theme="dark"] .text-neutral-800 { color: #e8e3d6; }
+[data-theme="dark"] .text-neutral-700 { color: #c8c3b6; }
+[data-theme="dark"] .text-neutral-600 { color: #9aa5bd; }
+[data-theme="dark"] .text-neutral-500 { color: #7b8398; }
+[data-theme="dark"] .text-neutral-400 { color: #66708a; }
+[data-theme="dark"] .border-neutral-100 { border-color: rgba(233, 227, 214, 0.08); }
+[data-theme="dark"] .border-neutral-200 { border-color: rgba(233, 227, 214, 0.12); }
+[data-theme="dark"] .border-neutral-300 { border-color: rgba(233, 227, 214, 0.18); }
+[data-theme="dark"] .divide-neutral-100 > :not([hidden]) ~ :not([hidden]) {
+  border-color: rgba(233, 227, 214, 0.08);
+}
+/* Pastel chips (bg-sky-100 / bg-amber-100 / bg-violet-100 etc.) wash out against the dark panel;
+   darken + brighten the paired text so the module icons stay legible. */
+[data-theme="dark"] .bg-sky-100 { background-color: rgba(56, 189, 248, 0.14); }
+[data-theme="dark"] .text-sky-700 { color: #7dd3fc; }
+[data-theme="dark"] .bg-amber-100 { background-color: rgba(245, 158, 11, 0.14); }
+[data-theme="dark"] .text-amber-700 { color: #fcd34d; }
+[data-theme="dark"] .bg-violet-100 { background-color: rgba(139, 92, 246, 0.14); }
+[data-theme="dark"] .text-violet-700 { color: #c4b5fd; }
+[data-theme="dark"] .bg-pink-100 { background-color: rgba(236, 72, 153, 0.14); }
+[data-theme="dark"] .text-pink-700 { color: #f9a8d4; }
+[data-theme="dark"] .bg-emerald-100 { background-color: rgba(16, 185, 129, 0.14); }
+[data-theme="dark"] .text-emerald-700 { color: #6ee7b7; }
+[data-theme="dark"] .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.1); }
+[data-theme="dark"] .bg-amber-50 { background-color: rgba(245, 158, 11, 0.1); }
+[data-theme="dark"] .bg-red-50 { background-color: rgba(239, 68, 68, 0.12); }
+[data-theme="dark"] .text-red-700 { color: #fca5a5; }
+[data-theme="dark"] .bg-sky-50 { background-color: rgba(56, 189, 248, 0.1); }
+[data-theme="dark"] .ring-neutral-200 { --tw-ring-color: rgba(233, 227, 214, 0.14); }

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/db";
 import { loadStoreAccessGrants } from "@/lib/auth/capabilities";
@@ -6,6 +7,7 @@ import { billingEnabled, userHasAccess } from "@/lib/billing";
 import Sidebar from "@/components/dashboard/Sidebar";
 import MobileTopBar from "@/components/dashboard/MobileTopBar";
 import TopBar from "@/components/dashboard/TopBar";
+import type { Theme } from "@/components/dashboard/NightModeToggle";
 import { I18nProvider } from "@/lib/i18n/client";
 import { getLocale } from "@/lib/i18n/server";
 
@@ -19,6 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (billingEnabled() && !(await userHasAccess(user.id))) redirect("/billing");
 
   const locale = await getLocale();
+  const theme: Theme = (await cookies()).get("theme")?.value === "dark" ? "dark" : "light";
 
   const grants = await loadStoreAccessGrants(user.id);
   const stores =
@@ -32,12 +35,12 @@ export default async function DashboardLayout({ children }: { children: React.Re
 
   return (
     <I18nProvider locale={locale}>
-      <div data-theme="light" className="min-h-screen bg-white text-neutral-900">
+      <div data-theme={theme} className="min-h-screen">
         <Sidebar />
         <MobileTopBar />
         <main className="px-3 pt-3 pb-16 sm:px-4 lg:pt-5 lg:pr-5 lg:pl-64">
           <div className="mx-auto max-w-7xl">
-            <TopBar stores={stores} email={user.email ?? ""} />
+            <TopBar stores={stores} email={user.email ?? ""} theme={theme} />
             <div className="pt-6">{children}</div>
           </div>
         </main>
