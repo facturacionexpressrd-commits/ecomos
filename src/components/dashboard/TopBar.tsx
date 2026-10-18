@@ -10,7 +10,6 @@ import { useT } from "@/lib/i18n/client";
 
 type StoreOption = { id: string; name: string; status: string };
 
-/** Sits over the top of the banner: which store you're looking at, and who you're signed in as. */
 export default function TopBar({ stores, email }: { stores: StoreOption[]; email: string }) {
   const router = useRouter();
   const t = useT();
@@ -24,15 +23,15 @@ export default function TopBar({ stores, email }: { stores: StoreOption[]; email
   }
 
   return (
-    <div className="relative z-20 flex items-center justify-between gap-3">
-      <div className="w-full max-w-64">
+    <div className="flex items-center justify-between gap-3 border-b border-neutral-200 pb-4">
+      <div className="w-full max-w-72">
         <StoreSwitcher stores={stores} />
       </div>
       <div className="flex items-center gap-2">
         <LanguageSwitcher />
         <span
           title={email}
-          className="glass flex h-9 w-9 items-center justify-center rounded-full text-sm font-medium text-hi uppercase"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 bg-white text-sm font-medium uppercase text-neutral-900"
         >
           {email.charAt(0) || "?"}
         </span>
@@ -42,7 +41,7 @@ export default function TopBar({ stores, email }: { stores: StoreOption[]; email
           disabled={signingOut}
           aria-label={t("topbar.signOut")}
           title={t("topbar.signOut")}
-          className="glass flex h-9 w-9 items-center justify-center rounded-full text-faint hover:text-hi disabled:opacity-50"
+          className="flex h-9 w-9 items-center justify-center rounded-full border border-neutral-200 text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 disabled:opacity-50"
         >
           <LogOut size={15} strokeWidth={1.75} />
         </button>

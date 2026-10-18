@@ -3,7 +3,7 @@ export function Sparkline({
   points,
   width = 640,
   height = 160,
-  color = "var(--teal)",
+  color = "#0a0a0a",
 }: {
   points: number[];
   width?: number;
@@ -12,8 +12,8 @@ export function Sparkline({
 }) {
   if (points.length < 2) {
     return (
-      <div className="flex h-40 items-center justify-center text-sm text-faint">
-        Not enough data yet
+      <div className="flex h-40 items-center justify-center text-sm text-neutral-400">
+        Sin datos suficientes
       </div>
     );
   }
@@ -38,7 +38,7 @@ export function Sparkline({
     <svg viewBox={`0 0 ${width} ${height}`} className="h-40 w-full overflow-visible" preserveAspectRatio="none">
       <defs>
         <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity="0.35" />
+          <stop offset="0%" stopColor={color} stopOpacity="0.12" />
           <stop offset="100%" stopColor={color} stopOpacity="0" />
         </linearGradient>
       </defs>

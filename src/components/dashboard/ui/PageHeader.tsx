@@ -12,13 +12,19 @@ export function PageHeader({
   action?: ReactNode;
 }) {
   return (
-    // Compact on purpose: the page's data should start near the top of the screen, not under a banner.
-    <header className="mb-5 flex flex-wrap items-center justify-between gap-3">
-      {/* Soft shadow instead of a dark overlay keeps the title readable over bright parts of the photo. */}
-      <div className="[text-shadow:0_1px_14px_rgba(5,8,15,0.85),0_0_2px_rgba(5,8,15,0.6)]">
-        {eyebrow && <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.2em] text-gold-hi">{eyebrow}</p>}
-        <h1 className="font-[family-name:var(--font-display)] text-2xl font-medium italic text-hi">{title}</h1>
-        {subtitle && <p className="mt-1 max-w-xl text-sm text-hi/80">{subtitle}</p>}
+    <header className="mb-6 flex flex-wrap items-end justify-between gap-3">
+      <div>
+        {eyebrow && (
+          <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-neutral-500">
+            {eyebrow}
+          </p>
+        )}
+        <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 sm:text-3xl">
+          {title}
+        </h1>
+        {subtitle && (
+          <p className="mt-1 max-w-xl text-sm text-neutral-600">{subtitle}</p>
+        )}
       </div>
       {action}
     </header>
@@ -27,9 +33,9 @@ export function PageHeader({
 
 export function EmptyState({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="glass rise-in flex flex-col items-center gap-2 px-6 py-16 text-center">
-      <p className="font-[family-name:var(--font-display)] text-xl italic text-hi">{title}</p>
-      <p className="max-w-sm text-sm text-lo">{children}</p>
+    <div className="flex flex-col items-center gap-2 rounded-xl border border-neutral-200 bg-white px-6 py-16 text-center">
+      <p className="text-xl font-medium tracking-tight text-neutral-900">{title}</p>
+      <p className="max-w-sm text-sm text-neutral-600">{children}</p>
     </div>
   );
 }
@@ -38,12 +44,12 @@ export function StatusPill({ status }: { status: string }) {
   const s = status.toLowerCase();
   const tone =
     s === "connected" || s === "active" || s === "delivered" || s === "paid" || s === "completed"
-      ? "bg-teal/15 text-teal border-teal/30"
+      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
       : s === "error" || s === "failed" || s === "cancelled" || s === "critical"
-        ? "bg-coral/15 text-coral border-coral/30"
+        ? "bg-red-50 text-red-700 border-red-200"
         : s === "pending" || s === "processing" || s === "paused"
-          ? "bg-gold/15 text-gold-hi border-gold/30"
-          : "bg-white/5 text-lo border-line-hi";
+          ? "bg-amber-50 text-amber-700 border-amber-200"
+          : "bg-neutral-100 text-neutral-700 border-neutral-200";
   return (
     <span className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium capitalize ${tone}`}>
       {status.replace(/_/g, " ")}

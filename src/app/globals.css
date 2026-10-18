@@ -143,3 +143,58 @@ body {
 .rise-in {
   animation: rise-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
+
+/* Dashboard light theme — the "Super Shopify Store OS" look.
+   Flips the token values inside any subtree marked data-theme="light"
+   (the signed-in app shell). Every component that reads from --text-hi
+   / --panel / --gold / etc. (and every Tailwind utility that compiles
+   from @theme inline) picks the light palette automatically. */
+[data-theme="light"] {
+  --ink: #ffffff;
+  --deep: #fafafa;
+  --panel: #ffffff;
+  --panel-hi: #f4f4f5;
+  --line: #e5e7eb;
+  --line-hi: #d4d4d8;
+  --text-hi: #0a0a0a;
+  --text-lo: #52525b;
+  --text-faint: #a1a1aa;
+  --gold: #d9f65c;
+  --gold-hi: #c7e63f;
+  --teal: #10b981;
+  --coral: #ef4444;
+  --violet: #8b5cf6;
+  color-scheme: light;
+  background: #ffffff;
+  color: #0a0a0a;
+}
+[data-theme="light"] .glass {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+[data-theme="light"] .glass-hover:hover {
+  border-color: var(--line-hi);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+[data-theme="light"] ::selection {
+  background: rgba(217, 246, 92, 0.5);
+  color: #0a0a0a;
+}
+/* Legacy dashboard pages still carry Fraunces-italic headings baked into their JSX. In the
+   light shell those read as awkward serif italics against the clean sans aesthetic, so we flip
+   the display font to the body font and strip italic from headings only — scoped so quoted
+   italics in body copy still look right. */
+[data-theme="light"] {
+  --font-display: var(--font-body);
+}
+[data-theme="light"] h1,
+[data-theme="light"] h2,
+[data-theme="light"] h3,
+[data-theme="light"] h4 {
+  font-style: normal;
+  letter-spacing: -0.02em;
+}
