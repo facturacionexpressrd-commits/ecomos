@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, ArrowUpRight, Bot, CircleAlert, Package, Search, Sparkles } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Bot, CircleAlert, Package, Search } from "lucide-react";
 import ProductThumb from "@/components/products/ProductThumb";
 
 type ProductSummary = {
@@ -36,8 +36,10 @@ export default function OperatorCommandCenter(props: Props) {
         eyebrow: "ECOMOS OPERATOR · COMMAND CENTER",
         title: "Your store, at a glance.",
         subtitle: "A clear view of performance and the next actions that need you.",
-        connected: "STORE CONNECTED",
+        connected: "STORE SNAPSHOT",
         period: "LAST 14 DAYS",
+        inventory: "Inventory on hand",
+        campaigns: "Active campaigns",
         revenue: "Revenue",
         profit: "Contribution profit",
         margin: "Contribution margin",
@@ -52,7 +54,7 @@ export default function OperatorCommandCenter(props: Props) {
         price: "Price",
         noProducts: "Products will appear here after the first Shopify sync.",
         attention: "Needs your attention",
-        allClear: "No open issues. Your connected store is ready.",
+        allClear: "No cost gaps, fulfillment exceptions, or Meta setup items are showing.",
         missingCosts: "{count} variants have no cost. Profit is incomplete until costs are added.",
         exceptions: "{count} fulfillment exceptions are waiting for review.",
         connectMeta: "Connect Meta Ads to include advertising spend in profit reporting.",
@@ -74,8 +76,10 @@ export default function OperatorCommandCenter(props: Props) {
         eyebrow: "ECOMOS OPERATOR · CENTRO DE MANDO",
         title: "Tu tienda, de un vistazo.",
         subtitle: "Rendimiento claro y las próximas acciones que necesitan de ti.",
-        connected: "TIENDA CONECTADA",
+        connected: "DATOS DE TIENDA",
         period: "ÚLTIMOS 14 DÍAS",
+        inventory: "Inventario disponible",
+        campaigns: "Campañas activas",
         revenue: "Ingresos",
         profit: "Ganancia de contribución",
         margin: "Margen de contribución",
@@ -90,7 +94,7 @@ export default function OperatorCommandCenter(props: Props) {
         price: "Precio",
         noProducts: "Los productos aparecerán aquí después de la primera sincronización con Shopify.",
         attention: "Necesita tu atención",
-        allClear: "No hay incidencias abiertas. Tu tienda conectada está lista.",
+        allClear: "No aparecen faltantes de costos, incidencias de fulfillment ni tareas de conexión con Meta.",
         missingCosts: "{count} variantes no tienen costo. La ganancia estará incompleta hasta registrarlos.",
         exceptions: "{count} incidencias de fulfillment esperan revisión.",
         connectMeta: "Conecta Meta Ads para incluir el gasto publicitario en el reporte de ganancias.",
@@ -270,6 +274,10 @@ export default function OperatorCommandCenter(props: Props) {
               <p className="rounded-xl bg-[#f7f9f2] p-3 text-xs leading-5 text-[#62675a]">{copy.allClear}</p>
             )}
           </section>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-xl border border-[#e1e3dc] bg-white px-4 py-3"><p className="text-[10px] uppercase tracking-wide text-[#7a7d72]">{copy.inventory}</p><p className="mt-1 font-mono text-lg font-semibold">{props.inventory.toLocaleString()}</p></div>
+            <div className="rounded-xl border border-[#e1e3dc] bg-white px-4 py-3"><p className="text-[10px] uppercase tracking-wide text-[#7a7d72]">{copy.campaigns}</p><p className="mt-1 font-mono text-lg font-semibold">{props.activeCampaigns.toLocaleString()}</p></div>
+          </div>
 
           <Link href={`/dashboard/agents${storeQuery}`} className="group block rounded-2xl bg-[#11140e] p-5 text-white shadow-[0_12px_28px_-18px_rgba(0,0,0,.5)]">
             <div className="mb-4 flex items-start justify-between gap-3">
@@ -296,7 +304,6 @@ export default function OperatorCommandCenter(props: Props) {
           </section>
         </aside>
       </div>
-      <div className="sr-only"><Sparkles aria-hidden="true" /> EcomOS</div>
     </main>
   );
 }
