@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadStoreAccessGrants, hasCapability, CAPABILITIES } from "@/lib/auth/capabilities";
 import ConnectStoreForm from "@/components/dashboard/ConnectStoreForm";
 import { ACTIVE_META } from "@/lib/meta/status";
-import { getLocale } from "@/lib/i18n/server";
+import { getLocale, getT } from "@/lib/i18n/server";
 import OperatorCommandCenter from "@/components/dashboard/OperatorCommandCenter";
 
 export default async function DashboardPage({
@@ -14,6 +14,7 @@ export default async function DashboardPage({
 }) {
   const { store: requestedStoreId } = await searchParams;
   const locale = await getLocale();
+  const t = await getT();
 
   const supabase = await createClient();
   const {
@@ -121,3 +122,4 @@ export default async function DashboardPage({
       }))}
     />
   );
+}
