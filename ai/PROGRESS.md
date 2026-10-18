@@ -25,6 +25,11 @@ All 19 build phases + agent integration framework (detail per phase: `docs/ROADM
 
 ## In Progress
 
+Command Center and Product Scout visual foundation (preview branch):
+- Labeled dark navigation rail and responsive live-data dashboard.
+- Product Scout restyled with existing search results, confidence/score detail, and no simulated write actions.
+- Awaiting GitHub CI and Vercel preview review; no production release.
+
 Runable API integration (agent execution layer):
 - Webhook authentication and processing
 - Agent execution logging and metrics
@@ -52,3 +57,6 @@ Runable API integration (agent execution layer):
 bounded Claude tool-use loop, chat UI with source labels and data-processing notice. No migration.
 
 2026-10-01 — Agent configuration added to AGENTS.md; Runable orchestration framework documented; GitHub updated.
+
+
+2026-10-18 — Command Center / Product Scout visual foundation added on `codex/ecomos-command-center-ui`; awaiting preview validation.
