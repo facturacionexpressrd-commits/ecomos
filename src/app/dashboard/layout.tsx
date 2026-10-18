@@ -37,7 +37,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <div className="min-h-screen">
         <Sidebar />
         <MobileTopBar />
-        <div className="relative z-10 px-3 pt-3 pb-16 sm:px-4 lg:pt-4 lg:pr-4 lg:pl-24">
+        <div className="relative z-10 px-3 pt-3 pb-16 sm:px-4 lg:pt-4 lg:pr-4 lg:pl-[248px]">
           {/* The banner is absolutely positioned; the top bar and page flow over its lower half. */}
           <div className="relative">
             <HeroBanner />
