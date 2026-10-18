@@ -16,7 +16,7 @@ export default function Sidebar() {
         <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#d8f76b] text-sm font-black text-[#14170e]">E</span>
         <span className="min-w-0">
           <span className="block text-sm font-semibold tracking-tight">EcomOS</span>
-          <span className="block text-[10px] text-white/45">Commerce workspace</span>
+          <span className="block text-[10px] text-white/45">{t("nav.home")}</span>
         </span>
       </Link>
 
@@ -43,7 +43,7 @@ export default function Sidebar() {
 
       <div className="mt-4 border-t border-white/10 px-3 pt-4">
         <p className="text-[10px] font-medium tracking-[.14em] text-white/40 uppercase">EcomOS Operator</p>
-        <p className="mt-1 text-xs text-white/65">Store tools and insights</p>
+        
       </div>
     </aside>
   );
