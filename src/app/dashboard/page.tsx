@@ -61,7 +61,6 @@ export default async function DashboardPage({
     campaignCount,
     exceptionCount,
     productCount,
-    variantCount,
     variantsMissingCost,
     metaAccount,
     recentProducts,
@@ -80,9 +79,14 @@ export default async function DashboardPage({
       prisma.metaCampaign.count({ where: { storeId, status: "ACTIVE" } }),
       prisma.fulfillmentException.count({ where: { supplierOrder: { storeId }, isResolved: false } }),
       prisma.product.count({ where: { storeId } }),
-      prisma.productVariant.count({ where: { storeId } }),
       prisma.productVariant.count({ where: { storeId, cost: null } }),
       prisma.metaAccount.findFirst({ where: { storeId, ...ACTIVE_META }, select: { id: true } }),
+      prisma.product.findMany({
+        where: { storeId },
+        orderBy: { updatedAt: "desc" },
+        take: 6,
+        include: { variants: { select: { price: true } } },
+      }),
     ]);
 
 
