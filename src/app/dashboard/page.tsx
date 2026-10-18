@@ -69,7 +69,7 @@ export default async function DashboardPage({
         where: { id: storeId },
         include: { organization: { select: { subscriptionStatus: true } } },
       }),
-      prisma.order.count({ where: { storeId } }),
+      prisma.order.count({ where: { storeId, createdAt: { gte: since } } }),
       prisma.inventoryLevel.aggregate({ where: { storeId }, _sum: { available: true } }),
       prisma.order.findFirst({ where: { storeId }, select: { currency: true } }),
       prisma.dailyFinancialMetric.findMany({
