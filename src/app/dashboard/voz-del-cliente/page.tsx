@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/dashboard/ui/PageHeader";
+import { LiveTicker } from "@/components/orchestrator/LiveTicker";
 import { Check, X } from "lucide-react";
 
 type Quote = { source: string; text: string; intent: string };
@@ -59,6 +60,8 @@ const DRAFTS: Draft[] = Array.from({ length: 8 }, (_, i) => ({ title: `Variació
 export default function VozDelClientePage() {
   return (
     <div className="flex flex-col gap-6">
+      <LiveTicker />
+
       <PageHeader
         eyebrow="Estudio Creativo"
         title="Voz del cliente"

@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/dashboard/ui/PageHeader";
+import { LiveTicker } from "@/components/orchestrator/LiveTicker";
 import {
   CreditCard,
   Truck,
@@ -45,6 +46,33 @@ const EVENTS: TimelineEvent[] = [
   { time: "10:05", title: "Lote de 7 pedidos → CJ", detail: "Esperando confirmación de empaque", tag: "supplier", status: "running" },
 ];
 
+type DayKPI = { label: string; value: string; sub: string };
+const KPIS: DayKPI[] = [
+  { label: "Pagos verificados", value: "220", sub: "100% match" },
+  { label: "Órdenes enviadas", value: "198", sub: "22 en cola" },
+  { label: "Devoluciones cerradas", value: "22", sub: "0.9% del total" },
+  { label: "Tracking sincronizado", value: "198", sub: "USPS · CJ" },
+];
+
+type OrderRow = {
+  customer: string;
+  product: string;
+  cost: string;
+  status: "paid" | "shipped" | "flagged";
+};
+const ORDERS: OrderRow[] = [
+  { customer: "Jude Soul", product: "Pet Hair Remover Roller", cost: "$18.40", status: "shipped" },
+  { customer: "Chloe Rayne", product: "Mini Massage Gun", cost: "$29.50", status: "shipped" },
+  { customer: "Omari Jones", product: "Galaxy Star Projector", cost: "$12.10", status: "flagged" },
+  { customer: "Marcus Hunt", product: "Portable Blender Bottle", cost: "$9.80", status: "paid" },
+];
+
+const ORDER_STATUS: Record<OrderRow["status"], { label: string; className: string }> = {
+  paid: { label: "pagado", className: "bg-sky-50 text-sky-700" },
+  shipped: { label: "enviado", className: "bg-emerald-50 text-emerald-700" },
+  flagged: { label: "revisar", className: "bg-amber-50 text-amber-700" },
+};
+
 const SUPPORT: SupportCase[] = [
   { tone: "amber", type: "Perdido en tránsito", snippet: "“Mi paquete lleva 11 días sin moverse.”", handledBy: "agent" },
   { tone: "red", type: "Llegó dañado", snippet: "“La caja llegó aplastada y el producto roto.”", handledBy: "human" },
@@ -63,6 +91,8 @@ const TONE: Record<SupportCase["tone"], string> = {
 export default function OperationsPage() {
   return (
     <div className="flex flex-col gap-6">
+      <LiveTicker />
+
       <PageHeader
         eyebrow="Operaciones"
         title="Hoy"
@@ -167,6 +197,56 @@ export default function OperationsPage() {
           </ul>
         </aside>
       </div>
+
+      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {KPIS.map((k) => (
+          <div key={k.label} className="rounded-xl border border-neutral-200 bg-white p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+              {k.label}
+            </p>
+            <p className="mt-2 font-mono text-3xl font-semibold text-neutral-900">{k.value}</p>
+            <p className="mt-1 text-[11px] text-neutral-500">{k.sub}</p>
+          </div>
+        ))}
+      </section>
+
+      <section className="rounded-2xl border border-neutral-200 bg-white">
+        <header className="flex items-center justify-between border-b border-neutral-100 px-5 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+            Órdenes recientes
+          </p>
+          <span className="text-[11px] text-neutral-400">última hora</span>
+        </header>
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-neutral-100 text-[10px] font-semibold uppercase tracking-[0.14em] text-neutral-500">
+                <th className="px-5 py-2 text-left">Cliente</th>
+                <th className="px-5 py-2 text-left">Producto</th>
+                <th className="px-5 py-2 text-right">Costo</th>
+                <th className="px-5 py-2 text-center">Estado</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-neutral-100">
+              {ORDERS.map((o) => {
+                const s = ORDER_STATUS[o.status];
+                return (
+                  <tr key={o.customer} className="hover:bg-neutral-50">
+                    <td className="px-5 py-2.5 font-medium text-neutral-900">{o.customer}</td>
+                    <td className="px-5 py-2.5 text-neutral-700">{o.product}</td>
+                    <td className="px-5 py-2.5 text-right font-mono text-neutral-900">{o.cost}</td>
+                    <td className="px-5 py-2.5 text-center">
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${s.className}`}>
+                        {s.label}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }
