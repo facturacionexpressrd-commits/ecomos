@@ -19,6 +19,7 @@ export const en: Record<keyof typeof es, string> = {
 
   // Navegación
   "nav.overview": "Overview",
+  "nav.architecture": "Architecture",
   "nav.stores": "Stores",
   "nav.orders": "Orders",
   "nav.products": "Products",

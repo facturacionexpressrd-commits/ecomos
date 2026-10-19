@@ -16,6 +16,7 @@ import {
   Radar,
   MessagesSquare,
   Clock,
+  Network,
   type LucideIcon,
 } from "lucide-react";
 import type { MessageKey } from "@/lib/i18n";
@@ -30,6 +31,7 @@ export type NavLink = {
 
 export const NAV_LINKS: NavLink[] = [
   { href: "/dashboard", labelKey: "nav.overview", icon: LayoutDashboard, tone: "lime" },
+  { href: "/dashboard/arquitectura", labelKey: "nav.architecture", icon: Network, tone: "lime" },
   { href: "/dashboard/products", labelKey: "nav.products", icon: Boxes, tone: "sky" },
   { href: "/dashboard/research", labelKey: "nav.research", icon: Telescope, tone: "sky" },
   { href: "/dashboard/competitors", labelKey: "nav.competitors", icon: Radar, tone: "sky" },

@@ -17,6 +17,7 @@ export const es = {
 
   // Navegación
   "nav.overview": "Resumen",
+  "nav.architecture": "Arquitectura",
   "nav.stores": "Tiendas",
   "nav.orders": "Órdenes",
   "nav.products": "Productos",
